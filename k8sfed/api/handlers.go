@@ -1,0 +1,1245 @@
+package api
+
+import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"io/ioutil"
+	"k8sfed/cluster/deployment"
+	"k8sfed/cluster/service"
+	"net/http"
+
+	"github.com/julienschmidt/httprouter"
+)
+
+var clusters []string
+var clustername map[string]string
+var fedclustername string
+
+func init() {
+	clusters = []string{"controller", "k8s-fed"}
+	fedclustername = "k8s-fed"
+
+}
+
+type middleWareHandler struct {
+	r *httprouter.Router
+}
+
+/**设计Restful api*/
+type HttpHandler func(w http.ResponseWriter, r *http.Request, p httprouter.Params) error
+
+func createRouter(r *httprouter.Router) {
+
+	m := map[string]map[string]HttpHandler{
+		"GET": { //包括暂停 驱逐 恢复 等操作
+			"/api/deployments":                  getAllDeps, //获取所有集群下面的dep
+			"/api/cluster/:cluster/deployments": getDeps,
+			//"/api/cluster/:cluster/namespace/:namespace/deployment/:deployment": getDep,
+			"/api/clusters":                    getClusters,
+			"/api/cluster/:cluster":            getCluster,
+			"/api/nodes":                       getAllNodes,
+			"/api/cluster/:cluster/nodes":      getNodes,
+			"/api/cluster/:cluster/node/:node": getNode,
+			"/api/apps":                        getAllApps, //获取所有集群下面的app
+			"/api/cluster/:cluster/apps":       getApps,
+			//"/api/cluster/:cluster/namespace/:namespace/app/:app": getApp,
+			"/api/cluster/:cluster/namespaces": getNamespaces,
+			//"/api/fed/namespaces":                        getNamespaces,
+			"/api/cluster/:cluster/template/deployments":            getTemDeps, //获取模板服务
+			"/api/cluster/:cluster/pause/deployments":               pauseDeps,  //批量暂停 url 传json数据 包括服务名称和服务命名空间
+			"/api/cluster/:cluster/resume/deployments":              resumeDeps, //批量恢复 url 传json数据 包括服务名称和服务命名空间
+			"/api/cluster/:cluster/configmaps":                      getConfigMaps,
+			"/api/cluster/:cluster/namespace/:namespace/configmaps": getConfigMapsbyNm,
+			//"/api/cluster/:cluster/template/deployments": getTemDeps,
+			"/api/cluster/:cluster/template/resources": getTemRes, // 从configMap 获取模板资源数据 可以设置"type"="temRes"获取config中模板资源
+			"/api/cluster/:cluster/ingresses":          getIngs,
+			"/api/cluster/:cluster/services":           getSvcs,
+			"/api/cluster/:cluster/pvcs":               getPVCs,
+			"/api/cluster/:cluster/pvs":                getPVs,
+			"/api/cluster/:cluster/scs":                getSCs,
+			"/api/cluster/:cluster/pause/nodes":        pauseNodes,
+			"/api/cluster/:cluster/resume/nodes":       resumeNodes, //恢复
+			"/api/cluster/:cluster/drain/nodes":        drainNodes,  //驱逐
+			"/api/users":                               getUsers,
+			"/api/pause/users":                         pauseUsers,
+			"/api/resume/users":                        resumeUsers,
+		},
+		"POST": { //创建
+			"/api/cluster/:cluster/app":                 postApp,
+			"/api/cluster/:cluster/deployment":          postDep,
+			"/api/cluster/:cluster/template/deployment": potTemDep,  //创建config模板服务
+			"/api/cluster/:cluster/template/resource":   postTemRes, //提交一个config模板资源
+			"/api/cluster/:cluster/ingress":             postIng,
+			"/api/cluster/:cluster/service":             postSvc,
+			"/api/cluster/:cluster/pvc":                 postPVC,
+			"/api/cluster/:cluster/pv":                  postPV,
+			"/api/cluster/:cluster/sc":                  postSC,
+			"/api/cluster/:cluster":                     postCluster,
+			"/api/cluster/:cluster/namespace":           postNamespace,
+			"/api/user":                                 postUser,
+			"/api/login":                                userLogin,
+			"/api/logout":                               userLogout,
+		},
+		"DELETE": { //删除
+			"/api/cluster/:cluster/app/:app":                                    deleteApp, //不分命名空间
+			"/api/cluster/:cluster/namespace/:namespace/deployment/:deployment": deleteDep,
+			"/api/cluster/:cluster/apps":                                        deleteApps,   //批量删除url传json数据{items:[{name,namespace},{}]}
+			"/api/cluster/:cluster/deployments":                                 deleteDeps,   //批量删除url传json数据{items:[{name,namespace},{}]}
+			"/api/cluster/:cluster/template/resources":                          deleteTemRes, //批量删除url传json数据{items:[{name,namespace},{}]}
+			"/api/cluster/:cluster/ingresses":                                   deleteIngs,
+			"/api/cluster/:cluster/services":                                    deleteSvcs,
+			"/api/cluster/:cluster/pvcs":                                        deletePVCs,
+			"/api/cluster/:cluster/pvs":                                         deletePVs,
+			"/api/cluster/:cluster/scs":                                         deleteSCs,
+			"/api/cluster/:cluster/nodes":                                       deleteNodes,
+			"/api/clusters":                                                     deleteClusters,
+			"/api/cluster/:cluster/namespaces":                                  deleteNamespaces,
+			"/api/users":                                                        deleteUsers,
+			"/api/cluster/:cluster/configmaps":                                  deleteConfigMaps,
+		},
+		"PUT": { //更新  包括扩容,      回滚
+			"/api/cluster/:cluster/app":                                                  updateApp,
+			"/api/cluster/:cluster/app/:app/rollback":                                    rollbackApp,
+			"/api/cluster/:cluster/namespace/:namespace/deployment/:deployment":          updateDep, //包括扩容功能
+			"/api/cluster/:cluster/namespace/:namespace/deployment/:deployment/rollback": rollbackDep,
+			"/api/cluster/:cluster/namespace/:namespace/template/resource/:resource":     updateTemRes,
+			"/api/cluster/:cluster/namespace/:namespace/ingress/:ingress":                updateIng,
+			"/api/cluster/:cluster/namespace/:namespace/service/:service":                updateSvc,
+			"/api/cluster/:cluster/pv/:pv":                                               updatePV,
+			"/api/cluster/:cluster/sc/:sc":                                               updateSC,
+			"/api/cluster/:cluster/node/:node":                                           updateNode,
+			"/api/cluster/:cluster":                                                      updateCluster,
+			"/api/user":                                                                  updateUser,
+		},
+		"OPTIONS": {},
+		"PATCH":   {},
+	}
+
+	for method, routes := range m { //依次读取上面map中的key value
+		for route, fct := range routes {
+			localRoute := route
+			localFct := fct
+			localMethod := method
+
+			f := makeHttpHandler(localMethod, localRoute, localFct)
+			r.Handle(localMethod, localRoute, f)
+		}
+	}
+
+}
+
+func NewMiddleWareHandler(r *httprouter.Router) http.Handler {
+	m := middleWareHandler{}
+	m.r = r
+	return m
+}
+
+func (m middleWareHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	//check session 检测session合法性
+	//把Sessionid 加在 Header 中发送过来，从Header中读取Sessionid检验它的有效性
+	/*var f = false
+	if !f { //如果校验通过再执行接下来的操作
+		io.WriteString(w, "wrong op")
+	} else {
+		m.r.ServeHTTP(w, r)
+	}*/
+	w.Header().Set("Content-Type", "application/json")
+	writeCorsHeaders(w, r) //解决跨域访问
+	m.r.ServeHTTP(w, r)
+
+}
+
+/**注册api*/
+func RegisterHandlers() *httprouter.Router {
+	router := httprouter.New()
+	/**view*/
+	viewRouter(router)
+
+	/**core handlers add*/
+	createRouter(router)
+	return router
+}
+
+// 添加头
+func makeHttpHandler(localMethod string, localRoute string, handlerFunc HttpHandler) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+		//writeCorsHeaders(w, r)
+		if err := handlerFunc(w, r, p); err != nil {
+			fmt.Printf("%v\n", err)
+		}
+	}
+}
+
+//解决跨域访问的头
+func writeCorsHeaders(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Access-Control-Allow-Origin", "*")
+	w.Header().Add("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
+	w.Header().Add("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT, OPTIONS,PATCH")
+}
+
+/**
+Handlers
+*/
+func getDeps(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+	//w.Header().Set("Content-Type", "application/json")
+	var clustername = p.ByName("cluster")
+	//dataSource = append(dataSource, deps.Items...)
+	dataSource, errd := ListDeps(clustername)
+	if errd != nil {
+		// handle error
+		return errd
+	}
+
+	depsdata, err := json.Marshal(dataSource)
+	if err != nil {
+		// handle error
+		return err
+	}
+	w.Write(depsdata)
+	/*resp2, _, err2 := utils.Call("GET", "/apis/apps/v1beta1/deployments", "10.103.240.130:8080", nil)
+	body2, err2 := ioutil.ReadAll(resp2)
+	if err2 != nil {
+		// handle error
+		return err2
+	}
+	//fmt.Printf("body2%s /n code%v", body2, code)
+	w.Write(body2)*/
+
+	/*resp, err := http.Get("http://10.103.240.130:8080/apis/apps/v1beta1/deployments")
+
+	if err != nil {
+		// handle error
+		return err
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		// handle error
+		return err
+	}*/
+	//w.Write(body)
+
+	//deployments  :=&Deployments{} //必须这样声明
+	//err2 :=json.Unmarshal(body,deployments) //解析成结构体对象
+	//deps,err:=json.Marshal(deployments)     //将结构体对象在转化为json数据
+	//fmt.Fprintf(w,string(deployments))
+	//if err2 != nil {
+	// handle error
+	//}
+	//fmt.Printf("%s ", body)
+	fmt.Println("Getdeps被访问！")
+
+	//uname := p.ByName("cluster")
+	//io.WriteString(w, "get deps")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func getDep(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("Getdep被访问！")
+	fmt.Println(p.ByName("cluster"))
+
+	//uname := p.ByName("cluster")
+	io.WriteString(w, "get dep"+p.ByName("cluster"))
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func getAllDeps(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println(" getAllDeps被访问！获取所有集群的deps")
+	w.Header().Set("Content-Type", "application/json")
+	//var list = append(clusters, clusters...)
+	var dataSource = []*deployment.Deployment{}
+	for _, item := range clusters {
+		deps := &deployment.Deployments{} //声明结构体
+		if err := deps.List(item + ":8080"); err != nil {
+			return err
+		}
+		dataSource = append(dataSource, deps.Items...)
+	}
+	depsdata, err := json.Marshal(dataSource)
+	if err != nil {
+		// handle error
+		return err
+	}
+	//io.WriteString(w, "get all dep")
+	w.Write(depsdata) //返回json数据byte数据类型
+	return nil
+}
+
+func getClusters(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	//w.Header().Set("Content-Type", "application/json")
+	fmt.Println("getClusters被访问！")
+	//var clustername = p.ByName("cluster")
+	var clustername = "k8s-fed" //以后从文件读取联邦集群的名字
+	//dataSource = append(dataSource, deps.Items...)
+	dataSource, errc := ListCluster(clustername)
+	if errc != nil {
+		// handle error
+		return errc
+	}
+
+	depsdata, err := json.Marshal(dataSource)
+	if err != nil {
+		// handle error
+		return err
+	}
+	w.Write(depsdata)
+	//fmt.Printf("%v", utils.A)
+	/*resp2, _, err1 := utils.Call("GET", "/apis/federation/v1beta1/clusters", "10.103.240.130:8001", nil)
+	if err1 != nil {
+		// handle error
+		return err1
+	}
+	body2, err2 := ioutil.ReadAll(resp2)
+	if err2 != nil {
+		// handle error
+		return err2
+	}
+	//fmt.Printf("body2%s /n code%v", body2, code)
+	w.Write(body2)*/
+
+	//uname := p.ByName("cluster")
+	//io.WriteString(w, "getClusters")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func getCluster(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("getCluster被访问！")
+	var clustername = p.ByName("cluster")
+	//dataSource = append(dataSource, deps.Items...)
+	dataSource, errc := ListCluster(clustername)
+	if errc != nil {
+		// handle error
+		return errc
+	}
+
+	depsdata, err := json.Marshal(dataSource)
+	if err != nil {
+		// handle error
+		return err
+	}
+	w.Write(depsdata)
+	//uname := p.ByName("cluster")
+	return nil
+}
+func getAllNodes(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+	fmt.Println("getNodes被访问！")
+
+	var clusternames = []string{"controller", "k8s-fed"}
+	var dataSource = []Node{}
+	for _, item := range clusternames {
+		data, errl := ListNode(item)
+		if errl != nil {
+			// handle error
+			return errl
+		}
+		dataSource = append(dataSource, data...)
+	}
+
+	nodesdata, err := json.Marshal(dataSource)
+	if err != nil {
+		// handle error
+		return err
+	}
+	w.Write(nodesdata)
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+func getNodes(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+	fmt.Println("getNodes被访问！")
+
+	var clustername = p.ByName("cluster")
+	dataSource, errl := ListNode(clustername)
+	if errl != nil {
+		// handle error
+		return errl
+	}
+	nodesdata, err := json.Marshal(dataSource)
+	if err != nil {
+		// handle error
+		return err
+	}
+	w.Write(nodesdata)
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+func getNode(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("getNode被访问！")
+
+	io.WriteString(w, "getNode")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func getAllApps(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("getAllApps被访问！")
+
+	io.WriteString(w, "getAllApps")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func getApps(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("getApps被访问！")
+
+	io.WriteString(w, "getApps")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func postApp(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("PostApp被访问！")
+
+	io.WriteString(w, "PostApp")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func getNamespaces(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("getNamespaces被访问！")
+	var clustername = p.ByName("cluster")
+
+	dataSource, errd := ListNamespace(clustername)
+	if errd != nil {
+		// handle error
+		return errd
+	}
+	pvcsdata, err := json.Marshal(dataSource)
+	if err != nil {
+		// handle error
+		return err
+	}
+	w.Write(pvcsdata)
+	//w.Write(body) 返回json数据byte数据类型
+
+	return nil
+}
+
+func getTemDeps(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("getTemDeps被访问！")
+
+	io.WriteString(w, "getTemDeps")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func pauseDeps(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("pauseDeps被访问！")
+
+	io.WriteString(w, "pauseDeps")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func resumeDeps(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("resumeDeps被访问！")
+
+	io.WriteString(w, "resumeDeps")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func getConfigMaps(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("getConfigMaps被访问！")
+	var clustername = p.ByName("cluster")
+	dataSource, errc := ListConfigMap(clustername)
+	if errc != nil {
+		// handle error
+		return errc
+	}
+
+	depsdata, err := json.Marshal(dataSource)
+	if err != nil {
+		// handle error
+		return err
+	}
+	w.Write(depsdata)
+	return nil
+}
+func getConfigMapsbyNm(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("getConfigMapsbyNm被访问！")
+	var clustername = p.ByName("cluster")
+	var namespace = p.ByName("namespace")
+	dataSource, errc := ListConfigMapbyNm(namespace, clustername)
+
+	if errc != nil {
+		// handle error
+		return errc
+	}
+
+	depsdata, err := json.Marshal(dataSource)
+	if err != nil {
+		// handle error
+		return err
+	}
+	w.Write(depsdata)
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func getTemRes(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	//从configMap 获取模板资源数据 可以设置"type"="temRes"获取config中模板资源
+	fmt.Println("getTemRes被访问！")
+	io.WriteString(w, "getTemRes")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func getIngs(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Println("getIngs被访问！")
+	/*ings := &deployment.Deployments{} //声明结构体
+	var clustername = p.ByName("cluster")
+	if err := ings.List(clustername + ":8080"); err != nil {
+		return err
+	}
+	//dataSource = append(dataSource, deps.Items...)
+	dataSource := []Ingress{}*/
+
+	io.WriteString(w, "getIngs")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func getSvcs(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("getSvcs被访问！")
+	svcs := &service.Services{} //声明结构体
+	var clustername = p.ByName("cluster")
+	if err := svcs.List(clustername + ":8080"); err != nil {
+		return err
+	}
+
+	//dataSource = append(dataSource, deps.Items...)
+	dataSource := []Service{}
+	for _, item := range svcs.Items {
+		var svc = Service{}
+		var ports = []SVCPort{}
+		var labels = []Label{}
+		var externalip []string
+		svc.Name = item.Meta.Name
+		svc.Namespace = item.Meta.Namespace
+		svc.Createtime = item.Meta.CreationTimeStamp
+		svc.Type = item.Spe.Type
+
+		for _, p := range item.Spe.Ports {
+			var port SVCPort
+			port.Name = p.Name
+			port.Port = p.Port
+			port.Protocol = p.Protocol
+			port.Targetport = p.TargetPort
+			port.Nodeport = p.NodePort
+			ports = append(ports, port)
+		}
+		svc.Ports = ports
+
+		for k, v := range item.Meta.Labels {
+			var l Label
+			l.Name = k
+			l.Value = v
+			labels = append(labels, l)
+		}
+		svc.Label = labels
+
+		for _, item := range item.Spe.ExternalIPs {
+
+			externalip = append(externalip, item)
+		}
+		svc.Externalip = externalip
+		svc.Target = item.Spe.Selector
+
+		var workloads []string
+		//deps, _ := ListDeps(clustername)
+		deps := &deployment.Deployments{} //声明结构体
+		if err := deps.List(clustername + ":8080"); err != nil {
+			return err
+		}
+		/*if svc.Target == nil {
+			fmt.Printf("%v", svc.Target)
+			fmt.Printf("\n %v", svc.Name)
+		}*/
+		for _, item := range deps.Items {
+			var labels = item.Meta.Labels
+			var flag = true
+			var loop = false //判断是否存在target
+			for k := range svc.Target {
+				loop = true
+				if svc.Target[k] != labels[k] {
+					flag = false
+				}
+			}
+			if flag && loop {
+				workloads = append(workloads, item.Meta.Name)
+			}
+		}
+		svc.Workload = workloads
+
+		dataSource = append(dataSource, svc)
+
+	}
+
+	svcsdata, err := json.Marshal(dataSource)
+	if err != nil {
+		// handle error
+		return err
+	}
+	w.Write(svcsdata)
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func getPVCs(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("getPVCs被访问！")
+	var clustername = p.ByName("cluster")
+
+	/*pvcs := &pvc.Pvcs{} //声明结构体
+	if err := pvcs.List(clustername + ":8080"); err != nil {
+		return err
+	}
+
+	//dataSource = append(dataSource, deps.Items...)
+	dataSource := []PVC{}
+	for _, item := range pvcs.Items {
+		var pvc = PVC{}
+
+		pvc.Name = item.Meta.Name
+		pvc.Namespace = item.Meta.Namespace
+		pvc.Status = item.Status.Phase
+		pvc.Size = item.Spe.Resources.Requests.Storage
+		pvc.Storageclass = item.Spe.StorageClassName
+		pvc.Volume = item.Spe.VolumeName
+		pvc.Createtime = item.Meta.CreationTimeStamp
+		pvc.Accessmodes = item.Spe.AccessModes
+
+		dataSource = append(dataSource, pvc)
+	}*/
+	dataSource, errd := ListPVC(clustername)
+	if errd != nil {
+		// handle error
+		return errd
+	}
+	pvcsdata, err := json.Marshal(dataSource)
+	if err != nil {
+		// handle error
+		return err
+	}
+	w.Write(pvcsdata)
+	return nil
+}
+
+func getPVs(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("getPVs被访问！")
+
+	var clustername = p.ByName("cluster")
+
+	dataSource, errd := ListPV(clustername)
+	if errd != nil {
+		// handle error
+		return errd
+	}
+	pvsdata, err := json.Marshal(dataSource)
+	if err != nil {
+		// handle error
+		return err
+	}
+	w.Write(pvsdata)
+	return nil
+}
+
+func getSCs(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("getSCs被访问！")
+
+	io.WriteString(w, "getSCs")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func pauseNodes(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("pauseNodes被访问！")
+
+	io.WriteString(w, "pauseNodes")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func resumeNodes(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("resumeNodes被访问！")
+
+	io.WriteString(w, "resumeNodes")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func drainNodes(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("drainNodes被访问！")
+
+	io.WriteString(w, "drainNodes")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func getUsers(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("getUsers被访问！")
+
+	io.WriteString(w, "getUsers")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func pauseUsers(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("pauseUsers被访问！")
+
+	io.WriteString(w, "pauseUsers")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func resumeUsers(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("resumeUsers被访问！")
+
+	io.WriteString(w, "resumeUsers")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func postDep(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("postDep被访问！")
+	var clustername = p.ByName("cluster")
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	var dep = &Deployment{}
+	if err := json.Unmarshal(data, dep); err != nil {
+		return err
+	}
+	/*datas, errj := json.Marshal(dep)
+	if errj != nil {
+		return errj
+	}
+	w.Write(datas)*/
+
+	_, errc := CreateDep(*dep, clustername)
+
+	if errc != nil {
+		sendErrorResponse(w, ErrorCreate)
+		return errc
+	}
+	//w.Write(body)
+	sendNormalResponse(w, NormalOp)
+	return nil
+}
+
+func potTemDep(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("potTemDep被访问！")
+
+	io.WriteString(w, "potTemDep")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func postTemRes(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("postTemRes被访问！")
+
+	io.WriteString(w, "postTemRes")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func postIng(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("postIng被访问！")
+
+	io.WriteString(w, "postIng")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func postSvc(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("postSvc被访问！")
+
+	io.WriteString(w, "postSvc")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func postPVC(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("postPVC被访问！")
+
+	io.WriteString(w, "postPVC")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func postPV(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("postPV被访问！")
+
+	io.WriteString(w, "postPV")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func postSC(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("postSC被访问！")
+
+	io.WriteString(w, "postSC")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func postCluster(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("postCluster被访问！")
+
+	io.WriteString(w, "postCluster")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func postNamespace(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("postNamespace被访问！")
+
+	io.WriteString(w, "postNamespace")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func postUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("postUser被访问！")
+
+	io.WriteString(w, "postUser")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func userLogin(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("userLogin被访问！")
+
+	io.WriteString(w, "userLogin")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func userLogout(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("userLogout被访问！")
+
+	io.WriteString(w, "userLogout")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func deleteApp(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("deleteApp被访问！")
+
+	io.WriteString(w, "deleteApp")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func deleteDep(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("deleteDep被访问！")
+	var clustername = p.ByName("cluster")
+	var namespace = p.ByName("namespace")
+	var name = p.ByName("deployment")
+
+	_, err := DeleteDep(clustername, namespace, name)
+
+	if err != nil {
+		sendErrorResponse(w, ErrorDelete)
+		return err
+	}
+	sendNormalResponse(w, NormalOp)
+	return nil
+}
+
+func deleteApps(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("deleteApps被访问！")
+
+	io.WriteString(w, "deleteApps")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func deleteDeps(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("deleteDeps被访问！")
+	var clustername = p.ByName("cluster")
+	var jsondata = r.FormValue("data")
+	//fmt.Print(jsondata)
+	var datas = &MetaDatas{}
+	errj := json.Unmarshal([]byte(jsondata), datas)
+	if errj != nil {
+		sendErrorResponse(w, ErrorDelete)
+		return errj
+	}
+	//var flag = false
+	for _, item := range datas.Items {
+		_, err := DeleteDep(clustername, item.Namespace, item.Name)
+		if err != nil {
+			//io.WriteString(w, "wrong")
+			sendErrorResponse(w, ErrorDelete)
+			return err
+		}
+		//w.Write(body)
+	}
+	sendNormalResponse(w, NormalOp)
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func deleteTemRes(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("deleteTemRes被访问！")
+
+	io.WriteString(w, "deleteTemRes")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func deleteIngs(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("deleteIngs被访问！")
+
+	io.WriteString(w, "deleteIngs")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func deleteSvcs(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("deleteSvcs被访问！")
+	var clustername = p.ByName("cluster")
+	var jsondata = r.FormValue("data")
+	//fmt.Print(jsondata)
+	var datas = &MetaDatas{}
+	errj := json.Unmarshal([]byte(jsondata), datas)
+	if errj != nil {
+		sendErrorResponse(w, ErrorDelete)
+		return errj
+	}
+	//var flag = false
+	for _, item := range datas.Items {
+		_, err := DeleteSvc(clustername, item.Namespace, item.Name)
+		if err != nil {
+			//io.WriteString(w, "wrong")
+			sendErrorResponse(w, ErrorDelete)
+			return err
+		}
+		//w.Write(body)
+	}
+	sendNormalResponse(w, NormalOp)
+	//w.Write("success")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func deletePVCs(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("deletePVCs被访问！")
+	var clustername = p.ByName("cluster")
+	var jsondata = r.FormValue("data")
+	//fmt.Print(jsondata)
+	var datas = &MetaDatas{}
+	errj := json.Unmarshal([]byte(jsondata), datas)
+	if errj != nil {
+		sendErrorResponse(w, ErrorDelete)
+		return errj
+	}
+	//var flag = false
+	for _, item := range datas.Items {
+		_, err := DeletePVC(clustername, item.Namespace, item.Name)
+		if err != nil {
+			//io.WriteString(w, "wrong")
+			sendErrorResponse(w, ErrorDelete)
+			return err
+		}
+		//w.Write(body)
+	}
+	sendNormalResponse(w, NormalOp)
+	return nil
+}
+
+func deletePVs(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("deletePVs被访问！")
+
+	var clustername = p.ByName("cluster")
+	var jsondata = r.FormValue("data")
+	//fmt.Print(jsondata)
+	var datas = &MetaDatas{}
+	errj := json.Unmarshal([]byte(jsondata), datas)
+	if errj != nil {
+		sendErrorResponse(w, ErrorDelete)
+		return errj
+	}
+	//var flag = false
+	for _, item := range datas.Items {
+		_, err := DeletePV(clustername, item.Name)
+		if err != nil {
+			//io.WriteString(w, "wrong")
+			sendErrorResponse(w, ErrorDelete)
+			return err
+		}
+		//w.Write(body)
+	}
+	sendNormalResponse(w, NormalOp)
+	return nil
+}
+
+func deleteSCs(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("deleteSCs被访问！")
+
+	io.WriteString(w, "deleteSCs")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func deleteNodes(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("deleteNodes被访问！")
+
+	io.WriteString(w, "deleteNodes")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func deleteClusters(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("deleteClusters被访问！")
+
+	//var clustername = p.ByName("cluster")
+	var jsondata = r.FormValue("data")
+	//fmt.Print(jsondata)
+	var datas = &MetaDatas{}
+	errj := json.Unmarshal([]byte(jsondata), datas)
+	if errj != nil {
+		sendErrorResponse(w, ErrorDelete)
+		return errj
+	}
+	//var flag = false
+	for _, item := range datas.Items {
+		_, err := DeleteCluster(item.Name)
+		if err != nil {
+			//io.WriteString(w, "wrong")
+			sendErrorResponse(w, ErrorDelete)
+			return err
+		}
+		//w.Write(body)
+	}
+	sendNormalResponse(w, NormalOp)
+	return nil
+}
+
+func deleteNamespaces(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("deleteNamespaces被访问！")
+
+	var clustername = p.ByName("cluster")
+	var jsondata = r.FormValue("data")
+	//fmt.Print(jsondata)
+	var datas = &MetaDatas{}
+	errj := json.Unmarshal([]byte(jsondata), datas)
+	if errj != nil {
+		sendErrorResponse(w, ErrorDelete)
+		return errj
+	}
+	//var flag = false
+	for _, item := range datas.Items {
+		_, err := DeleteNamespace(clustername, item.Name)
+		if err != nil {
+			//io.WriteString(w, "wrong")
+			sendErrorResponse(w, ErrorDelete)
+			return err
+		}
+		//w.Write(body)
+	}
+	sendNormalResponse(w, NormalOp)
+	return nil
+}
+
+func deleteUsers(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("deleteUsers被访问！")
+
+	io.WriteString(w, "deleteUsers")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+func deleteConfigMaps(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("deleteConfigMaps被访问！")
+	var clustername = p.ByName("cluster")
+	var jsondata = r.FormValue("data")
+	//fmt.Print(jsondata)
+	var datas = &MetaDatas{}
+	errj := json.Unmarshal([]byte(jsondata), datas)
+	if errj != nil {
+		sendErrorResponse(w, ErrorDelete)
+		return errj
+	}
+	//var flag = false
+	for _, item := range datas.Items {
+		_, err := DeleteConfigMap(clustername, item.Namespace, item.Name)
+		if err != nil {
+			//io.WriteString(w, "wrong")
+			sendErrorResponse(w, ErrorDelete)
+			return err
+		}
+		//w.Write(body)
+	}
+	sendNormalResponse(w, NormalOp)
+	//w.Write("success")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func updateApp(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("updateApp被访问！")
+
+	io.WriteString(w, "updateApp")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func rollbackApp(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("rollbackApp被访问！")
+
+	io.WriteString(w, "rollbackApp")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func updateDep(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("updateDep被访问！")
+
+	io.WriteString(w, "updateDep")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func rollbackDep(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("rollbackDep被访问！")
+
+	io.WriteString(w, "rollbackDep")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func updateTemRes(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("updateTemRes被访问！")
+
+	io.WriteString(w, "updateTemRes")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func updateIng(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("updateIng被访问！")
+
+	io.WriteString(w, "updateIng")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func updateSvc(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("updateSvc被访问！")
+
+	io.WriteString(w, "updateSvc")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func updatePV(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("updatePV被访问！")
+
+	io.WriteString(w, "updatePV")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func updateSC(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("updateSC被访问！")
+
+	io.WriteString(w, "updateSC")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func updateNode(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("updateNode被访问！")
+
+	io.WriteString(w, "updateNode")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func updateCluster(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("updateCluster被访问！")
+
+	io.WriteString(w, "updateCluster")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func updateUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("updateUser被访问！")
+
+	io.WriteString(w, "updateUser")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
