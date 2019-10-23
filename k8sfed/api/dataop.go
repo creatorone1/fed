@@ -177,6 +177,81 @@ func ListDeps(clustername string) ([]Deployment, error) {
 	}*/
 	return dataSource, nil
 }
+func ListSvc(clustername string) ([]Service, error) {
+	svcs := &service.Services{} //声明结构体
+	if err := svcs.List(clustername + ":8080"); err != nil {
+		return nil, err
+	}
+
+	//dataSource = append(dataSource, deps.Items...)
+	dataSource := []Service{}
+	for _, item := range svcs.Items {
+		var svc = Service{}
+		var ports = []SVCPort{}
+		var labels = []Label{}
+		var externalip []string
+		svc.Name = item.Meta.Name
+		svc.Namespace = item.Meta.Namespace
+		svc.Createtime = item.Meta.CreationTimeStamp
+		svc.Type = item.Spe.Type
+
+		for _, p := range item.Spe.Ports {
+			var port SVCPort
+			port.Name = p.Name
+			port.Port = p.Port
+			port.Protocol = p.Protocol
+			port.Targetport = p.TargetPort
+			port.Nodeport = p.NodePort
+			ports = append(ports, port)
+		}
+		svc.Ports = ports
+
+		for k, v := range item.Meta.Labels {
+			var l Label
+			l.Name = k
+			l.Value = v
+			labels = append(labels, l)
+		}
+		svc.Label = labels
+
+		for _, item := range item.Spe.ExternalIPs {
+			externalip = append(externalip, item)
+		}
+		svc.Externalip = externalip
+		svc.Target = item.Spe.Selector
+
+		var workloads []string
+		//deps, _ := ListDeps(clustername)
+		deps := &deployment.Deployments{} //声明结构体
+		if err := deps.List(clustername + ":8080"); err != nil {
+			return nil, err
+		}
+		/*if svc.Target == nil {
+			fmt.Printf("%v", svc.Target)
+			fmt.Printf("\n %v", svc.Name)
+		}*/
+		for _, item := range deps.Items {
+			var labels = item.Meta.Labels
+			var flag = true
+			var loop = false //判断是否存在target
+			for k := range svc.Target {
+				loop = true
+				if svc.Target[k] != labels[k] {
+					flag = false
+				}
+			}
+			if flag && loop {
+				workloads = append(workloads, item.Meta.Name)
+			}
+		}
+		svc.Workload = workloads
+
+		dataSource = append(dataSource, svc)
+
+	}
+	//fmt.Print(dataSource)
+	return dataSource, nil
+}
 func ListPV(clustername string) ([]PV, error) {
 	pvs := &pv.Pvs{} //声明结构体
 	if err := pvs.List(clustername + ":8080"); err != nil {
@@ -938,13 +1013,256 @@ func CreateDep(dep Deployment, clustername string) ([]byte, error) {
 	/* end dep spe  */
 	var newdep = &deployment.Deployment{
 		Kind:       "Deployment",
-		ApiVersion: "apps/v1beta1",
+		ApiVersion: "apps/v1beta1", //对于联邦应该是 extensions/v1beta1
 		Meta:       depmeta,
 		Spe:        depspe,
 	}
 	//datas, _ := json.Marshal(newdep)
 	//fmt.Printf("%s", datas)
 	body, _, err := cluster.ReadBody(newdep.Create(clustername + ":8080"))
+	if err != nil {
+		return body, err
+	}
+	return body, nil
+}
+func CreateSvc(svc Service, clustername string) ([]byte, error) {
+	var labels = svc.Label
+	var mplabels map[string]string = make(map[string]string)
+	//mplabels["app"] = svc.Name
+	for _, label := range labels {
+		mplabels[label.Name] = label.Value
+	}
+
+	var svcmeta = &cluster.Metadata{
+		Name:      svc.Name,
+		Namespace: svc.Namespace,
+		Labels:    mplabels,
+	}
+	/*svc spe begin*/
+	var svcports []*service.Port
+	for _, item := range svc.Ports {
+		var port = &service.Port{
+			Name:       item.Name,
+			Protocol:   item.Protocol,
+			Port:       item.Port,
+			TargetPort: item.Targetport,
+			NodePort:   item.Nodeport,
+		}
+		svcports = append(svcports, port)
+	}
+	var svcselector = svc.Target
+	/*for k, v := range svc.Target {
+		svcselector[k] = v
+	}*/
+	var svctype = svc.Type
+	var exip = svc.Externalip
+	var svcspe = &service.Spec{
+		Ports:       svcports,
+		Selector:    svcselector,
+		Type:        svctype,
+		ExternalIPs: exip,
+	}
+	/* end svc spe  */
+	var newsvc = &service.Service{
+		Kind:       "Service",
+		ApiVersion: "v1",
+		Meta:       svcmeta,
+		Spe:        svcspe,
+	}
+	//datas, _ := json.Marshal(newdep)
+	//fmt.Printf("%s", datas)
+	body, _, err := cluster.ReadBody(newsvc.Create(clustername + ":8080"))
+	if err != nil {
+		return body, err
+	}
+	return body, nil
+}
+func CreatePV(p PV, clustername string) ([]byte, error) {
+
+	var pvmeta = &cluster.Metadata{
+		Name: p.Name,
+	}
+	/*svc spe begin*/
+	var capacity = &pv.Resource{}
+	capacity.Storage = p.Capacity
+	var nfs = &pv.NFS{
+		Server: p.Server,
+		Path:   p.Path,
+	}
+	var accessModes = p.Accessmodes
+	var storageClassName = p.Storageclass
+	var pvspe = &pv.Spec{
+		Capacity:         capacity,
+		Nfs:              nfs,
+		AccessModes:      accessModes,
+		StorageClassName: storageClassName,
+	}
+	/* end pv spe  */
+	var newpv = &pv.Pv{
+		Kind:       "PersistentVolume",
+		ApiVersion: "v1",
+		Meta:       pvmeta,
+		Spe:        pvspe,
+	}
+	//datas, _ := json.Marshal(newdep)
+	//fmt.Printf("%s", datas)
+	body, _, err := cluster.ReadBody(newpv.Create(clustername + ":8080"))
+	if err != nil {
+		return body, err
+	}
+	return body, nil
+}
+func CreatePvc(pvc PVC, clustername string) ([]byte, error) {
+	var labels = svc.Label
+	var mplabels map[string]string = make(map[string]string)
+	//mplabels["app"] = svc.Name
+	for _, label := range labels {
+		mplabels[label.Name] = label.Value
+	}
+
+	var svcmeta = &cluster.Metadata{
+		Name:      svc.Name,
+		Namespace: svc.Namespace,
+		Labels:    mplabels,
+	}
+	/*svc spe begin*/
+	var svcports []*service.Port
+	for _, item := range svc.Ports {
+		var port = &service.Port{
+			Name:       item.Name,
+			Protocol:   item.Protocol,
+			Port:       item.Port,
+			TargetPort: item.Targetport,
+			NodePort:   item.Nodeport,
+		}
+		svcports = append(svcports, port)
+	}
+	var svcselector = svc.Target
+	/*for k, v := range svc.Target {
+		svcselector[k] = v
+	}*/
+	var svctype = svc.Type
+	var exip = svc.Externalip
+	var svcspe = &service.Spec{
+		Ports:       svcports,
+		Selector:    svcselector,
+		Type:        svctype,
+		ExternalIPs: exip,
+	}
+	/* end svc spe  */
+	var newsvc = &service.Service{
+		Kind:       "Service",
+		ApiVersion: "v1",
+		Meta:       svcmeta,
+		Spe:        svcspe,
+	}
+	//datas, _ := json.Marshal(newdep)
+	//fmt.Printf("%s", datas)
+	body, _, err := cluster.ReadBody(newsvc.Create(clustername + ":8080"))
+	if err != nil {
+		return body, err
+	}
+	return body, nil
+}
+func CreateConfigMap(pvc PVC, clustername string) ([]byte, error) {
+	var labels = svc.Label
+	var mplabels map[string]string = make(map[string]string)
+	//mplabels["app"] = svc.Name
+	for _, label := range labels {
+		mplabels[label.Name] = label.Value
+	}
+
+	var svcmeta = &cluster.Metadata{
+		Name:      svc.Name,
+		Namespace: svc.Namespace,
+		Labels:    mplabels,
+	}
+	/*svc spe begin*/
+	var svcports []*service.Port
+	for _, item := range svc.Ports {
+		var port = &service.Port{
+			Name:       item.Name,
+			Protocol:   item.Protocol,
+			Port:       item.Port,
+			TargetPort: item.Targetport,
+			NodePort:   item.Nodeport,
+		}
+		svcports = append(svcports, port)
+	}
+	var svcselector = svc.Target
+	/*for k, v := range svc.Target {
+		svcselector[k] = v
+	}*/
+	var svctype = svc.Type
+	var exip = svc.Externalip
+	var svcspe = &service.Spec{
+		Ports:       svcports,
+		Selector:    svcselector,
+		Type:        svctype,
+		ExternalIPs: exip,
+	}
+	/* end svc spe  */
+	var newsvc = &service.Service{
+		Kind:       "Service",
+		ApiVersion: "v1",
+		Meta:       svcmeta,
+		Spe:        svcspe,
+	}
+	//datas, _ := json.Marshal(newdep)
+	//fmt.Printf("%s", datas)
+	body, _, err := cluster.ReadBody(newsvc.Create(clustername + ":8080"))
+	if err != nil {
+		return body, err
+	}
+	return body, nil
+}
+func CreateNamespace(svc Service, clustername string) ([]byte, error) {
+	var labels = svc.Label
+	var mplabels map[string]string = make(map[string]string)
+	//mplabels["app"] = svc.Name
+	for _, label := range labels {
+		mplabels[label.Name] = label.Value
+	}
+
+	var svcmeta = &cluster.Metadata{
+		Name:      svc.Name,
+		Namespace: svc.Namespace,
+		Labels:    mplabels,
+	}
+	/*svc spe begin*/
+	var svcports []*service.Port
+	for _, item := range svc.Ports {
+		var port = &service.Port{
+			Name:       item.Name,
+			Protocol:   item.Protocol,
+			Port:       item.Port,
+			TargetPort: item.Targetport,
+			NodePort:   item.Nodeport,
+		}
+		svcports = append(svcports, port)
+	}
+	var svcselector = svc.Target
+	/*for k, v := range svc.Target {
+		svcselector[k] = v
+	}*/
+	var svctype = svc.Type
+	var exip = svc.Externalip
+	var svcspe = &service.Spec{
+		Ports:       svcports,
+		Selector:    svcselector,
+		Type:        svctype,
+		ExternalIPs: exip,
+	}
+	/* end svc spe  */
+	var newsvc = &service.Service{
+		Kind:       "Service",
+		ApiVersion: "v1",
+		Meta:       svcmeta,
+		Spe:        svcspe,
+	}
+	//datas, _ := json.Marshal(newdep)
+	//fmt.Printf("%s", datas)
+	body, _, err := cluster.ReadBody(newsvc.Create(clustername + ":8080"))
 	if err != nil {
 		return body, err
 	}

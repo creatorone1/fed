@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/ioutil"
 	"k8sfed/cluster/deployment"
-	"k8sfed/cluster/service"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
@@ -257,6 +256,7 @@ func getAllDeps(w http.ResponseWriter, r *http.Request, p httprouter.Params) err
 	for _, item := range clusters {
 		deps := &deployment.Deployments{} //声明结构体
 		if err := deps.List(item + ":8080"); err != nil {
+			//fmt.print
 			return err
 		}
 		dataSource = append(dataSource, deps.Items...)
@@ -339,7 +339,8 @@ func getAllNodes(w http.ResponseWriter, r *http.Request, p httprouter.Params) er
 		data, errl := ListNode(item)
 		if errl != nil {
 			// handle error
-			return errl
+			fmt.Print(errl)
+			//return errl
 		}
 		dataSource = append(dataSource, data...)
 	}
@@ -520,6 +521,7 @@ func getIngs(w http.ResponseWriter, r *http.Request, p httprouter.Params) error 
 	return nil
 }
 
+/**
 func getSvcs(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 
 	fmt.Println("getSvcs被访问！")
@@ -573,10 +575,10 @@ func getSvcs(w http.ResponseWriter, r *http.Request, p httprouter.Params) error 
 		if err := deps.List(clustername + ":8080"); err != nil {
 			return err
 		}
-		/*if svc.Target == nil {
-			fmt.Printf("%v", svc.Target)
-			fmt.Printf("\n %v", svc.Name)
-		}*/
+		//if svc.Target == nil {
+		//	fmt.Printf("%v", svc.Target)
+		//	fmt.Printf("\n %v", svc.Name)
+		//}
 		for _, item := range deps.Items {
 			var labels = item.Meta.Labels
 			var flag = true
@@ -605,8 +607,26 @@ func getSvcs(w http.ResponseWriter, r *http.Request, p httprouter.Params) error 
 	w.Write(svcsdata)
 	//w.Write(body) 返回json数据byte数据类型
 	return nil
-}
+}*/
+func getSvcs(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 
+	fmt.Println("getSvcs被访问！")
+
+	var clustername = p.ByName("cluster")
+	dataSource, errs := ListSvc(clustername)
+	if errs != nil {
+		// handle error
+		return errs
+	}
+	svcsdata, err := json.Marshal(dataSource)
+	if err != nil {
+		// handle error
+		return err
+	}
+	w.Write(svcsdata)
+
+	return nil
+}
 func getPVCs(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 
 	fmt.Println("getPVCs被访问！")
@@ -789,8 +809,30 @@ func postIng(w http.ResponseWriter, r *http.Request, p httprouter.Params) error 
 func postSvc(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 
 	fmt.Println("postSvc被访问！")
+	var clustername = p.ByName("cluster")
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	var svc = &Service{}
+	if err := json.Unmarshal(data, svc); err != nil {
+		return err
+	}
+	/*datas, errj := json.Marshal(svc)
+	if errj != nil {
+		return errj
+	}
+	w.Write(datas)*/
 
-	io.WriteString(w, "postSvc")
+	_, errc := CreateSvc(*svc, clustername)
+
+	if errc != nil {
+		sendErrorResponse(w, ErrorCreate)
+		return errc
+	}
+	//w.Write(body)
+	sendNormalResponse(w, NormalOp)
+
 	//w.Write(body) 返回json数据byte数据类型
 	return nil
 }
@@ -808,8 +850,30 @@ func postPV(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 
 	fmt.Println("postPV被访问！")
 
-	io.WriteString(w, "postPV")
-	//w.Write(body) 返回json数据byte数据类型
+	var clustername = p.ByName("cluster")
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	var pv = &PV{}
+	if err := json.Unmarshal(data, pv); err != nil {
+		return err
+	}
+	/*datas, errj := json.Marshal(pv)
+	if errj != nil {
+		return errj
+	}
+	w.Write(datas)*/
+
+	_, errp := CreatePV(*pv, clustername)
+
+	if errp != nil {
+		sendErrorResponse(w, ErrorCreate)
+		return errp
+	}
+	//w.Write(body)
+	sendNormalResponse(w, NormalOp)
+
 	return nil
 }
 
