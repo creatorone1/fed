@@ -20,8 +20,10 @@ class CreateWL extends React.Component {
     }
     componentWillUnmount(){
       //console.log('CreateWL destroy')
+       
     }
 
+    
     showModal = () => {
       const { form } = this.props;
       form.resetFields(); 
@@ -55,26 +57,61 @@ class CreateWL extends React.Component {
           const { name,podsnum,image,namespace,
             keys,labelkeys,portkeys,env_label,value
             , portnum, porttype,
-            cpurequst,cpulimit,memoryrequst,memorylimit,gpurequst,
+            cpurequest,cpulimit,memoryrequest,memorylimit,gpurequest,
             nodename
             } = values;  
-          console.log('env_label name :', keys.map(key => env_label[key]));
+        //  console.log('env_label name :', keys.map(key => env_label[key]));
+         var dep = new Deployment(values)
+         console.log('dep:',JSON.stringify(dep))
+            
           
-          //成功了则关闭弹窗且初始化
-          const { form } = this.props; 
-          form.resetFields();  //重置表单
-          id=0;
-          this.setState({
-            visible: false, 
-            advanced:false,
-            schedule:''
-          });
+          fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/deployment',{
+            method:'POST',
+            mode: 'cors', 
+            body:JSON.stringify(dep)
+          }).then((response) => {
+              console.log('response:',response.ok)
+              return response.json();
+          }).then((data) => {
+              console.log('data:',data)
+  
+              /*this.setState({ //表格选中状态清空
+                  selectedRowKeys:[],
+                  selectedRows:null,
+                  dataSource:data
+              })*/
+               //成功了则关闭弹窗且初始化
+              const { form } = this.props; 
+              form.resetFields();  //重置表单
+              id=0;
+              this.props.statechange()//创建成功刷新数据
+              this.setState({
+                visible: false, 
+                advanced:false,
+                schedule:''
+              });
+              return data;
+          }).catch( (e)=> {  
+            //成功了则关闭弹窗且初始化
+              const { form } = this.props; 
+              form.resetFields();  //重置表单
+              id=0;
+              this.setState({
+                visible: false, 
+                advanced:false,
+                schedule:''
+              });
+              console.log(e);
+          }) 
+
+
+           
         }
         else{ //否则报错 
           const { name,podsnum,image,namepace,
             keys,labelkeys,portkeys,env_label,value
             , portnum, porttype,
-            cpurequst,cpulimit,memoryrequst,memorylimit,gpurequst,
+            cpurequest,cpulimit,memoryrequest,memorylimit,gpurequest,
             nodename
             } = values;  
           console.log(' values: ', values);   
@@ -83,7 +120,7 @@ class CreateWL extends React.Component {
       });
     }
     
-    handleConfig =()=>{ //点击确认按钮
+    handleConfig =()=>{ //点击生成配置模板按钮
      
       this.props.form.validateFields((err, values) => {
         if (!err) {   //如果没有错则传输数据 
@@ -94,26 +131,58 @@ class CreateWL extends React.Component {
           const { name,podsnum,image,namespace,
             keys,labelkeys,portkeys,env_label,value
             , portnum, porttype,
-            cpurequst,cpulimit,memoryrequst,memorylimit,gpurequst,
+            cpurequest,cpulimit,memoryrequest,memorylimit,gpurequest,
             nodename
             } = values;  
-          console.log('env_label name :', keys.map(key => env_label[key]));
+         // console.log('env_label name :', keys.map(key => env_label[key]));
+        
+
+         var dep = new Deployment(values)
+         console.log('dep:',JSON.stringify(dep)) 
           
-          //成功了则关闭弹窗且初始化
-          const { form } = this.props; 
-          form.resetFields();  //重置表单
-          id=0;
-          this.setState({
-            visible: false, 
-            advanced:false,
-            schedule:''
-          });
+          fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/template/deployment',{
+            method:'POST',
+            mode: 'cors', 
+            body:JSON.stringify(dep)
+          }).then((response) => {
+              console.log('response:',response.ok)
+              return response.json();
+          }).then((data) => {
+              console.log('data:',data)
+  
+              /*this.setState({ //表格选中状态清空
+                  selectedRowKeys:[],
+                  selectedRows:null,
+                  dataSource:data
+              })*/
+               //成功了则关闭弹窗且初始化
+              const { form } = this.props; 
+              form.resetFields();  //重置表单
+              id=0;
+              this.setState({
+                visible: false, 
+                advanced:false,
+                schedule:''
+              });
+              return data;
+          }).catch( (e)=> {  
+            //成功了则关闭弹窗且初始化
+              const { form } = this.props; 
+              form.resetFields();  //重置表单
+              id=0;
+              this.setState({
+                visible: false, 
+                advanced:false,
+                schedule:''
+              });
+              console.log(e);
+          }) 
         }
         else{ //否则报错 
           const { name,podsnum,image,namepace,
             keys,labelkeys,portkeys,env_label,value
             , portnum, porttype,
-            cpurequst,cpulimit,memoryrequst,memorylimit,gpurequst,
+            cpurequest,cpulimit,memoryrequest,memorylimit,gpurequest,
             nodename
             } = values;  
           console.log(' values: ', values);   
@@ -206,7 +275,7 @@ class CreateWL extends React.Component {
         <FormItem 
           label={index === 0 ? '变量' : ''} 
         >
-          {getFieldDecorator(`label[${k}]`, {
+          {getFieldDecorator(`env_label[${k}]`, {
               initialValue:'' ,
               rules: [{
                 required: true,
@@ -453,7 +522,7 @@ class CreateWL extends React.Component {
         <Modal
           title="创建工作负载"
           visible={this.state.visible}
-          
+          onCancel={this.hideModal}
           maskClosable={false}
           destroyOnClose={true}
           
@@ -616,7 +685,7 @@ class CreateWL extends React.Component {
                         wrapperCol={{span:'16'}}
                       >
                        <div style={{  lineHeight:'100%', backgroundColor:'#d9d9d9'  }}>
-                        {getFieldDecorator('cpurequst', { 
+                        {getFieldDecorator('cpurequest', { 
 
                         })(
                            <InputNumber style={{ width: '50%' ,marginRight:'5px' }} 
@@ -652,7 +721,7 @@ class CreateWL extends React.Component {
                         wrapperCol={{span:'16'}}
                       >
                        <div style={{  lineHeight:'100%', backgroundColor:'#d9d9d9'  }}>
-                        {getFieldDecorator('memoryrequst', { 
+                        {getFieldDecorator('memoryrequest', { 
 
                         })(
                           <InputNumber style={{ width: '70%' ,marginRight:'5px' }}
@@ -689,7 +758,7 @@ class CreateWL extends React.Component {
                         wrapperCol={{span:'16'}}
                       >
                         <div style={{  lineHeight:'100%', backgroundColor:'#d9d9d9'  }}> 
-                        {getFieldDecorator('gpurequst', { 
+                        {getFieldDecorator('gpurequest', { 
                         })(
                            <InputNumber style={{ width: '70%' ,marginRight:'5px' }}
                             min={0} 
@@ -786,5 +855,92 @@ class CreateWL extends React.Component {
   //const WrappedDynamicFieldSet = Form.create({ name: 'dynamic_form_item' })(CreateWL);
   export default Form.create()(CreateWL); 
 
+  function Deployment(values) {
+    var node=new Object(); 
+    const { name,podsnum,image,namespace,
+            keys,
+            labelkeys, 
+            env_label, //env与label的name
+            value,   //value
+            
+            portkeys, 
+            portnum, 
+            porttype,
+            cpurequest,cpulimit,memoryrequest,memorylimit,gpurequest,
+            schedule,
+            nodename,
+            nodematchkeys,
+            matchlabel,
+            matchop,
+            matchvalue,
+             
+            } = values;
+    node.name=name;
+    node.namespace=namespace
+    node.image=image
+    node.podsnum=[]
+    node.podsnum[0]=0
+    node.podsnum[1]=podsnum
 
+    var env=[]
+    keys.map(key =>{
+      var e ={
+        name: env_label[key],
+        value:value[key]
+      }
+      env=env.concat(e)
+    })       
+    node.env= env  
+
+    var label=[]
+    labelkeys.map(key =>{
+      var l ={
+        name: env_label[key],
+        value:value[key]
+      }
+      label=label.concat(l)
+    })       
+    node.label= label
+
+    node.schedule=  schedule     
+    if(schedule=="LABEL"){
+        var nodematch=[]
+        nodematchkeys.map(key =>{
+          var nm = {
+            label: matchlabel[key],
+            op:matchop[key],
+            value:matchvalue[key]
+          }
+          nodematch=nodematch.concat(nm)
+        })       
+        node.nodematch= nodematch
+    }
+    if(schedule=="NODE"){
+      node.nodename= nodename
+    }
+
+    var ports=[]
+    portkeys.map(key =>{
+      var p ={
+        containerPort: portnum[key],
+        protocol:porttype[key]
+      }
+      ports=ports.concat(p)
+    })       
+    node.ports= ports
+
+    var request={
+      cpurequest:cpurequest,
+      memoryrequest:memoryrequest,
+      gpurequest:gpurequest
+    }
+    node.request= request
+
+    var limit={
+      cpulimit:cpulimit,
+      memorylimit:memorylimit 
+    }
+    node.limit= limit
+    return node
+}
 

@@ -80,10 +80,22 @@ func (pvc *Pvc) Create(master string) (io.ReadCloser, int, error) {
 	return cluster.Call("POST", "/api/v1/namespaces/"+pvc.Meta.Namespace+"/persistentvolumeclaims", master, pvc)
 }
 
-func (pvc *Pvc) Get(master string) (io.ReadCloser, int, error) {
-	return cluster.Call("GET", "/api/v1/namespaces/"+pvc.Meta.Namespace+"/persistentvolumeclaims/"+pvc.Meta.Name, master, nil)
-}
+func (pvc *Pvc) Get(master string) error {
+	body, _, err := cluster.ReadBody(cluster.Call("GET", "/api/v1/namespaces/"+pvc.Meta.Namespace+"/persistentvolumeclaims/"+pvc.Meta.Name, master, nil))
 
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(body, pvc); err != nil {
+		return err
+	}
+
+	return nil
+}
+func (pvc *Pvc) Replace(master string) (io.ReadCloser, int, error) {
+	return cluster.Call("PUT", "/api/v1/namespaces/"+pvc.Meta.Namespace+"/persistentvolumeclaims/"+pvc.Meta.Name, master, pvc)
+}
 func (pvc *Pvc) Delete(master string) (io.ReadCloser, int, error) {
 	b := cluster.NewBody(0, false)
 	return cluster.Call("DELETE", "/api/v1/namespaces/"+pvc.Meta.Namespace+"/persistentvolumeclaims/"+pvc.Meta.Name, master, b)

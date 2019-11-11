@@ -63,10 +63,10 @@ type Status struct {
 	VolumesAttacheds []*VolumesAttached   `json:"volumesAttached,omitempty"`
 }
 type Spec struct {
-	Unschedulable bool `json:"unschedulable,omitmepty"`
+	Unschedulable bool `json:"unschedulable,omitempty"`
 }
 type Node struct {
-	Kind       string            `json:"kind,omitmepty"`
+	Kind       string            `json:"kind,omitempty"`
 	ApiVersion string            `json:"apiVersion,omitempty"`
 	Meta       *cluster.Metadata `json:"metadata,omitempty"`
 	Spe        Spec              `json:"spec,omitempty"`
@@ -76,8 +76,9 @@ type Node struct {
 func (node *Node) Get(master string) (io.ReadCloser, int, error) {
 	return cluster.Call("GET", "/api/v1/nodes/"+node.Meta.Name, master, nil)
 }
-func (node *Node) Update(master string) (io.ReadCloser, int, error) {
-	return cluster.Call("PATCH", "/api/v1/nodes/"+node.Meta.Name, master, node)
+func (node *Node) Update(master string, data []byte) (io.ReadCloser, int, error) {
+	return cluster.PatchCall("PATCH", "/api/v1/nodes/"+node.Meta.Name, master, data)
+	//return cluster.Call("PATCH", "/api/v1/nodes/"+node.Meta.Name, master, node)
 }
 func (node *Node) Creatwe(master string) (io.ReadCloser, int, error) {
 	return cluster.Call("POST", "/api/v1/nodes", master, node)

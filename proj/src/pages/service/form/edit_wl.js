@@ -85,29 +85,61 @@ class EditWL extends React.Component {
           const { name,podsnum,image,namespace,
             keys,labelkeys,portkeys,env_label,value
             , portnum, porttype,
-            cpurequst,cpulimit,memoryrequst,memorylimit,gpurequst,
+            cpurequest,cpulimit,memoryrequest,memorylimit,gpurequest,
             nodename
             } = values;  
-          console.log('env_label name :', keys.map(key => env_label[key]));
-          
-          //成功了则关闭弹窗且初始化
-          const { form } = this.props; 
-          form.resetFields();  //重置表单
-          id=0;
-          this.setState({
-            visible: false, 
-            advanced:false,
-            schedule:''
-            //dataSource:undefined
-          });
-          //通知父节点关闭弹窗
-          this.props.handleUpdate(false)
+          //console.log('env_label name :', keys.map(key => env_label[key]));
+          var dep = new Deployment(values)
+          console.log('dep:',JSON.stringify(dep))
+             
+
+          fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/namespace/'+namespace+'/deployment/'+name,{
+            method:'PUT',
+            mode: 'cors', 
+            body:JSON.stringify(dep)
+            }).then((response) => {
+                console.log('response:',response.ok)
+                return response.json();
+            }).then((data) => {
+                console.log('data:',data)
+               //成功了则关闭弹窗且初始化
+               const { form } = this.props; 
+               form.resetFields();  //重置表单
+               id=0;
+               this.setState({
+                 visible: false, 
+                 advanced:false,
+                 schedule:''
+                 //dataSource:undefined
+               });
+               //通知父节点关闭弹窗
+               this.props.handleUpdate(false)
+               this.props.statechange()//更新成功刷新数据
+                //this.props.handleUpdate(false,true)
+                return data;
+            }).catch((e)=>{ 
+                 //成功了则关闭弹窗且初始化
+                 const { form } = this.props; 
+                 form.resetFields();  //重置表单
+                 id=0;
+                 this.setState({
+                   visible: false, 
+                   advanced:false,
+                   schedule:''
+                   //dataSource:undefined
+                 });
+                 //通知父节点关闭弹窗
+                 this.props.handleUpdate(false)
+                console.log(e);
+            }) 
+ 
+           
         }
         else{ //否则报错 
           const { name,podsnum,image,namepace,
             keys,labelkeys,portkeys,env_label,value
             , portnum, porttype,
-            cpurequst,cpulimit,memoryrequst,memorylimit,gpurequst,
+            cpurequest,cpulimit,memoryrequest,memorylimit,gpurequest,
             nodename
             } = values;  
           console.log(' values: ', values);   
@@ -543,14 +575,14 @@ class EditWL extends React.Component {
     render() {  
       //console.log(' render dataSource:',this.state.dataSource )
       var dataSource=this.state.dataSource 
-      let  cpurequst,memoryrequst,gpurequst,cpulimit,memorylimit=undefined
+      let  cpurequest,memoryrequest,gpurequest,cpulimit,memorylimit=undefined
       var podsnum
       if(dataSource){ //不为空再获取dataSource的属性值
         if(dataSource.request)//request不空
         {
-          cpurequst=dataSource.request.cpurequst  
-          memoryrequst= dataSource.request.memoryrequst
-          gpurequst= dataSource.request.gpurequst 
+          cpurequest=dataSource.request.cpurequest  
+          memoryrequest= dataSource.request.memoryrequest
+          gpurequest= dataSource.request.gpurequest 
         }
         if(dataSource.limit)//limit不空
         {
@@ -823,8 +855,8 @@ class EditWL extends React.Component {
                         wrapperCol={{span:'16'}}
                       >
                        <div style={{  lineHeight:'100%', backgroundColor:'#d9d9d9'  }}>
-                        {getFieldDecorator('cpurequst', { 
-                            initialValue:cpurequst?cpurequst:undefined
+                        {getFieldDecorator('cpurequest', { 
+                            initialValue:cpurequest?cpurequest:undefined
                         })(
                            <InputNumber style={{ width: '50%' ,marginRight:'5px' }} 
                              min={0}  
@@ -860,8 +892,8 @@ class EditWL extends React.Component {
                         wrapperCol={{span:'16'}}
                       >
                        <div style={{  lineHeight:'100%', backgroundColor:'#d9d9d9'  }}>
-                        {getFieldDecorator('memoryrequst', { 
-                            initialValue:memoryrequst?memoryrequst:undefined
+                        {getFieldDecorator('memoryrequest', { 
+                            initialValue:memoryrequest?memoryrequest:undefined
                         })(
                           <InputNumber style={{ width: '70%' ,marginRight:'5px' }}
                           min={0}   
@@ -897,8 +929,8 @@ class EditWL extends React.Component {
                         wrapperCol={{span:'16'}}
                       >
                         <div style={{  lineHeight:'100%', backgroundColor:'#d9d9d9'  }}> 
-                        {getFieldDecorator('gpurequst', {
-                            initialValue:gpurequst?gpurequst:undefined
+                        {getFieldDecorator('gpurequest', {
+                            initialValue:gpurequest?gpurequest:undefined
                            
                         })(
                            <InputNumber style={{ width: '70%' ,marginRight:'5px' }}
@@ -1001,4 +1033,91 @@ class EditWL extends React.Component {
   export default Form.create()(EditWL); 
 
 
+  function Deployment(values) {
+    var node=new Object(); 
+    const { name,podsnum,image,namespace,
+            keys,
+            labelkeys, 
+            env_label, //env与label的name
+            value,   //value
+            
+            portkeys, 
+            portnum, 
+            porttype,
+            cpurequest,cpulimit,memoryrequest,memorylimit,gpurequest,
+            schedule,
+            nodename,
+            nodematchkeys,
+            matchlabel,
+            matchop,
+            matchvalue,
+             
+            } = values;
+    node.name=name;
+    node.namespace=namespace
+    node.image=image
+    node.podsnum=[]
+    node.podsnum[0]=0
+    node.podsnum[1]=podsnum
 
+    var env=[]
+    keys.map(key =>{
+      var e ={
+        name: env_label[key],
+        value:value[key]
+      }
+      env=env.concat(e)
+    })       
+    node.env= env  
+
+    var label=[]
+    labelkeys.map(key =>{
+      var l ={
+        name: env_label[key],
+        value:value[key]
+      }
+      label=label.concat(l)
+    })       
+    node.label= label
+
+    node.schedule=  schedule     
+    if(schedule=="LABEL"){
+        var nodematch=[]
+        nodematchkeys.map(key =>{
+          var nm = {
+            label: matchlabel[key],
+            op:matchop[key],
+            value:matchvalue[key]
+          }
+          nodematch=nodematch.concat(nm)
+        })       
+        node.nodematch= nodematch
+    }
+    if(schedule=="NODE"){
+      node.nodename= nodename
+    }
+
+    var ports=[]
+    portkeys.map(key =>{
+      var p ={
+        containerPort: portnum[key],
+        protocol:porttype[key]
+      }
+      ports=ports.concat(p)
+    })       
+    node.ports= ports
+
+    var request={
+      cpurequest:cpurequest,
+      memoryrequest:memoryrequest,
+      gpurequest:gpurequest
+    }
+    node.request= request
+
+    var limit={
+      cpulimit:cpulimit,
+      memorylimit:memorylimit 
+    }
+    node.limit= limit
+    return node
+}

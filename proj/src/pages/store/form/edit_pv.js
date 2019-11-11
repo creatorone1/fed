@@ -34,9 +34,9 @@ class EditPV extends React.Component {
         }
         ],
         accessmodes: [
-            { label: '单主机读写', value: 'RWO' },
-            { label: '多主机只读', value: 'ROX' },
-            { label: '多主机读写', value: 'RWX' },
+            { label: '单主机读写', value: 'ReadWriteOnce' },
+            { label: '多主机只读', value: 'ReadOnlyMany' },
+            { label: '多主机读写', value: 'ReadWriteMany' },
         ] 
     }
     componentDidMount(){//初始化数据，只调用一次
@@ -59,12 +59,30 @@ class EditPV extends React.Component {
           this.setState({  
           //这儿 必须是深拷贝，不然会影响传入的值,并且只能初始化这个参数一次，以后的form的set操作不能影响该值
           dataSource:JSON.parse(data) //
-          }) 
+          })
+          this.request(this.props.currentcluster) 
         }
         //console.log('nextProps:',  nextProps) 
         //console.log('nextProps.dataSource:', nextProps.dataSource) 
     }
-  
+    request = (clustername) => { //初始化数据请求
+      fetch('http://localhost:9090/api/cluster/'+clustername+'/scs',{
+          method:'GET'
+          }).then((response) => {
+              console.log('response:',response.ok)
+              return response.json();
+          }).then((data) => {
+              console.log('data:',data) 
+              this.setState({ //表格选中状态清空
+                  selectedRowKeys:[],
+                  selectedRows:null,
+                  SCData:data
+              }) 
+              return data;
+          }).catch((e)=>{
+              console.log(e);
+          })
+  } 
 
  
   
@@ -90,11 +108,36 @@ class EditPV extends React.Component {
                 storageclass,
                 capacity,accessmodes, 
               } = values;  
+
+              var pv = new PV(values)
+              console.log('pv:',JSON.stringify(pv)) 
+                
+              fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/pv/'+name,{
+                method:'PUT',
+                mode: 'cors', 
+                body:JSON.stringify(pv)
+                }).then((response) => {
+                    console.log('response:',response.ok)
+                    return response.json();
+                }).then((data) => {
+                    console.log('data:',data)
+                    //成功了则关闭弹窗且初始化
+                    const { form } = this.props; 
+                    form.resetFields();  //重置表单
+                    this.props.handleUpdate(false)
+                   this.props.statechange()//更新成功刷新数据
+                    return data;
+                }).catch( (e)=>{ 
+                      //成功了则关闭弹窗且初始化
+                      const { form } = this.props; 
+                      form.resetFields();  //重置表单
+                      this.props.handleUpdate(false)
+                     //通知父节点关闭弹窗 
+                    console.log(e);
+                })  
+
+
             
-            //成功了则关闭弹窗且初始化
-            const { form } = this.props; 
-            form.resetFields();  //重置表单
-            this.props.handleUpdate(false)
           }
           else{ //否则报错 
             const { name,podsnum,image,namepace,
@@ -237,7 +280,7 @@ class EditPV extends React.Component {
                             <div style={{  lineHeight:'100%', backgroundColor:'#d9d9d9'  , width: wwidth   }}> 
                             {
                             getFieldDecorator('capacity',{ 
-                            initialValue:parseInt(dataSource.capacity.substring(0,dataSource.capacity.indexOf('G')),10),//初始化  
+                            initialValue:parseFloat(dataSource.capacity.substring(0,dataSource.capacity.indexOf('G')),10),//初始化  
                                 rules:[       //规则数组
                                 {
                                 required:true,
@@ -285,3 +328,21 @@ class EditPV extends React.Component {
 
 
 
+  function PV(values){
+    var pv=new Object(); 
+    const { name,
+             capacity,
+             path,
+             server,
+             storageclass,
+             accessmodes, 
+            } = values;
+    pv.name=name 
+    pv.capacity=capacity+'Gi'
+    pv.path=path
+    pv.server=server
+    pv.storageclass=storageclass
+    pv.accessmodes=accessmodes
+
+    return pv
+}

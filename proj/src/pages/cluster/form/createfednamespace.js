@@ -40,13 +40,44 @@ class CreateFedNamespace extends React.Component {
             //portkeys表示portnum与porttype的key
             const { name, 
               } = values;  
-            
-            //成功了则关闭弹窗且初始化
-            const { form } = this.props; 
-            form.resetFields();  //重置表单
-            this.setState({
-              visible: false, 
-            });
+            var newnm = {
+                name:name
+            }
+            console.log('nmjson',JSON.stringify(newnm))
+              fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/namespace',{
+               method:'POST',
+               mode: 'cors', 
+               body:JSON.stringify(newnm)
+             }).then((response) => {
+                 console.log('response:',response.ok)
+                 return response.json();
+             }).then((data) => {
+                 console.log('data:',data)
+     
+                 /*this.setState({ //表格选中状态清空
+                     selectedRowKeys:[],
+                     selectedRows:null,
+                     dataSource:data
+                 })*/
+                 //成功了则关闭弹窗且初始化
+                 this.props.statechange()
+                 const { form } = this.props; 
+                 form.resetFields();  //重置表单
+                 this.setState({
+                   visible: false, 
+                 });
+                 return data;
+             }).catch( (e)=> {  
+               
+              //成功了则关闭弹窗且初始化
+              const { form } = this.props; 
+              form.resetFields();  //重置表单
+              this.setState({
+                visible: false, 
+              });
+                 console.log(e);
+             }) 
+             
           }
           else{ //否则报错 
             
@@ -72,7 +103,7 @@ class CreateFedNamespace extends React.Component {
         }).then((data) => {
             console.log('data:',data)
             return data;
-        }).catch(function (e) {
+        }).catch((e)=>{
             console.log(e);
         })
     }

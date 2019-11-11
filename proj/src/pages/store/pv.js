@@ -64,25 +64,33 @@ export default class PV extends React.Component {
 
     }
     componentDidMount(){//请求数据
-        //this.request();
+        this.request(this.props.currentcluster);
     }
     componentWillReceiveProps(nextProps){
         //接收参数后更新数据
-
+        this.request(nextProps.currentcluster);
     }
-    request = () => {
-        fetch('url',{
-        method:'GET'
+    request = (clustername) => { //初始化数据请求
+        fetch('http://localhost:9090/api/cluster/'+clustername+'/pvs',{
+        method:'GET',
+        mode: 'cors', 
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
         }).then((data) => {
             console.log('data:',data)
+
+            this.setState({ //表格选中状态清空
+                selectedRowKeys:[],
+                selectedRows:null,
+                dataSource:data
+            })
+             
             return data;
-        }).catch(function (e) {
+        }).catch( (e)=> {  
             console.log(e);
         })
-    }
+    } 
 
     // 删除操作
     handleDelete = (key,text,record )=>{
@@ -94,10 +102,43 @@ export default class PV extends React.Component {
         Modal.confirm({
             title:'确认删除',
             content:'您确认要删除此条数据吗？'+record.name ,
-            onOk:()=>{
-                message.success('删除成功');
-                //发送删除请求
-                this.request();
+            onOk:()=>{ 
+                var datas={
+                    items:[]
+                }  
+                var ditem={
+                        name:record.name,  
+                 }
+                datas.items=datas.items.concat(ditem)
+               
+               // console.log(JSON.stringify(datas))
+                //下面URL的 集群 名称 以后需要替换掉
+                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/pvs?data='+JSON.stringify(datas),{
+                    method:'DELETE',
+                    mode: 'cors', 
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request(this.props.currentcluster);
+                        return data;
+                    }).catch( (e)=> {  
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request(this.props.currentcluster);
+                        console.log(e);
+                    }) 
+                
             }
         })
     }
@@ -117,14 +158,44 @@ export default class PV extends React.Component {
             title:'确认删除',
             content:'您确认要删除这些数据吗？'+this.state.selectedRows.map(item=>item.name) ,
             onOk:()=>{
-                this.setState({  //取消选中行
-                    selectedRowKeys: [ ],  
-                    selectedRows: null
+
+                var datas={
+                    items:[]
+                }  
+                this.state.selectedRows.map(item=>{
+                    var ditem={
+                        name:item.name,  
+                    }
+                    datas.items=datas.items.concat(ditem)
                 })
-                message.success('删除成功');
-                //发送删除请求
-                this.request();
-            }
+               // console.log(JSON.stringify(datas))
+                //下面URL的 集群 名称 以后需要替换掉
+                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/pvs?data='+JSON.stringify(datas),{
+                    method:'DELETE',
+                    mode: 'cors', 
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request(this.props.currentcluster);
+                        return data;
+                    }).catch( (e)=> {  
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request(this.props.currentcluster);
+                        console.log(e);
+                    }) 
+                }
         })
     }
     //搜索输入框响应变化
@@ -138,6 +209,15 @@ export default class PV extends React.Component {
             this.setState({
                 search:false
             })    
+        }
+        if(content!==''){
+            //console.log('this.state.searchname:',this.state.searchname)
+            //console.log(this.state.dataSource.map(item=>item.name.indexOf(this.state.searchname)))
+            this.setState({
+                searchdata:this.state.dataSource.filter(item=>item.name.indexOf(content)!==-1),
+                search:true
+            })
+             
         }
     }
      //点击搜索按钮
@@ -185,6 +265,10 @@ export default class PV extends React.Component {
             this.handleDelete(key, text, record)
         } 
     }; 
+    statechange=()=>{ //创建服务之后回调
+        console.log('refresh!')
+        this.request(this.props.currentcluster)
+    } 
     render(){
         /**考虑加上集群列，表示数据属于哪个集群 */
         const columns=[
@@ -192,6 +276,7 @@ export default class PV extends React.Component {
                 title:'名称',
                 key:'name',
                 dataIndex: 'name',
+                width:"20%"
             },
             {
                 title:'状态',
@@ -212,6 +297,9 @@ export default class PV extends React.Component {
                 title:'容量',
                 key:'capacity',
                 dataIndex: 'capacity',
+                render(text){
+                    return parseFloat(text.substring(0,text.indexOf('G')),10)+'G'
+                }
             },
             {
                 title:'数据卷',
@@ -240,7 +328,15 @@ export default class PV extends React.Component {
                 key:'accessmodes',
                 dataIndex: 'accessmodes',
                 render(abc) {
-                    return abc.map(item=>item+' ') 
+                    var accmap={
+                        'ROX':'ROX',
+                        'RWO':'RWO',
+                        'RWX':'RWX',
+                        'ReadWriteOnce':'RWO',
+                        'ReadOnlyMany': 'ROX',
+                        'ReadWriteMany':'RWX',
+                    }   
+                    return abc.map(item=>accmap[item]+' ') 
                 }
             },
             {
@@ -289,7 +385,7 @@ export default class PV extends React.Component {
                         
                     </Col>
                         <Col span='4' className='Button-right'> 
-                        <CreatePV namespaces={this.props.namespaces} ></CreatePV>
+                        <CreatePV statechange={this.statechange} currentcluster={this.props.currentcluster} namespaces={this.props.namespaces} ></CreatePV>
                     </Col>
                     </Row>
                     <Table  
@@ -298,7 +394,7 @@ export default class PV extends React.Component {
                         columns={columns }  
                         rowClassName={(record,index)=>index%2===0?'table1':'table2'}
                     />
-                    <EditPV dataSource={this.state.operationdata} namespaces={this.props.namespaces} editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}/>
+                    <EditPV statechange={this.statechange} currentcluster={this.props.currentcluster} dataSource={this.state.operationdata} namespaces={this.props.namespaces} editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}/>
                  
                 </div>
                 )

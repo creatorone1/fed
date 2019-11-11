@@ -20,6 +20,7 @@ class ConfigWL extends React.Component {
         dataSource:undefined,
         /***从后台获取configmap */
         configmap:[{
+            filename:'nginx1',
             name:'nginx1',
             status:'running',
             namespace:'default',
@@ -77,7 +78,7 @@ class ConfigWL extends React.Component {
             },],
             request:{
                 cpurequst:100,
-                memoryrequst:96
+                memoryrequest:96
             },
             limit:{
                 cpulimit:200,
@@ -87,6 +88,7 @@ class ConfigWL extends React.Component {
             
         },
         {
+          filename:'nginx2f',  
             name:'nginx2',
             status:'pause',
             namespace:'default',
@@ -125,6 +127,7 @@ class ConfigWL extends React.Component {
                 },]
         },
         {
+          filename:'nginx3',  
             name:'nginx3',
             status:'waiting',
             namespace:'default',
@@ -155,6 +158,7 @@ class ConfigWL extends React.Component {
                 },]
         },
         {
+          filename:'nginx4',  
             name:'nginx4',
             status:'running',
             namespace:'default',
@@ -190,7 +194,7 @@ class ConfigWL extends React.Component {
           //   dataSource:this.props.dataSource 
           // })
           // console.log('this.props.dataSource:', this.props.dataSource)
-
+          this.request('fed')
 
     } 
 
@@ -202,7 +206,33 @@ class ConfigWL extends React.Component {
         
         //console.log('nextProps:',  nextProps) 
         //console.log('nextProps.dataSource:', nextProps.dataSource) 
-    }
+         
+         
+      }
+    request = (clustername) => { //初始化数据请求
+      fetch('http://localhost:9090/api/cluster/'+clustername+'/template/deployments',{
+      method:'GET',
+      mode: 'cors', 
+      }).then((response) => {
+          console.log('response:',response.ok)
+          return response.json();
+      }).then((data) => {
+          console.log('data:',data)
+          var configdatas=[]
+          data.map(item=>{
+            var configdata=JSON.parse(item.configdata.data)
+            configdata.filename=item.name
+            configdatas=configdatas.concat(configdata)
+          })
+          this.setState({ //表格选中状态清空 
+            configmap:configdatas
+          })
+           
+          return data;
+      }).catch( (e)=> {  
+          console.log(e);
+      })
+     } 
   
     showModal = () => {
         const { form } = this.props;
@@ -214,6 +244,7 @@ class ConfigWL extends React.Component {
           schedule:'',
           dataSource:undefined,
         }); 
+        this.request(this.props.currentcluster)
        
       }
  
@@ -242,28 +273,62 @@ class ConfigWL extends React.Component {
           const { name,podsnum,image,namespace,
             keys,labelkeys,portkeys,env_label,value
             , portnum, porttype,
-            cpurequst,cpulimit,memoryrequst,memorylimit,gpurequst,
+            cpurequst,cpulimit,memoryrequest,memorylimit,gpurequst,
             nodename
             } = values;  
           console.log('env_label name :', keys.map(key => env_label[key]));
+          var dep = new Deployment(values)
+          console.log('dep:',JSON.stringify(dep))
+             
+          fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/deployment',{
+            method:'POST',
+            mode: 'cors', 
+            body:JSON.stringify(dep)
+          }).then((response) => {
+              console.log('response:',response.ok)
+              return response.json();
+          }).then((data) => {
+              console.log('data:',data)
+  
+              /*this.setState({ //表格选中状态清空
+                  selectedRowKeys:[],
+                  selectedRows:null,
+                  dataSource:data
+              })*/
+               //成功了则关闭弹窗且初始化
+                const { form } = this.props; 
+                form.resetFields();  //重置表单
+                this.props.statechange()//创建成功刷新数据
+                id=0;
+                this.setState({
+                  visible: false, 
+                  advanced:false,
+                  schedule:''
+                  //dataSource:undefined
+                });
+                //通知父节点关闭弹窗
+              return data;
+          }).catch( (e)=> {  
+             //成功了则关闭弹窗且初始化
+                const { form } = this.props; 
+                form.resetFields();  //重置表单
+                id=0;
+                this.setState({
+                  visible: false, 
+                  advanced:false,
+                  schedule:''
+                  //dataSource:undefined
+                });
+                //通知父节点关闭弹窗
+              console.log(e);
+          }) 
           
-          //成功了则关闭弹窗且初始化
-          const { form } = this.props; 
-          form.resetFields();  //重置表单
-          id=0;
-          this.setState({
-            visible: false, 
-            advanced:false,
-            schedule:''
-            //dataSource:undefined
-          });
-          //通知父节点关闭弹窗
         }
         else{ //否则报错 
           const { name,podsnum,image, 
             keys,labelkeys,portkeys,env_label,value
             , portnum, porttype,
-            cpurequst,cpulimit,memoryrequst,memorylimit,gpurequst,
+            cpurequst,cpulimit,memoryrequest,memorylimit,gpurequst,
             nodename
             } = values;  
           console.log(' values: ', values);   
@@ -702,7 +767,7 @@ class ConfigWL extends React.Component {
         console.log('value',value)
         
         
-        var data=this.state.configmap.filter(item=>item.name==value)
+        var data=this.state.configmap.filter(item=>item.filename==value)
         let datastring=JSON.stringify(data[0])
         let datacopy=JSON.parse(datastring)
         console.log('data',data)
@@ -723,14 +788,14 @@ class ConfigWL extends React.Component {
     render() {  
       //console.log(' render dataSource:',this.state.dataSource )
       var dataSource=this.state.dataSource 
-      let  cpurequst,memoryrequst,gpurequst,cpulimit,memorylimit=undefined
+      let  cpurequst,memoryrequest,gpurequst,cpulimit,memorylimit=undefined
       var podsnum
 
       if(dataSource){ //不为空再获取dataSource的属性值
         if(dataSource.request)//request不空
         {
           cpurequst=dataSource.request.cpurequst  
-          memoryrequst= dataSource.request.memoryrequst
+          memoryrequest= dataSource.request.memoryrequest
           gpurequst= dataSource.request.gpurequst 
         }
         if(dataSource.limit)//limit不空
@@ -851,7 +916,7 @@ class ConfigWL extends React.Component {
           </Option>
         ) )
       const  configdata =this.state.configmap.map((item)=>(  
-        <Option value={item.name} key={item.name} >{item.name}</Option>
+        <Option value={item.filename} key={item.filename} >{item.filename}</Option>
         )
       )
 
@@ -1085,8 +1150,8 @@ class ConfigWL extends React.Component {
                         wrapperCol={{span:'16'}}
                       >
                        <div style={{  lineHeight:'100%', backgroundColor:'#d9d9d9'  }}>
-                        {getFieldDecorator('memoryrequst', { 
-                            initialValue:memoryrequst?memoryrequst:undefined
+                        {getFieldDecorator('memoryrequest', { 
+                            initialValue:memoryrequest?memoryrequest:undefined
                         })(
                           <InputNumber style={{ width: '70%' ,marginRight:'5px' }}
                           min={0}   
@@ -1227,3 +1292,91 @@ class ConfigWL extends React.Component {
 
 
 
+  function Deployment(values) {
+    var node=new Object(); 
+    const { name,podsnum,image,namespace,
+            keys,
+            labelkeys, 
+            env_label, //env与label的name
+            value,   //value
+            
+            portkeys, 
+            portnum, 
+            porttype,
+            cpurequest,cpulimit,memoryrequest,memorylimit,gpurequest,
+            schedule,
+            nodename,
+            nodematchkeys,
+            matchlabel,
+            matchop,
+            matchvalue,
+             
+            } = values;
+    node.name=name;
+    node.namespace=namespace
+    node.image=image
+    node.podsnum=[]
+    node.podsnum[0]=0
+    node.podsnum[1]=podsnum
+
+    var env=[]
+    keys.map(key =>{
+      var e ={
+        name: env_label[key],
+        value:value[key]
+      }
+      env=env.concat(e)
+    })       
+    node.env= env  
+
+    var label=[]
+    labelkeys.map(key =>{
+      var l ={
+        name: env_label[key],
+        value:value[key]
+      }
+      label=label.concat(l)
+    })       
+    node.label= label
+
+    node.schedule=  schedule     
+    if(schedule=="LABEL"){
+        var nodematch=[]
+        nodematchkeys.map(key =>{
+          var nm = {
+            label: matchlabel[key],
+            op:matchop[key],
+            value:matchvalue[key]
+          }
+          nodematch=nodematch.concat(nm)
+        })       
+        node.nodematch= nodematch
+    }
+    if(schedule=="NODE"){
+      node.nodename= nodename
+    }
+
+    var ports=[]
+    portkeys.map(key =>{
+      var p ={
+        containerPort: portnum[key],
+        protocol:porttype[key]
+      }
+      ports=ports.concat(p)
+    })       
+    node.ports= ports
+
+    var request={
+      cpurequest:cpurequest,
+      memoryrequest:memoryrequest,
+      gpurequest:gpurequest
+    }
+    node.request= request
+
+    var limit={
+      cpulimit:cpulimit,
+      memorylimit:memorylimit 
+    }
+    node.limit= limit
+    return node
+}

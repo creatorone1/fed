@@ -47,6 +47,7 @@ export default class User extends React.Component {
             username:'use',
             role:'Administrator'
         }
+         
        
     }
     componentDidMount(){//请求数据
@@ -270,28 +271,52 @@ export default class User extends React.Component {
         //点击搜索按钮
     handleSearch = ()=>{
             //console.log('this.state.searchname:',this.state.searchname)
-           /* var data={
-                name:2,
-                age:"18asd"
+            /*var date = new Date('2019-10-24T10:01:30Z')
+            function formatDate(date) {
+              var year = date.getFullYear()
+              var month = format(date.getMonth() + 1)
+              var da = format(date.getDate())
+              var h = format(date.getHours())
+              var m = format(date.getMinutes())
+              var s = format(date.getSeconds())
+              return year + '-' + month + '-' + da + ' ' + h + ':' + m + ':' + s
             }
-            console.log("datajson:"+JSON.stringify(data))
-            fetch('http://localhost:9090/api/cluster/cluster/deployments?json='+JSON.stringify(data)
-            ,{
-                method:'GET',
-                mode: 'cors',
-                headers:{ // 请求头（可以是Headers对象，也可是JSON对象）
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                }, 
+            function format(val) {
+              return Number(val) < 10 ? '0' + val : '' + val
+            }
+            console.log(formatDate(date))*/
+            var deletedata={
+                items:[{
+                    name:'1x',
+                    namespace:"default"
+                }]
+            }
+            console.log(JSON.stringify(deletedata))
+            var jsondata=`{"items":[
+                {
+                    "name":"1x",
+                    "namespace":"default"		
+                },{
+                    "name":"hello2",
+                    "namespace":"default"		
+                }]}`
+                fetch('http://localhost:9090/api/cluster/k8s-fed/template/resources?data='+JSON.stringify(deletedata),{
+                method:'DELETE',
+                mode: 'cors', 
                 }).then((response) => {
                     console.log('response:',response.ok)
                     return response.json();
                 }).then((data) => {
                     console.log('data:',data)
-                    return data;
-                }).catch(function (e) {
+                   /* data.map(item=>{
+                        var datas=item.configdata
+                        console.log('depdata:',JSON.parse(datas["data"]))
+                       
+                    }) */
+                     return data;
+                }).catch( (e)=> {  
                     console.log(e);
-                })*/
+                })  
              if(this.state.searchname!==''){
                 //console.log('this.state.searchname:',this.state.searchname)
                 //console.log(this.state.dataSource.map(item=>item.name.indexOf(this.state.searchname)))
@@ -314,7 +339,128 @@ export default class User extends React.Component {
             checked:e.target.value
         })
     }   
-
+    testClick =()=>{
+        var data={
+            "metadata": {
+                "name": "k8s-fed",
+                "labels": {
+                    "clsuter/role": null
+                }
+            }
+        }
+       
+        console.log(JSON.stringify(data))
+        var url =`http://localhost:9090/api/cluster/k8s-fed`
+        fetch( url,{
+            method:'PUT',
+            mode: 'cors',
+            body: JSON.stringify(data),
+            }).then((response) => {
+                console.log('response:',response.ok)
+                return response.json();
+            }).then((data) => {
+                console.log('data:',data)
+               /* data.map(item=>{
+                    var datas=item.configdata
+                    console.log('depdata:',JSON.parse(datas["data"]))
+                   
+                }) */
+                 return data;
+            }).catch( (e)=> {  
+                console.log(e);
+            })
+    }
+    /*testClick =()=>{
+        
+        var data=` {
+            "name": "hellox",
+            "status": "running",
+            "namespace": "default",
+            "image": "nginx",
+            "createtime": "2019-10-22T03:15:41Z",
+            "podsnum": [
+                1,
+                1
+            ],
+            "revision": "1",
+            "env": [
+                {
+                    "name": "CATTLE_SERVER",
+                    "value": "https://10.103.240.133"
+                },
+                {
+                    "name": "CATTLE_CA_CHECKSUM",
+                    "value": "1e86d8e787eb0d6b3866f997b08373d5363151fe263b34884d0952d2032414da"
+                },
+                {
+                    "name": "CATTLE_CLUSTER",
+                    "value": "true"
+                },
+                {
+                    "name": "CATTLE_K8S_MANAGED",
+                    "value": "true"
+                }
+            ],
+            "label": [
+                {
+                    "name": "app",
+                    "value": "hellox"
+                },
+                {
+                    "name": "cluster",
+                    "value": "k8s-fed"
+                }
+            ],
+            "ports": [
+                {
+                    "name": "http",
+                    "containerPort": 80,
+                    "protocol": "TCP"
+                }
+            ],
+            "schedule": "LABEL",
+            "nodematch": [
+                {
+                    "label": "beta.kubernetes.io/os",
+                    "op": "NotIn",
+                    "value": "windows"
+                }
+            ],
+            "request": {
+                "cpurequest": 100,
+                "memoryrequest": 128
+            },
+            "limit": {
+                "cpulimit": 100,
+                "memorylimit": 128
+            }
+        }`
+        var configmap= {
+            "name": "helloxx",
+            "namespace": "default",
+            "configdata": {
+                "a":  data
+            },
+            "createtime": "2019-09-11T09:56:43Z"
+        }
+       // console.log("datajson:"+JSON.stringify(data))
+        fetch('http://localhost:9090/api/cluster/k8s-fed/configmap'
+        ,{
+            method:'POST',
+            mode: 'cors', 
+            body:JSON.stringify(configmap),
+            }).then((response) => {
+                console.log('response:',response.ok)
+                return response.json();
+            }).then((data) => {
+                console.log('data:',data)
+                //return data;
+            }).catch(function (e) {
+                console.log(e);
+            })
+        
+    }*/
+   
     render(){
         const columns=[
             {
@@ -450,15 +596,15 @@ export default class User extends React.Component {
                 />
                 <EditUser dataSource={this.state.operationdata} editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}></EditUser>
                  {
-                     /**
+                     
                 <Radio.Group className='config-wrap' onChange={this.handleConfig}>
-                        <Radio value='1x'>
+                        <Radio value={this.state.dataSource}>
                         <Card  className={this.state.checked!=='1x'?'config-card-wrap':''}
                           style={{
                               background:this.state.checked=='1x'?'#5e7ce0':'#f2f5fc', 
                             }}
                          > 
-                         <div style={{ width:'60px',background:'#FFFFFF', textAlign:'center',margin:'0 auto' }}>
+                         <div style={{ width:'60px',background:'#FFFFFF', textAlign:'center',margin:'0 auto' ,marginTop:'-2' }}>
                          1x
                          </div> 
                          <div>
@@ -479,8 +625,9 @@ export default class User extends React.Component {
                             </Card>
                         </Radio>
                 </Radio.Group>
-                     */
+                     
                  }
+                 <Button onClick={this.testClick}>test</Button>
      
                  
                  

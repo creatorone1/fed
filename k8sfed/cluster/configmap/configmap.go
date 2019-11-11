@@ -14,7 +14,7 @@ type ConfigMap struct {
 	Data       interface{}       `json:"data,omitempty"`
 }
 
-func NewConfigMap(name, namespace string, labels map[string]string, data interface{}) *ConfigMap {
+/*func NewConfigMap(name, namespace string, labels map[string]string, data interface{}) *ConfigMap {
 
 	if namespace == "" {
 		namespace = "default"
@@ -31,7 +31,7 @@ func NewConfigMap(name, namespace string, labels map[string]string, data interfa
 		Meta:       meta,
 		Data:       data,
 	}
-}
+}*/
 
 func (config *ConfigMap) ToJsonString() string {
 	strs, err := json.Marshal(config)
@@ -46,9 +46,22 @@ func (config *ConfigMap) ToJsonString() string {
 func (config *ConfigMap) Create(master string) (io.ReadCloser, int, error) {
 	return cluster.Call("POST", "/api/v1/namespaces/"+config.Meta.Namespace+"/configmaps", master, config)
 }
+func (config *ConfigMap) Replace(master string) (io.ReadCloser, int, error) {
+	return cluster.Call("PUT", "/api/v1/namespaces/"+config.Meta.Namespace+"/configmaps/"+config.Meta.Name, master, config)
+}
+func (config *ConfigMap) Get(master string) error {
 
-func (config *ConfigMap) Get(master string) (io.ReadCloser, int, error) {
-	return cluster.Call("GET", "/api/v1/namespaces/"+config.Meta.Namespace+"/configmaps/"+config.Meta.Name, master, nil)
+	body, _, err := cluster.ReadBody(cluster.Call("GET", "/api/v1/namespaces/"+config.Meta.Namespace+"/configmaps/"+config.Meta.Name, master, nil))
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(body, config); err != nil {
+		return err
+	}
+
+	return nil
+	//return cluster.Call("GET", "/api/v1/namespaces/"+config.Meta.Namespace+"/configmaps/"+config.Meta.Name, master, nil)
 }
 
 func (config *ConfigMap) Delete(master string) (io.ReadCloser, int, error) {

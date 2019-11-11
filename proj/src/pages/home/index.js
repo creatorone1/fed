@@ -17,126 +17,301 @@ export default class Home extends React.Component{
         size:'default' ,
         //下面通过后台请求获取数据
         dep_total:12, 
-        dep_runing:5
+        dep_runing:5,
+        dataload:false,
+        /*dataSource:{
+            clusters:[
+                {
+                    clustername:'',
+                    nodes:[{
+                        nodename:'',
+                        nodestatus:ready,
+                    }]
+                }
+            ]
+        }*/
+
     }
      
-    componentDidMount() {
-        //this.request()
+    componentDidMount() {  // 必须在hosts配置ip地址  C:\Windows\System32\drivers\etc
+        this.requestCluster()
         
     } 
-    request=()=>{
-         // 初始化   /apis/apps/v1beta1/deployments 
-            //http://localhost:9091/apis/apps/v1beta1/deployments
-            fetch(' /apis/apps/v1beta1/deployments  ',{ 
-            }).then((response) => {
-                console.log('home_dep_get:',response.ok)
-                console.log('response:',response)   
-                return response.json(); 
-            }).then((data) => {
-                console.log('data:',data)   
-                var dep_total=(data.items)?data.items.length:0;
-                var dep_runing=0; 
-                data.items.map(item=>{ 
-                        if(item.status.availableReplicas)
-                            dep_runing++;
+
+ 
+    requestCluster=()=>{
+         // 初始化  
+         /** 获取联邦里面集群 */
+         fetch('http://localhost:9090/api/clusters'
+         ,{
+             method:'GET',
+             mode: 'cors', 
+             }).then((response) => {
+                 console.log('clusters response:',response.ok)
+                 return response.json();
+             }).then((data) => {
+                console.log('clusters data:',data)
+                var items=data
+                var clusternum=0;
+                var ready=0;
+                var notready=0;
+                var deps={
+                    ready:0,
+                    notready:0,
+                 }
+                var apps={
+                    ready:0,
+                    notready:0,
+                 };
+                var clusters=[];
+                 /**deps 与apps以后用网络请求获取真实数据 */
+               /* deps={
+                     ready:17,
+                     notready:3,
+                 }
+                apps={
+                    ready:15,
+                    notready:2
+                 }*/
+                clusternum =items.length
+                /* 以后的方法
+                 在每个fetch中的 .then((data) => {
+                     这里面接着写下一个 fetch
+
+                     接着在下一个fetch里面写继续要执行的程序
+                 }
+
+                var depstatus=this.requestDeployment("fed")
+                deps={
+                     ready:deps.ready+depstatus.ready,
+                     notready:deps.notready+depstatus.notready, 
+                }
+                var appstatus=this.requestApp("fed")
+                apps={
+                     ready:deps.ready+appstatus.ready,
+                     notready:deps.notready+appstatus.notready, 
+                }
+                */
+                //初始化数据请求
+                var clusterdepcount=0
+                items.map(item=>{
+                    fetch('http://localhost:9090/api/cluster/'+item.name+'/deployments',{
+                method:'GET',
+                mode: 'cors', 
+                }).then((response) => {
+                    console.log('response:',response.ok)
+                    return response.json();
+                }).then((data) => {
+                    clusterdepcount++
+                    console.log('data:',data)
+                    data.map(dep=>{
+                        if(dep.status=="running"){
+                            deps.ready++
+                        }else{
+                            deps.notready++
+                        } 
+                    })
+                     
+                    if(clusternodecount==items.length&&clusterdepcount==items.length&&clusterappcount==items.length){
+                        console.log('get all clusters') 
+                        this.setState({
+                            dataSource:{
+                                clusternum,
+                                ready,
+                                notready,
+                                deps,
+                                apps,
+                                clusters,
+                            },
+                            dataload:true
+                        } )
+                    }    
+                     
+                    return data;
+                }).catch( (e)=> {  
+                    clusterdepcount++
+                    if(clusternodecount==items.length&&clusterdepcount==items.length&&clusterappcount==items.length){
+                        console.log('get all clusters') 
+                        this.setState({
+                            dataSource:{
+                                clusternum,
+                                ready,
+                                notready,
+                                deps,
+                                apps,
+                                clusters,
+                            },
+                            dataload:true
+                        } )
+                    }
+                    console.log(e);
                 }) 
-                this.setState({
-                    dep_total:dep_total, 
-                    dep_runing:dep_runing
                 })
-                console.log('get_dep_total:',this.state.dep_total);
-                console.log('get_dep_runing:',this.state.dep_runing);
-            }).catch(function (e) {
-                console.log(e);
-            }) 
-     
-            //get cluster1 nodes
-            fetch('/1/api/v1/nodes',{
-                method:'GET' 
-            }).then((response) => {
-                console.log('nodes1:',response.ok)
-                return response.json(); 
-            }).then((data) => {
-                console.log('nodes1_data:',data)   
-                var nodes=[]
-                data.items.map(item=>{
-                    let name,cpu,cpul,memory,memoryl
-                    name=item.metadata.name;
-                    cpu=item.status.capacity.cpu;
-                    memory=item.status.capacity.memory.substring(0,item.status.capacity.memory.indexOf('K'));
-                    cpul=item.status.allocatable.cpu;
-                    //console.log('memory   ',item.status.capacity.memory )
-                    //console.log('K index: ',item.status.capacity.memory.indexOf('K'))
-                    memoryl=item.status.allocatable.memory.substring(0,item.status.allocatable.memory.indexOf('K')); 
-                    var node = new Node(name,cpu,cpul,memory,memoryl,0,0)
-                    nodes=nodes.concat(node) 
+
+                var clusterappcount=0
+                items.map(item=>{
+                    fetch('http://localhost:9090/api/cluster/'+item.name+'/apps',{
+                method:'GET',
+                mode: 'cors', 
+                }).then((response) => {
+                    console.log('response:',response.ok)
+                    return response.json();
+                }).then((data) => {
+                    clusterappcount++
+                    console.log('data:',data)
+                    data.map(app=>{
+                        if(app.status=="Active"){
+                            apps.ready++
+                        }else{
+                            apps.notready++
+                        } 
+                    }) 
+                    if(clusternodecount==items.length&&clusterdepcount==items.length&&clusterappcount==items.length){
+                        console.log('get all clusters') 
+                        this.setState({
+                            dataSource:{
+                                clusternum,
+                                ready,
+                                notready,
+                                deps,
+                                apps,
+                                clusters,
+                            },
+                            dataload:true
+                        } )
+                    }
+                    return data;
+                }).catch( (e)=> {  
+                    clusterappcount++ 
+                    if(clusternodecount==items.length&&clusterdepcount==items.length&&clusterappcount==items.length){
+                        console.log('get all clusters') 
+                        this.setState({
+                            dataSource:{
+                                clusternum,
+                                ready,
+                                notready,
+                                deps,
+                                apps,
+                                clusters,
+                            },
+                            dataload:true
+                        } )
+                    }
+                    console.log(e);
+                }) 
+                })
+
+                var clusternodecount=0
+
+                items.map((item,index)=>{
+
+                    console.log("cluster: "+item.name)
+                     let name,status
+                     let nodes=[] 
+                     let nodestatus={
+                         ready:0,
+                         notready:0
+                     }
+                     name=item.name
+                     if(item.status)
+                    {   status=item.status
+                        if(status=="Ready") ready++
+                        else { notready++}
+                    }else{ notready++}
+                    
+                    //this.requestNodes(name)
+                    //nodes=this.state.nodes 
+                   
+
+                    fetch('http://localhost:9090/api/cluster/'+item.name+'/nodes',{
+                        method:'GET',
+                        mode: 'cors',
+                    }).then((response) => {
+                        console.log(name+'nodesreq:',response.ok)
+                        return response.json(); 
+                    }).then((data) => {
+                        console.log(name+'nodes_data:',data)   
+                        data.map(node=>{
+                            let name,cpu,cpul,memory,memoryl,status
+                            name=node.name;
+                            cpu=node.cpu[1];
+                            memory=node.memory[1] ;
+                            cpul=node.cpu[0];
+                            memoryl=node.memory[0];
+                            //console.log('memory   ',item.status.capacity.memory )
+                            //console.log('K index: ',item.status.capacity.memory.indexOf('K'))
+                           // memoryl=item.status.allocatable.memory.substring(0,item.status.allocatable.memory.indexOf('K')); 
+                            status=node.status
+                            var node = new Node(name,status,cpu,cpul,memory,memoryl,0,0)
+                            nodes=nodes.concat(node)  
+                        })
+                           
+                        nodes.map(item=>{
+                            if(item.status=="Ready"){
+                                nodestatus.ready++
+                            }
+                            else{
+                                nodestatus.notready++
+                            }
+                        })
                         
-                })
-                console.log('nodes1:',nodes); 
-                this.setState({
-                    nodes1:nodes, 
-                })
-               
-            }).catch(function (e) {
-                console.log(e);
-            })  
-    
-             //get cluster2nodes
-             fetch('/2/api/v1/nodes',{
-                method:'GET' 
-            }).then((response) => {
-                console.log('nodes2:',response.ok)
-                return response.json(); 
-            }).then((data) => {
-                console.log('nodes2_data:',data)   
-                var nodes=[]
-                data.items.map(item=>{
-                    let name,cpu,cpul,memory,memoryl
-                    name=item.metadata.name;
-                    cpu=item.status.capacity.cpu;
-                    memory=item.status.capacity.memory.substring(0,item.status.capacity.memory.indexOf('K'));
-                    cpul=item.status.allocatable.cpu;
-                    //console.log('memory   ',item.status.capacity.memory )
-                    //console.log('K index: ',item.status.capacity.memory.indexOf('K'))
-                    memoryl=item.status.allocatable.memory.substring(0,item.status.allocatable.memory.indexOf('K')); 
-                    var node = new Node(name,cpu,cpul,memory,memoryl,0,0)
-                    nodes=nodes.concat(node)     
-                })
-                console.log('nodes2:',nodes); 
-                this.setState({
-                    nodes2:nodes, 
-                })
-               
-            }).catch(function (e) {
-                console.log(e);
-            })   
+                        var cluster = new Cluster(name,status,nodestatus,nodes)
+                        clusters=clusters.concat(cluster)
+                        console.log('clusters now :',clusters)
+                        clusternodecount++
+
+                        if(clusternodecount==items.length&&clusterdepcount==items.length&&clusterappcount==items.length){
+                            console.log('get all clusters') 
+                            this.setState({
+                                dataSource:{
+                                    clusternum,
+                                    ready,
+                                    notready,
+                                    deps,
+                                    apps,
+                                    clusters,
+                                },
+                                dataload:true
+                            } )
+                        }
+                    }).catch( (e)=>{
+                        clusternodecount++ 
+                        if(clusternodecount==items.length&&clusterdepcount==items.length&&clusterappcount==items.length){
+                            console.log('get all clusters') 
+                            this.setState({
+                                dataSource:{
+                                    clusternum,
+                                    ready,
+                                    notready,
+                                    deps,
+                                    apps,
+                                    clusters,
+                                },
+                                dataload:true
+                            } )
+                        }
+                        console.log(e); 
+                    }) 
+
+                   
+                 })
+                  
+                 
+                 
+                // return data;
+             }).catch(function (e) {
+                 console.log(e);
+             })
+                
     }
     render(){
-        console.log('dep_total//:',this.state.dep_total);
-        console.log('dep_runing//:',this.state.dep_runing);
+        console.log('homepage data ',this.state.dataSource);
  
-        var dep_total=this.state.dep_total;
+       
         /***通过后台请求设置nodes */
-        var nodes1=[],nodes2=[]
-        let name11,name21,name22,cpu,cpul,memory,memoryl
-            name11='node1';name21='controller';name22='node2.bupt.edu.cn';
-            cpu='24';
-            memory='32828740';
-            cpul='24';
-            //console.log('memory   ',item.status.capacity.memory )
-             //console.log('K index: ',item.status.capacity.memory.indexOf('K'))
-            memoryl='32726340';
-            var node11 = new Node(name11,cpu,cpul,memory,memoryl,0,0)
-            nodes1=nodes1.concat(node11)  
-            var node21 = new Node(name21,cpu,cpul,memory,memoryl,0,0)
-            nodes2=nodes2.concat(node21) 
-            var node22 = new Node(name22,cpu,cpul,memory,memoryl,0,0)
-            nodes2=nodes2.concat(node22) 
-            
 
-
-
-        var data=[
+        var data=this.state.dataSource
+        /*[
             {cluster:'集群1',
             ready:1,
             notready:0,
@@ -149,17 +324,15 @@ export default class Home extends React.Component{
             //nodes:this.state.nodes2
             nodes:nodes2
          },
-        ];  
-        //console.log(this.state.nodes1)
-        //if(this.state.nodes1&&this.state.nodes2){
-      if(nodes1&&nodes2){     
-        var cluster_info=(
-            data.map(item=>(<Card key={item.cluster} title ={item.cluster}  className='card-wrap'> 
+        ]; */  
+      if(data){     
+        var cluster_nodeinfo=(
+            data.clusters.map((item,index)=>(<Card key={index} title ={'集群'+(index+1)+': '+item.name}  className='card-wrap'> 
                 <Row> 
                 <Col span='6' style={{display:'flex',alignItems:'center',justifyContent:'center' }}>
                      <div className="card-wrap1"   > 
                         <Card  title={'节点总数: '+  item.nodes.length}   > 
-                        <Panel domid={item.cluster} pietype='节点状态' ready={item.ready} notready={item.notready} />  
+                        <Panel domid={item.name} pietype='节点状态' ready={item.nodestatus.ready} notready={item.nodestatus.notready} />  
                         </Card>  
                      </div >
                 </Col>
@@ -167,20 +340,20 @@ export default class Home extends React.Component{
                 {
                     item.nodes.map(item2=>( //显示每个集群中每个节点的信息
 
-                    <div key={item.cluster+item2.name}> 
+                    <div key={item.name+item2.name}> 
                         <div className="card-wrap1"> 
                         <Card title={item2.name+' CPU'} >  
-                        <Pie domid= {item.cluster+item2.name+'cpu_info'} pietype='cpu' data1={item2.cpu-item2.cpul}  data2={item2.cpul} /> 
+                        <Pie domid= {item.name+item2.name+'cpu_info'} pietype='cpu' data1={item2.cpu-item2.cpul}  data2={item2.cpul} /> 
                         </Card>  
                          </div>
                          <div className="card-wrap1"> 
                          <Card title={item2.name+' GPU'} >  
-                         <Pie domid= {item.cluster+item2.name+'gpu_info'} pietype='gpu'data1={item2.gpu-item2.gpul}  data2={item2.gpul}/> 
+                         <Pie domid= {item.name+item2.name+'gpu_info'} pietype='gpu'data1={item2.gpu-item2.gpul}  data2={item2.gpul}/> 
                          </Card>  
                           </div>
                           <div className="card-wrap1"> 
                           <Card title={item2.name+' Memory'} >  
-                          <Liquid_pie domid= {item.cluster+item2.name+'memory_info' } data1={item2.memoryl}  data2={item2.memoryl/item2.memory}/> 
+                          <Liquid_pie domid= {item.name+item2.name+'memory_info' } data1={item2.memoryl}  data2={item2.memoryl/item2.memory}/> 
                           </Card>  
                            </div>
                         </div>
@@ -194,37 +367,38 @@ export default class Home extends React.Component{
         }
 
 
-        return (this.state.dep_total)?
+        return (this.state.dataload)?
             (
             <div >
                 <Card title = '联邦状态总览'  className='card-wrap'   > 
                     <div className="card-wrap1"> 
-                        <Card  title={'集群总数: '+ data.length}  > 
+                        <Card  title={'集群总数: '+ data.clusternum}  > 
                                                 {/***通过后台请求设置data */}
-                        <Panel domid='集群'pietype='集群总览' wid={350} ready={2} notready={0} />  
+                        <Panel domid='集群'pietype='集群总览' wid={350} ready={data.ready} notready={data.notready} />  
                         </Card>  
                     </div   >
                     <div className="card-wrap1">
                         <Card title='应用'   >  {/***通过后台请求设置data */}
-                        <Pie domid='应用' wid='350px' pietype='应用' data1={10} data2={5} />    
+                        <Pie domid='应用' wid='350px' pietype='应用' data1={data.apps.ready} data2={data.apps.notready} />    
                         </Card>  
                     </div>
                     <div className="card-wrap1">
                         <Card  title='服务' >   
-                        <Pie domid='服务'wid={350} pietype='服务' data1={this.state.dep_runing}  data2={this.state.dep_total-this.state.dep_runing}/>  
+                        <Pie domid='服务'wid={350} pietype='服务' data1={data.deps.ready}  data2={data.deps.notready}/>  
                         </Card>  
                     </div> 
                 </Card>
 
-                {cluster_info}
+                {cluster_nodeinfo}
             </div> 
         ):''
     }
 }
 
-function Node(name,cpu,cpul,memory,memoryl,gpu,gpul) {
+function Node(name,status,cpu,cpul,memory,memoryl,gpu,gpul) {
     var node=new Object(); 
     node.name=name;
+    node.status=status;
     node.cpu=cpu;
     node.cpul=cpul;
     node.memory=memory;
@@ -233,4 +407,13 @@ function Node(name,cpu,cpul,memory,memoryl,gpu,gpul) {
     node.gpul=gpul; 
 
     return node
+}
+function Cluster(name,status,nodestatus,nodes){
+    var cluster=new Object()
+    cluster.name=name;
+    cluster.status=status;
+    cluster.nodestatus=nodestatus;
+    cluster.nodes=nodes;
+    return cluster
+
 }

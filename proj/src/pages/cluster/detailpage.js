@@ -9,6 +9,7 @@ import Header from './../../components/Header'
 import EPanel from'./../echarts/panel/panelv2'
 import Bar from'./../echarts/bar/index'
 import FedNamespaceList from './fednamespace'
+import utils from '../../utils/utils';
 const Panel = Collapse.Panel;
 export default class DetaiCluster extends React.Component {
     state = {
@@ -55,10 +56,10 @@ export default class DetaiCluster extends React.Component {
         /***有了后台下面两行删除 */
         var data=this.state.dataSource
         data.name=sessionStorage.getItem('clustername') 
-        
+        //console.log('cluster',utils.clusterdetail)
         this.setState({
             clustername:sessionStorage.getItem('clustername'),
-            
+            dataSource:utils.clusterdetail
         })
         
         //根据nodename和nodecluster来请求数据
@@ -86,7 +87,7 @@ export default class DetaiCluster extends React.Component {
                 getdata:true
             })
             return data;
-        }).catch(function (e) {
+        }).catch((e)=>{
             console.log(e);
         })
     }
@@ -100,9 +101,10 @@ export default class DetaiCluster extends React.Component {
  
         }
         var status=config[this.state.dataSource.status] 
-        //标签labels
+        if(this.state.dataSource.status=="Ready"){
+             //标签labels
         var labeldata=this.state.dataSource.labels
-        const  labelcolumns=[ {
+        var  labelcolumns=[ {
             title:'标签名',
             key:'name',
             dataIndex: 'name',
@@ -124,6 +126,8 @@ export default class DetaiCluster extends React.Component {
         cpurate=cpurate.substr(0,cpurate.indexOf(".")+3) //保留三位小数
         memoryrate=memoryrate.substr(0,memoryrate.indexOf(".")+3)
         podrate=podrate.substr(0,podrate.indexOf(".")+3)
+        }
+        
         
         return(
 
@@ -141,8 +145,11 @@ export default class DetaiCluster extends React.Component {
               </Col>
                 </Row>
                   
-            </div> 
-            <div style={{backgroundColor:'white',marginTop:-10,padding:10 }}>
+            </div>
+            {
+                this.state.dataSource.status=="Ready"? 
+                
+                <div style={{backgroundColor:'white',marginTop:-10,padding:10 }}>
                 {//节点详细信息
                 }
                 <Divider style={{marginTop:-5}}></Divider>
@@ -177,28 +184,28 @@ export default class DetaiCluster extends React.Component {
                 {/*** 状态信息*/}
                 <Row gutter={16} style={{marginTop: -16}}>
                 <Col span='6' className='status'>
-                    <div className='statussuccess'>
-                        <div className='icon'><Icon type="check" /> </div>
+                    <div className={this.state.dataSource.componentstatuses.etcd=="True"?'statussuccess':'statuserror'} >
+                        <div className='icon'><Icon type={this.state.dataSource.componentstatuses.etcd=="True"?"check":'close'}   /> </div>
                         <div className='message'>Etcd</div>
                     </div>
                     
                 </Col>
                 <Col span='6'className='status'>
-                    <div className='statuserror'>
-                        <div className='icon'><Icon type="close" /> </div>
+                    <div className={this.state.dataSource.componentstatuses.controller=="True"?'statussuccess':'statuserror'}>
+                        <div className='icon'><Icon type={this.state.dataSource.componentstatuses.etcd=="True"?"check":'close'}  /> </div>
                         <div className='message'>Controller Manager</div>
                     </div> 
                 </Col>
                 <Col span='6' className='status'>
-                    <div className='statussuccess'>
-                        <div className='icon'><Icon type="check" /> </div>
+                    <div className={this.state.dataSource.componentstatuses.scheduler=="True"?'statussuccess':'statuserror'}>
+                        <div className='icon'><Icon type={this.state.dataSource.componentstatuses.etcd=="True"?"check":'close'} /> </div>
                         <div className='message'>Scheduler</div>
                     </div>
                     
                 </Col>
                 <Col span='6'className='status'>
-                    <div className='statussuccess'>
-                        <div className='icon'><Icon type="check" /> </div>
+                    <div className={this.state.dataSource.componentstatuses.node=="True"?'statussuccess':'statuserror'}>
+                        <div className='icon'><Icon type={this.state.dataSource.componentstatuses.etcd=="True"?"check":'close'}  /> </div>
                         <div className='message'>Nodes</div>
                     </div> 
                 </Col>
@@ -209,7 +216,7 @@ export default class DetaiCluster extends React.Component {
                 {/*** 详细信息*/}
                 <Collapse   className="collwrap" style={{marginBottom:24}} >
                   <Panel header="命名空间" key="1"  >  
-                   <FedNamespaceList  type='cluster' data={this.state.dataSource.namespaces}/>
+                   <FedNamespaceList  type='cluster' currentcluster={this.state.dataSource.name} data={this.state.dataSource.namespaces}/>
                   </Panel> 
               </Collapse>  
 
@@ -223,11 +230,10 @@ export default class DetaiCluster extends React.Component {
                     />
                   </Panel> 
               </Collapse> 
- 
-            
-        
-
             </div>  
+                :""
+            }
+             
         </div> 
         :''}
         </div> 

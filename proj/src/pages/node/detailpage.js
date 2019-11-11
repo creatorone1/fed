@@ -8,6 +8,7 @@ import Header from './../../components/Header'
 import './node.less'
 import EPanel from'./../echarts/panel/panelv2'
 import Bar from'./../echarts/bar/index'
+import utils from '../../utils/utils';
 
 const Panel = Collapse.Panel;
 export default class DetaiNode extends React.Component {
@@ -147,6 +148,7 @@ export default class DetaiNode extends React.Component {
         this.setState({
             nodename:sessionStorage.getItem('nodename'),
             nodecluster:sessionStorage.getItem('nodecluster'), 
+            dataSource:utils.nodedetail
         })
         
         //根据nodename和nodecluster来请求数据
@@ -367,28 +369,28 @@ export default class DetaiNode extends React.Component {
                 {/*** 状态信息*/}
                 <Row gutter={16} style={{marginTop: -16}}>
                 <Col span='6' className='status'>
-                    <div className='statussuccess'>
-                        <div className='icon'><Icon type="check" /> </div>
+                    <div className={this.state.dataSource.nodecomponentstatuses.outofdisk=="True"?'statussuccess':'statuserror'}>
+                        <div className='icon'><Icon type={this.state.dataSource.nodecomponentstatuses.outofdisk=="True"?'check':'close'}  /> </div>
                         <div className='message'>磁盘空间</div>
                     </div>
                     
                 </Col>
                 <Col span='6'className='status'>
-                    <div className='statuserror'>
-                        <div className='icon'><Icon type="close" /> </div>
+                    <div className={this.state.dataSource.nodecomponentstatuses.diskpressure=="True"?'statussuccess':'statuserror'}>
+                        <div className='icon'><Icon type={this.state.dataSource.nodecomponentstatuses.diskpressure=="True"?'check':'close'} /> </div>
                         <div className='message'>磁盘负载</div>
                     </div> 
                 </Col>
                 <Col span='6' className='status'>
-                    <div className='statussuccess'>
-                        <div className='icon'><Icon type="check" /> </div>
+                    <div className={this.state.dataSource.nodecomponentstatuses.memorypressure=="True"?'statussuccess':'statuserror'}>
+                        <div className='icon'><Icon type={this.state.dataSource.nodecomponentstatuses.memorypressure=="True"?'check':'close'} /> </div>
                         <div className='message'>内存负载</div>
                     </div>
                     
                 </Col>
                 <Col span='6'className='status'>
-                    <div className='statussuccess'>
-                        <div className='icon'><Icon type="check" /> </div>
+                    <div className={this.state.dataSource.nodecomponentstatuses.kubelet=="True"?'statussuccess':'statuserror'}>
+                        <div className='icon'><Icon type={this.state.dataSource.nodecomponentstatuses.kubelet=="True"?'check':'close'} /> </div>
                         <div className='message'>Kubelet</div>
                     </div> 
                 </Col>

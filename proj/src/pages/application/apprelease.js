@@ -28,7 +28,7 @@ export default class AppRelease   extends React.Component {
             chartversion:'5.2.0',
             version:1, //表示的是历史版本号
             status:'Active',
-            namespaces:'default',
+            namespace:'default',
             cluster:'cluster1',
             createtime:'2019-5-24',
             appversion: "5.2.0",
@@ -41,7 +41,7 @@ export default class AppRelease   extends React.Component {
             chartversion:'4.3.6',
             appversion: "4.3.6",
             status:'Pending',
-            namespaces:'default',
+            namespace:'default',
             version:2,
             cluster:'cluster2',
             createtime:'2019-5-23',
@@ -49,7 +49,7 @@ export default class AppRelease   extends React.Component {
         } ]
     }
     componentDidMount(){//请求数据
-        //this.request();
+        this.request();
         this.setState({
             currentcluster:this.props.currentcluster, 
            })
@@ -59,20 +59,27 @@ export default class AppRelease   extends React.Component {
         this.setState({
             currentcluster:nextProps.currentcluster, 
         })
+        this.request();
         console.log('AppRelease get props currentcluster:',nextProps.currentcluster)
     }
 
     //请求数据
     request = () => {
-        fetch('url',{
+        fetch('http://localhost:9090/api/cluster/k8s-fed/apps',{
         method:'GET'
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
         }).then((data) => {
             console.log('data:',data)
+            data.map(item=>{
+                item.createtime=Util.formateDate(item.createtime)
+            })
+            this.setState({
+                dataSource:data
+            })
             return data;
-        }).catch(function (e) {
+        }).catch((e)=>{
             console.log(e);
         })
     }
@@ -87,11 +94,43 @@ export default class AppRelease   extends React.Component {
         //let id = record.id;
         Modal.confirm({
             title:'确认删除',
-            content:'您确认要删除此条数据吗？'+record.name.name ,
+            content:'您确认要删除这些数据吗？'+record.name.name ,
             onOk:()=>{
-                message.success('删除成功');
-                //发送删除请求
-                this.request();
+
+                var datas={
+                    items:[]
+                }   
+                var ditem={
+                    name:record.name.name , 
+                }
+                datas.items=datas.items.concat(ditem) 
+                //下面URL的 集群 名称 以后需要替换掉
+                fetch('http://localhost:9090/api/cluster/k8s-fed/releases?data='+JSON.stringify(datas),{
+                    method:'DELETE',
+                    mode: 'cors', 
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request(); 
+                        return data;
+                    }).catch( (e)=> {  
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('网络错误');
+                        //发送删除请求
+                        this.request();
+                        console.log(e);
+                    })
+               
             }
         })
     }
@@ -110,15 +149,46 @@ export default class AppRelease   extends React.Component {
             title:'确认删除',
             content:'您确认要删除这些数据吗？'+this.state.selectedRows.map(item=>item.name.name) ,
             onOk:()=>{
-                this.setState({  //取消选中行
-                    selectedRowKeys: [ ],  
-                    selectedRows: null
+
+                var datas={
+                    items:[]
+                }  
+                this.state.selectedRows.map(item=>{
+                    var ditem={
+                        name:item.name.name, 
+                    }
+                    datas.items=datas.items.concat(ditem)
                 })
-                message.success('删除成功');
-                //发送删除请求
-                this.request();
+                //下面URL的 集群 名称 以后需要替换掉
+                fetch('http://localhost:9090/api/cluster/k8s-fed/releases?data='+JSON.stringify(datas),{
+                    method:'DELETE',
+                    mode: 'cors', 
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request(); 
+                        return data;
+                    }).catch( (e)=> {  
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request();
+                        console.log(e);
+                    })
+               
             }
         })
+       
     }
     //搜索输入框响应变化
     searchChange = (e)=>{
@@ -131,6 +201,15 @@ export default class AppRelease   extends React.Component {
             this.setState({
                 search:false
             })    
+        }
+        if(content!==''){
+            //console.log('this.state.searchname:',this.state.searchname)
+            //console.log(this.state.dataSource.map(item=>item.name.indexOf(this.state.searchname)))
+            this.setState({
+                searchdata:this.state.dataSource.filter(item=>item.name.name.indexOf(content)!==-1),
+                search:true
+            })
+             
         }
     }
     //点击搜索按钮
@@ -154,11 +233,43 @@ export default class AppRelease   extends React.Component {
 
      // 回滚操作
     handleRollback = (key,text,record)=>{
-        console.log("回滚！") 
- 
-        let sysTime = Util.formateDate(new Date().getTime()); //获取格式化的时间
-    
-        fetch('url'+record.name,{  //查找该工作负载的副本集,修改 this.state.rollback 数据
+        console.log("回滚！")  
+       // let sysTime = Util.formateDate(new Date().getTime()); //获取格式化的时间
+       Modal.confirm({
+        title:'确认回滚',
+        content:'您确认要回滚这个应用吗？'+record.name.name ,
+        onOk:()=>{ 
+              
+            //下面URL的 集群 名称 以后需要替换掉
+            fetch('http://localhost:9090/api/cluster/k8s-fed/app/'+record.name.name+'/rollback',{
+                method:'PUT',
+                mode: 'cors', 
+                }).then((response) => {
+                    console.log('response:',response.ok)
+                    return response.json();
+                }).then((data) => {
+                    this.setState({  //取消选中行
+                        selectedRowKeys: [ ],  
+                        selectedRows: null
+                    })
+                    message.success('回滚成功');
+                    //发送删除请求
+                    this.request(); 
+                    return data;
+                }).catch( (e)=> {  
+                    this.setState({  //取消选中行
+                        selectedRowKeys: [ ],  
+                        selectedRows: null
+                    })
+                    message.success('网络错误');
+                    //发送删除请求
+                    this.request();
+                    console.log(e);
+                })
+           
+        }
+    })
+        /*fetch('url'+record.name,{  //查找该工作负载的副本集,修改 this.state.rollback 数据
                 method:'GET'
             }).then((response) => {
             console.log('response:',response.ok)
@@ -167,7 +278,7 @@ export default class AppRelease   extends React.Component {
             console.log('data:',data) 
             this.setState({    //传入获取的版本数据 
                 //rollbackdata:data,  以后由后台传入数据 
-                rollbackdata:[
+                 rollbackdata:[
                     {
                         name:'appversion-d58g7',
                         version:1,
@@ -183,17 +294,16 @@ export default class AppRelease   extends React.Component {
                         version:3,
                         createtime:sysTime
                     },
-                ],
+                ], 
                 
                 rbvisible:true,   
             })  
         }).catch((e)=> {  //写箭头函数，不要写function(e) {} 
-             /**以后记得删除 */ 
             console.log("Error:   以后记得删除catch里的setState");
             this.setState({     //传入获取的版本数据
                 //rollbackdata:data,  以后由后台传入数据
                 operationdata:record, // 传入要操作数据
-                rollbackdata:[
+               rollbackdata:[
                     {
                         name:'appversion-d58g7',
                         version:1,
@@ -213,16 +323,11 @@ export default class AppRelease   extends React.Component {
                 
                 rbvisible:true,   
             })
-            /**以后用以下内容替代错误信息 */
+            
             message.success('网络请求错误！') 
-            /* 
-            Modal.error({
-                title:'错误' ,
-                content:' 网络请求错误！' ,
-                
-            }) */
+            
             console.log("Error: ",e);
-        }) 
+        }) */
     }
     handleSelectRb=(value)=>{ //选择回滚版本数据
         this.setState({
@@ -231,7 +336,7 @@ export default class AppRelease   extends React.Component {
 
     }
      // 升级操作
-     handleUpdate = (visible)=>{
+     handleUpdate = (visible,ok)=>{
         //console.log("升级！") 
         if(visible)   
         this.setState({
@@ -241,6 +346,9 @@ export default class AppRelease   extends React.Component {
         this.setState({
             editvisible:false
         }) 
+        if(ok){
+            this.request()
+        }
 
     } 
     onClick = ( key,text,record ) => { //点击下拉菜单选则
@@ -285,8 +393,8 @@ export default class AppRelease   extends React.Component {
             },
             {
                 title:'命名空间',
-                key:'namespaces',
-                dataIndex: 'namespaces',
+                key:'namespace',
+                dataIndex: 'namespace',
             },
             /*{
                 title:'集群',
@@ -295,13 +403,19 @@ export default class AppRelease   extends React.Component {
             },*/
             {
                 title:'版本',
-                key:'appversion',
-                dataIndex: 'appversion',
+                key:'version',
+                dataIndex: 'version',
+            },
+            {
+                title:'Chart版本',
+                key:'chartversion',
+                dataIndex: 'chartversion',
             },
             {
                 title:'创建时间',
                 key:'createtime',
                 dataIndex: 'createtime',
+                width:'20%',
             },
             {
                 title:'操作',
@@ -348,7 +462,7 @@ export default class AppRelease   extends React.Component {
                         columns={columns }  
                         rowClassName={(record,index)=>index%2===0?'table1':'table2'}
                     /> 
-                    <EditApp dataSource={this.state.operationdata}   editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}/>
+                    <EditApp clusters={this.props.clusters} dataSource={this.state.operationdata}   editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}/>
                  
                  <Modal
                     width='560px'

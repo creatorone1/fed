@@ -31,6 +31,7 @@ export default class FedNamespaceList extends React.Component {
     componentDidMount(){//请求数据
        
        console.log('namespace type:',this.props.type) //如果不是集群的
+       console.log('namspaces currentcluster:',this.props.currentcluster) 
        if(this.props.type!==undefined){
            console.log('change')
            
@@ -38,12 +39,13 @@ export default class FedNamespaceList extends React.Component {
                   dataSource:this.props.data //
                })  
        }else{  //如果是联邦的则访问联邦命名空间数据
-         // this.request()
+          this.request('fed')
        }
      }
 
     componentWillReceiveProps(nextProps){
-        console.log('componentWillReceiveProps')
+       // console.log('componentWillReceiveProps')
+        console.log('namspaces currentcluster:',nextProps.currentcluster) 
         /*if(nextProps.type!==undefined){
             console.log('change')
             this.setState({  
@@ -56,24 +58,25 @@ export default class FedNamespaceList extends React.Component {
     } 
 
     // 动态获取mock数据
-    request = () => {
-        var token='token-b2q8g:ql4lb8mnw26fdwjgfwmhjsh2j6ssm2nmgm584bz6fqgrnp6klqhz2k'
-        fetch('https://10.103.240.133/v3',{
+    request = (clustername) => { //初始化数据请求
+        fetch('http://localhost:9090/api/cluster/'+clustername+'/namespaces',{
         method:'GET',
-        headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          }
+        mode: 'cors', 
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
         }).then((data) => {
-            console.log('data:',data)
+            console.log('data:',data) 
+            this.setState({ //表格选中状态清空
+                selectedRowKeys:[],
+                selectedRows:null,
+                dataSource:data
+            }) 
             return data;
-        }).catch(function (e) {
+        }).catch( (e)=> {  
             console.log(e);
         })
-    }
+    } 
 
 
 
@@ -94,14 +97,44 @@ export default class FedNamespaceList extends React.Component {
                 title:'删除命名空间',
                 content:'您确认要删除这些命名空间吗？'+this.state.selectedRows.map(item=>item.name),
                 onOk:()=>{
-                    this.setState({  //取消选中行
-                        selectedRowKeys: [ ],  
-                        selectedRows: null
+
+                    var datas={
+                        items:[]
+                    }  
+                    this.state.selectedRows.map(item=>{
+                        var ditem={
+                            name:item.name,   
+                        }
+                        datas.items=datas.items.concat(ditem)
                     })
-                    message.success('删除成功');
-                    //发送恢复请求
-                    this.request();
-                }
+                   // console.log(JSON.stringify(datas))
+                    //下面URL的 集群 名称 以后需要替换掉
+                    fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/namespaces?data='+JSON.stringify(datas),{
+                        method:'DELETE',
+                        mode: 'cors', 
+                        }).then((response) => {
+                            console.log('response:',response.ok)
+                            return response.json();
+                        }).then((data) => {
+                            this.setState({  //取消选中行
+                                selectedRowKeys: [ ],  
+                                selectedRows: null
+                            })
+                            message.success('删除成功');
+                            //发送删除请求
+                            this.request(this.props.currentcluster);
+                            return data;
+                        }).catch( (e)=> {  
+                            this.setState({  //取消选中行
+                                selectedRowKeys: [ ],  
+                                selectedRows: null
+                            })
+                            message.success('删除成功');
+                            //发送删除请求
+                            this.request(this.props.currentcluster);
+                            console.log(e);
+                        }) 
+                    }
             }) 
     }  
 
@@ -128,13 +161,42 @@ export default class FedNamespaceList extends React.Component {
                 title:'删除命名空间',
                 content:'您确认要删除此命名空间吗？'+record.name ,
                 onOk:()=>{ 
-                    message.success('删除成功');
-                    //发送删除请求
-                    this.request();
-                    //有了后台后删除
-                    this.setState({
-                        dataSource:this.state.dataSource.filter(item => item.name!==record.name)
-                    })
+                    var datas={
+                        items:[]
+                    }  
+                    var ditem={
+                            name:record.name,   
+                     }
+                    datas.items=datas.items.concat(ditem)
+                   
+                   // console.log(JSON.stringify(datas))
+                    //下面URL的 集群 名称 以后需要替换掉
+                    fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/namespaces?data='+JSON.stringify(datas),{
+                        method:'DELETE',
+                        mode: 'cors', 
+                        }).then((response) => {
+                            console.log('response:',response.ok)
+                            return response.json();
+                        }).then((data) => {
+                            this.setState({  //取消选中行
+                                selectedRowKeys: [ ],  
+                                selectedRows: null
+                            })
+                            message.success('删除成功');
+                            //发送删除请求
+                            this.request(this.props.currentcluster);
+                            return data;
+                        }).catch( (e)=> {  
+                            this.setState({  //取消选中行
+                                selectedRowKeys: [ ],  
+                                selectedRows: null
+                            })
+                            message.success('删除成功');
+                            //发送删除请求
+                            this.request(this.props.currentcluster);
+                            console.log(e);
+                        }) 
+                    
                 }
             })
         }
@@ -149,6 +211,15 @@ export default class FedNamespaceList extends React.Component {
                     this.setState({
                         search:false
                     })    
+                }
+                if(content!==''){
+                    //console.log('this.state.searchname:',this.state.searchname)
+                    //console.log(this.state.dataSource.map(item=>item.name.indexOf(this.state.searchname)))
+                    this.setState({
+                        searchdata:this.state.dataSource.filter(item=>item.name.indexOf(content)!==-1),
+                        search:true
+                    })
+                     
                 }
             }
             //点击搜索按钮
@@ -170,7 +241,10 @@ export default class FedNamespaceList extends React.Component {
                 }
             }
    
-   
+    statechange=()=>{ //创建服务之后回调
+                console.log('refresh!')
+                this.request(this.props.currentcluster)
+    } 
     render(){ 
         const columns=[
             {
@@ -254,7 +328,7 @@ export default class FedNamespaceList extends React.Component {
                         
                     </Col>
                         <Col span='4' className='Button-right'> 
-                        <CreateFedNamespace />
+                        <CreateFedNamespace statechange={this.statechange} currentcluster={this.props.currentcluster}/>
                     </Col>
                     </Row>
                     <Table  

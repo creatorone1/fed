@@ -80,17 +80,31 @@ export default class AppRepo   extends React.Component {
 
     }
     request = () => {
-        fetch('url',{
+        fetch('http://localhost:9090/api/charts',{
         method:'GET'
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
         }).then((data) => {
             console.log('data:',data)
+            
+            function compare(a,b){
+                if(a.name>b.name){
+                    return 1; //sort()中参数大于0，交换a b顺序，升序排列
+                }else if(a.name<b.name){
+                    return -1;  //sort()中参数小于0，a b顺序不变，升序排列
+                }
+            } 
+            this.setState({
+                dataSource:data.sort(compare),
+                loading:false,   
+            })
             return data;
-        }).catch(function (e) {
+        }).catch((e)=>{
             console.log(e);
         })
+       
+
     }
 
     //搜索输入框响应变化
@@ -104,6 +118,15 @@ export default class AppRepo   extends React.Component {
             this.setState({
                 search:false
             })    
+        }
+        if(content!==''){
+            //console.log('this.state.searchname:',this.state.searchname)
+            //console.log(this.state.dataSource.map(item=>item.name.indexOf(this.state.searchname)))
+            this.setState({
+                searchdata:this.state.dataSource.filter(item=>item.name.indexOf(content)!==-1),
+                search:true
+            })
+             
         }
     }
      //点击搜索按钮
@@ -129,13 +152,13 @@ export default class AppRepo   extends React.Component {
         this.setState({ 
             loading:true
         })
+        //this.request()
         setTimeout(()=> {//模拟数据加载结束则取消加载框
-            this.setState({
-                loading:false,   
-            })
+             
+            this.request()
           }
-        ,3000)
-        this.request()
+        ,1000)
+         
     }
     // 创建操作
     handleCreate = (visible,data)=>{
@@ -165,9 +188,7 @@ export default class AppRepo   extends React.Component {
                     {item.description}
                 </p>
                 </div>
-                <Button   type='primary'  style={{marginTop:'20px'}}  onClick={()=>this.handleCreate(true,item)}>创建</Button>
-                 
-                
+                <Button   type='primary'  style={{marginTop:'20px'}}  onClick={()=>this.handleCreate(true,item)}>创建</Button>  
             </Card>
             </div> 
         ))
@@ -186,7 +207,7 @@ export default class AppRepo   extends React.Component {
                     <Row   >
                     {card   } 
                     </Row>  
-                    <CreateApp dataSource={this.state.operationdata} createvisible={this.state.createvisible} handleCreate={this.handleCreate}></CreateApp>
+                    <CreateApp clusters={this.props.clusters}  dataSource={this.state.operationdata} createvisible={this.state.createvisible} handleCreate={this.handleCreate}></CreateApp>
 
                 </div>
                 )

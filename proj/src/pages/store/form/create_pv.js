@@ -11,10 +11,10 @@ const Panel = Collapse.Panel;
 
 class CreatePV extends React.Component {
     state = {
-        /**pv与存储类的数据从网络获取 
+        /**存储类sc的数据从网络获取 
          * 
         */
-        pvData:[{
+      /*  pvData:[{
             name:'pv1',
             namespace:'default',
             status:'Available',
@@ -54,6 +54,8 @@ class CreatePV extends React.Component {
             key:'4',
         },
        ] ,
+       */
+
         //存储类
         SCData: [{
             name:'stc1', 
@@ -77,22 +79,23 @@ class CreatePV extends React.Component {
         ], 
         selectdata:[],// 存储源数据，pv或sc 
         accessmodes: [
-            { label: '单主机读写', value: 'RWO' },
-            { label: '多主机只读', value: 'ROX' },
-            { label: '多主机读写', value: 'RWX' },
-        ] 
+            { label: '单主机读写', value: 'ReadWriteOnce' },
+            { label: '多主机只读', value: 'ReadOnlyMany' },
+            { label: '多主机读写', value: 'ReadWriteMany' },
+        ]
     }
     showModal = () => {
+        this.request(this.props.currentcluster)
         const { form } = this.props;
         form.resetFields(); //重置表单数据 
         this.setState({
           visible: true, 
           selectdata:[],
           accessmodes: [
-            { label: '单主机读写', value: 'RWO' },
-            { label: '多主机只读', value: 'ROX' },
-            { label: '多主机读写', value: 'RWX' },
-          ] 
+            { label: '单主机读写', value: 'ReadWriteOnce' },
+            { label: '多主机只读', value: 'ReadOnlyMany' },
+            { label: '多主机读写', value: 'ReadWriteMany' },
+         ]
         }); 
        
       }
@@ -111,18 +114,44 @@ class CreatePV extends React.Component {
              //keys表示env名字env_label与值value的key
             //labelkeys表示label名字env_label与值value的key
             //portkeys表示portnum与porttype的key
-            const { name,
-                path,server,
-                storageclass,
-                capacity,accessmodes, 
-              } = values;  
-            
-            //成功了则关闭弹窗且初始化
+            var pv=new PV(values)
+              //console.log('svc',pvc)
+               //console.log(JSON.stringify(pvc))
+              fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/pv',{
+               method:'POST',
+               mode: 'cors', 
+               body:JSON.stringify(pv)
+             }).then((response) => {
+                 console.log('response:',response.ok)
+                 return response.json();
+             }).then((data) => {
+                 console.log('data:',data)
+                
+                 /*this.setState({ //表格选中状态清空
+                     selectedRowKeys:[],
+                     selectedRows:null,
+                     dataSource:data
+                 })*/
+                 
+                    this.props.statechange() 
+                 //成功了则关闭弹窗且初始化
+                const { form } = this.props; 
+                form.resetFields();  //重置表单
+                this.setState({
+                 visible: false, 
+                    });
+                 return data;
+             }).catch( (e)=> {  
+               //成功了则关闭弹窗且初始化
             const { form } = this.props; 
             form.resetFields();  //重置表单
             this.setState({
               visible: false, 
             });
+                 console.log(e);
+             }) 
+
+             
           }
           else{ //否则报错 
             const { name,podsnum,image,namepace,
@@ -139,24 +168,30 @@ class CreatePV extends React.Component {
          
     componentDidMount(){//请求数据
         //this.request();
+        //console.log(`'safaf'`)
     }
     componentWillReceiveProps(nextProps){
         //接收参数后更新数据
 
     }
-    request = () => {
-        fetch('url',{
-        method:'GET'
-        }).then((response) => {
-            console.log('response:',response.ok)
-            return response.json();
-        }).then((data) => {
-            console.log('data:',data)
-            return data;
-        }).catch(function (e) {
-            console.log(e);
-        })
-    }
+    request = (clustername) => { //初始化数据请求
+        fetch('http://localhost:9090/api/cluster/'+clustername+'/scs',{
+            method:'GET'
+            }).then((response) => {
+                console.log('response:',response.ok)
+                return response.json();
+            }).then((data) => {
+                console.log('data:',data) 
+                this.setState({ //表格选中状态清空
+                    selectedRowKeys:[],
+                    selectedRows:null,
+                    SCData:data
+                }) 
+                return data;
+            }).catch((e)=>{
+                console.log(e);
+            })
+    } 
 
     render(){
         const { getFieldDecorator, getFieldValue } = this.props.form;
@@ -176,7 +211,7 @@ class CreatePV extends React.Component {
        
         return(
             <div>
-            <Button type='primary' onClick={this.showModal}><Icon type='plus'/>添加数据卷</Button>  
+            <Button type='primary' onClick={this.showModal}><Icon type='plus'/>添加持久卷</Button>  
                         
             <Modal
             title="添加持久卷"
@@ -332,3 +367,21 @@ class CreatePV extends React.Component {
         }
     }
 export default Form.create()(CreatePV);            
+function PV(values){
+    var pv=new Object(); 
+    const { name,
+             capacity,
+             path,
+             server,
+             storageclass,
+             accessmodes, 
+            } = values;
+    pv.name=name 
+    pv.capacity=capacity+'Gi'
+    pv.path=path
+    pv.server=server
+    pv.storageclass=storageclass
+    pv.accessmodes=accessmodes
+
+    return pv
+}

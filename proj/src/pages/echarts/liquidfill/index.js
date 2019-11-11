@@ -15,7 +15,7 @@ export default class Liquid_pie extends React.Component {
             backgroundColor:'white',
             tooltip: {
                 trigger: 'item', 
-                formatter:  'memory<br>Left:  '+left+'Ki' ,
+                formatter:  'memory<br>Left:  '+left+'Gi' ,
                 confine:true
             },
             legend: {

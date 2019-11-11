@@ -41,21 +41,27 @@ export default class StorageClass extends React.Component {
     }
     componentDidMount(){//请求数据
         //this.request();
+        this.request(this.props.currentcluster);
     }
     componentWillReceiveProps(nextProps){
         //接收参数后更新数据
-
+        this.request(nextProps.currentcluster);
     }
-    request = () => {
-        fetch('url',{
+    request = (clustername) => {
+        fetch('http://localhost:9090/api/cluster/'+clustername+'/scs',{
         method:'GET'
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
         }).then((data) => {
-            console.log('data:',data)
+            console.log('data:',data) 
+            this.setState({ //表格选中状态清空
+                selectedRowKeys:[],
+                selectedRows:null,
+                dataSource:data
+            }) 
             return data;
-        }).catch(function (e) {
+        }).catch((e)=>{
             console.log(e);
         })
     }
@@ -70,10 +76,43 @@ export default class StorageClass extends React.Component {
         Modal.confirm({
             title:'确认删除',
             content:'您确认要删除此条数据吗？'+record.name ,
-            onOk:()=>{
-                message.success('删除成功');
-                //发送删除请求
-                this.request();
+            onOk:()=>{ 
+                var datas={
+                    items:[]
+                }  
+                var ditem={
+                        name:record.name,  
+                 }
+                datas.items=datas.items.concat(ditem)
+               
+               // console.log(JSON.stringify(datas))
+                //下面URL的 集群 名称 以后需要替换掉
+                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/scs?data='+JSON.stringify(datas),{
+                    method:'DELETE',
+                    mode: 'cors', 
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request(this.props.currentcluster);
+                        return data;
+                    }).catch( (e)=> {  
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request(this.props.currentcluster);
+                        console.log(e);
+                    }) 
+                
             }
         })
     }
@@ -93,14 +132,44 @@ export default class StorageClass extends React.Component {
             title:'确认删除',
             content:'您确认要删除这些数据吗？'+this.state.selectedRows.map(item=>item.name) ,
             onOk:()=>{
-                this.setState({  //取消选中行
-                    selectedRowKeys: [ ],  
-                    selectedRows: null
+
+                var datas={
+                    items:[]
+                }  
+                this.state.selectedRows.map(item=>{
+                    var ditem={
+                        name:item.name,  
+                    }
+                    datas.items=datas.items.concat(ditem)
                 })
-                message.success('删除成功');
-                //发送删除请求
-                this.request();
-            }
+               // console.log(JSON.stringify(datas))
+                //下面URL的 集群 名称 以后需要替换掉
+                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/scs?data='+JSON.stringify(datas),{
+                    method:'DELETE',
+                    mode: 'cors', 
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request(this.props.currentcluster);
+                        return data;
+                    }).catch( (e)=> {  
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request(this.props.currentcluster);
+                        console.log(e);
+                    }) 
+                }
         })
     }
     //搜索输入框响应变化
@@ -114,6 +183,15 @@ export default class StorageClass extends React.Component {
             this.setState({
                 search:false
             })    
+        }
+        if(content!==''){
+            //console.log('this.state.searchname:',this.state.searchname)
+            //console.log(this.state.dataSource.map(item=>item.name.indexOf(this.state.searchname)))
+            this.setState({
+                searchdata:this.state.dataSource.filter(item=>item.name.indexOf(content)!==-1),
+                search:true
+            })
+             
         }
     }
      //点击搜索按钮
@@ -158,7 +236,10 @@ export default class StorageClass extends React.Component {
         }) 
 
     }
-
+    statechange=()=>{ //创建服务之后回调
+        console.log('refresh!')
+        this.request(this.props.currentcluster)
+    } 
     render(){
         /**考虑加上集群列，表示数据属于哪个集群 */
         
@@ -197,7 +278,10 @@ export default class StorageClass extends React.Component {
                     return( 
                      <Dropdown overlay={
                         <Menu onClick={({key})=>this.onClick(key,text,record)}>
-                        <Menu.Item key="1">编辑</Menu.Item> 
+                        {
+                           // <Menu.Item key="1">编辑</Menu.Item> 
+                        }
+                         
                         <Menu.Item key="2">删除</Menu.Item> 
                       </Menu> 
                      } trigger={['click']}>
@@ -229,7 +313,7 @@ export default class StorageClass extends React.Component {
                         
                     </Col>
                         <Col span='4' className='Button-right'> 
-                        <CreateSc   namespaces={this.props.namespaces} > </CreateSc>
+                        <CreateSc  statechange={this.statechange} currentcluster={this.props.currentcluster}   namespaces={this.props.namespaces} > </CreateSc>
                     </Col>
                     </Row>
                     <Table  
@@ -238,7 +322,7 @@ export default class StorageClass extends React.Component {
                         columns={columns }  
                         rowClassName={(record,index)=>index%2===0?'table1':'table2'}
                     />
-                      <EditSc dataSource={this.state.operationdata} namespaces={this.props.namespaces} editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}></EditSc>
+                      <EditSc statechange={this.statechange} currentcluster={this.props.currentcluster} dataSource={this.state.operationdata} namespaces={this.props.namespaces} editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}></EditSc>
                 </div>
                 )
         }

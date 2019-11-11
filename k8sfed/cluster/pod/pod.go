@@ -67,7 +67,9 @@ type Port struct {
 type Limit struct {
 	Cpu    string `json:"cpu,omitempty"`
 	Memory string `json:"memory,omitempty"`
-	Gpu    string `json:"alpha.kubernetes.io/nvidia-gpu,omitempty"`
+	Gpu    string `json:"nvidia.com/gpu,omitempty"`
+
+	//Gpu    string `json:"alpha.kubernetes.io/nvidia-gpu,omitempty"`
 }
 
 type Resource struct {
@@ -139,12 +141,13 @@ type SeLinuxOption struct {
 }
 
 type SecurityContext struct {
-	Capabilities           *Capability    `json:"capabilities,omitempty"`
-	Privileged             bool           `json:"privileged,omitempty"`
-	SeLinuxOptions         *SeLinuxOption `json:"seLinuxOptions,omitmepty"`
-	RunAsUser              int64          `json:"runAsUser,omitempty"`
-	RunAsNonRoot           bool           `json:"runAsNonRoot,omitempty"`
-	ReadOnlyRootFilesystem bool           `json:"readOnlyRootFilesystem,omitempty"`
+	Capabilities             *Capability    `json:"capabilities,omitempty"`
+	Privileged               bool           `json:"privileged"`
+	SeLinuxOptions           *SeLinuxOption `json:"seLinuxOptions,omitmepty"`
+	RunAsUser                int64          `json:"runAsUser,omitmepty"`
+	RunAsNonRoot             bool           `json:"runAsNonRoot"`
+	ReadOnlyRootFilesystem   bool           `json:"readOnlyRootFilesystem"`
+	AllowPrivilegeEscalation bool           `json:"allowPrivilegeEscalation"`
 }
 
 type Container struct {
@@ -416,7 +419,7 @@ func NewVolume(name, hostPath, medium, secretName, congigMapName, pvcName string
 
 }
 
-func NewPod(name, namespace string, labels map[string]string, initContainers, containers []*Container, volumes []*Volume) *Pod {
+/*func NewPod(name, namespace string, labels map[string]string, initContainers, containers []*Container, volumes []*Volume) *Pod {
 	if namespace == "" {
 		namespace = "default"
 	}
@@ -440,8 +443,8 @@ func NewPod(name, namespace string, labels map[string]string, initContainers, co
 		Spe:        spec,
 	}
 
-}
-func NewSelcectPod(name, namespace, selector string, labels map[string]string, initContainers, containers []*Container, volumes []*Volume) *Pod {
+}*/
+/*func NewSelcectPod(name, namespace, selector string, labels map[string]string, initContainers, containers []*Container, volumes []*Volume) *Pod {
 	if namespace == "" {
 		namespace = "default"
 	}
@@ -467,7 +470,7 @@ func NewSelcectPod(name, namespace, selector string, labels map[string]string, i
 		Spe:        spec,
 	}
 
-}
+}*/
 
 func (pod *Pod) Create(master string) (io.ReadCloser, int, error) {
 	return cluster.Call("POST", "/api/v1/namespaces/"+pod.Meta.Namespace+"/pods", master, pod)
@@ -489,7 +492,8 @@ func (pod *Pod) Get(master string) error {
 }
 
 func (pod *Pod) Delete(master string) (io.ReadCloser, int, error) {
-	return cluster.Call("DELETE", "/api/v1/namespaces/"+pod.Meta.Namespace+"/pods/"+pod.Meta.Name, master, nil)
+	b := cluster.NewBody(0, false)
+	return cluster.Call("DELETE", "/api/v1/namespaces/"+pod.Meta.Namespace+"/pods/"+pod.Meta.Name, master, b)
 }
 
 func (pod *Pod) ToJsonString() string {

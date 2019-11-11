@@ -14,7 +14,8 @@ export default class Login extends React.Component {
     }
 
     loginReq = (params) => {
-        window.location.href = '/#/';
+        //window.location.href = '/#/';
+        window.location.href = '/#/application';
     };
 
     render() {

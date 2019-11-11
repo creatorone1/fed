@@ -41,14 +41,51 @@ class CreateIng extends React.Component {
             console.log('打开时候深拷贝dataSource') 
             //先把原数据 转换为json字符串 再转化为 对象
             let data=JSON.stringify( nextProps.dataSource)
-            //console.log('json:',data)
+           // console.log('data:',data)
             //console.log('object:',JSON.parse(data)) 
             this.setState({  
             //这儿 必须是深拷贝，不然会影响传入的值,并且只能初始化这个参数一次，以后的form的set操作不能影响该值
             dataSource:JSON.parse(data) //
             }) 
+           // console.log('dataSource',JSON.parse(data))
+            this.request(this.props.currentcluster,nextProps.dataSource.namespace)
           }
+           
     }
+    request = (clustername,namespace) => { //初始化数据请求
+        fetch('http://localhost:9090/api/cluster/'+clustername+'/services',{
+        method:'GET',
+        mode: 'cors', 
+        }).then((response) => {
+            console.log('response:',response.ok)
+            return response.json();
+        }).then((data) => {
+            console.log('data:',data)
+            var services=[]
+            data.map(item=>{
+                var ports=[]
+                item.ports.map(p=>{
+                    ports=ports.concat(p.port)
+                })
+              var service={
+                name:item.name,
+                port:ports,
+                namespace:item.namespace
+              } 
+              services=services.concat(service)
+            })
+            var sdata=services.filter(item=>item.namespace==namespace)
+            
+            this.setState({ //表格选中状态清空 
+              services:services,
+              Servicesdata:sdata
+            })
+             
+            return data;
+        }).catch( (e)=> {  
+            console.log(e);
+        })
+    } 
     hideModal = () => { //点击取消按钮
         const { form } = this.props; 
         form.resetFields();  //重置表单
@@ -83,10 +120,37 @@ class CreateIng extends React.Component {
                  } = values;   
             //console.log('env_label name :', keys.map(key => env_label[key]));
             //成功了则关闭弹窗且初始化
-            const { form } = this.props; 
-            form.resetFields();  //重置表单
-            id=0; 
-            this.props.handleUpdate(false)
+            var ing = new Ingress(values)
+            console.log('ing:',JSON.stringify(ing)) 
+            fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/namespace/'+namespace+'/ingress/'+name,{
+              method:'PUT',
+              mode: 'cors', 
+              body:JSON.stringify(ing)
+              }).then((response) => {
+                  console.log('response:',response.ok)
+                  return response.json();
+              }).then((data) => {
+                  console.log('data:',data)
+                 //成功了则关闭弹窗且初始化
+                 const { form } = this.props; 
+                    form.resetFields();  //重置表单
+                    id=0; 
+                 this.props.handleUpdate(false)  //通知父节点关闭弹窗 
+                 this.props.statechange()//更新成功刷新数据
+                  return data;
+              }).catch( (e)=>{ 
+
+                   //成功了则关闭弹窗且初始化
+                  const { form } = this.props; 
+                    form.resetFields();  //重置表单
+                    id=0; 
+                    this.props.handleUpdate(false)
+                   //通知父节点关闭弹窗 
+                  console.log(e);
+              }) 
+            
+            
+             
           }
           else{ //否则报错 
             /*const { name,podsnum,image,namepace,
@@ -407,9 +471,11 @@ class CreateIng extends React.Component {
         };  
         let rules,ruleslength
         if(dataSource){
+           // console.log('rules',rules)
             rules=dataSource.rules
         }
         if(rules){
+           // console.log('rules',rules)
             this.props.form.getFieldDecorator('ruleskeys', { initialValue: rules.map((item,index)=>'defaultrulekeys'+index) });//定义环境变量的key
             //this.add('keys')  //修改了props 导致无线调用 死循环
             ruleslength=rules.length; 
@@ -543,3 +609,49 @@ class CreateIng extends React.Component {
 
  
 export default Form.create()(CreateIng); //创建表单
+function Ingress(values) {
+    var ing=new Object(); 
+    const { name,namespace,
+            defaultport,
+            defaultname,  
+            
+            ruleskeys, 
+            dnsname, 
+            
+            backendkeys,
+            servicename,
+            serviceport,
+            path, 
+             
+            } = values;
+    ing.name=name;
+    ing.namespace=namespace
+    var backend={
+        servicename:defaultname,
+        serviceport:defaultport
+    }   
+    ing.backend= backend    
+    var rules=[]
+    ruleskeys.map(key =>{
+      var backends=[]
+       backendkeys[key].map(bkey=>{
+        var b={
+            path:path[bkey],
+            servicename:servicename[bkey],
+            serviceport:serviceport[bkey],
+        }
+        backends=backends.concat(b)
+      })  
+      var r ={
+        host: dnsname[key],
+        backend:backends, 
+      }
+
+      
+      rules=rules.concat(r)
+    })       
+    ing.rules= rules    
+
+     
+    return ing
+}

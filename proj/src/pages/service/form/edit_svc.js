@@ -53,6 +53,8 @@ class CreateSvc extends React.Component {
             dataSource:JSON.parse(data), // 
             selectwldata:this.state.workloaddata.filter(item=>item.namespace===nextProps.dataSource.namespace)
             //读取该命名空间下的服务
+            ,
+            type:nextProps.dataSource.type
             }) 
             //let data1=this.state.workloaddata.filter(item=>item.namespace===nextProps.dataSource.namespace)
             //console.log('data:',data1)
@@ -67,13 +69,13 @@ class CreateSvc extends React.Component {
         this.props.handleUpdate(false) 
       }
     handleOk =()=>{ //点击确认按钮
-        if(this.state.dataSource.workload)
+        /*if(this.state.dataSource.workload)
         {   
           //console.log('change')
           this.props.form.setFieldsValue({ //如果之前存在工作负载则不需要默认的
               [`wlname[${'wlkeysdefault'}]`]:'none'
             })
-        } 
+        } */
 
         this.props.form.validateFields((err, values) => {
           if (!err) {   //如果没有错则传输数据 
@@ -87,11 +89,36 @@ class CreateSvc extends React.Component {
               } = values;  
             //console.log('env_label name :', keys.map(key => env_label[key]));
             
-            //成功了则关闭弹窗且初始化
-            const { form } = this.props; 
-            form.resetFields();  //重置表单
-            id=0;
-            this.props.handleUpdate(false) 
+            var svc = new Service(values)
+            console.log('svc:',JSON.stringify(svc)) 
+              
+            fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/namespace/'+namespace+'/service/'+name,{
+              method:'PUT',
+              mode: 'cors', 
+              body:JSON.stringify(svc)
+              }).then((response) => {
+                  console.log('response:',response.ok)
+                  return response.json();
+              }).then((data) => {
+                  console.log('data:',data)
+                 //成功了则关闭弹窗且初始化
+                 const { form } = this.props; 
+                 form.resetFields();  //重置表单
+                 id=0;
+                 this.props.handleUpdate(false) 
+                 this.props.statechange()//更新成功刷新数据
+                  return data;
+              }).catch( (e)=>{ 
+
+                   //成功了则关闭弹窗且初始化
+                    const { form } = this.props; 
+                    form.resetFields();  //重置表单
+                    id=0;
+                    this.props.handleUpdate(false) 
+                   //通知父节点关闭弹窗 
+                  console.log(e);
+              })  
+            
           }
           else{ //否则报错 
               
@@ -103,12 +130,12 @@ class CreateSvc extends React.Component {
     handleSlectn=(value)=>{ //选择当前命名空间下的工作负载
         console.log('select namespaces: '+value)
         const {form}=this.props
-        form.resetFields('wlkeys') //重置工作负载选项
-        form.resetFields(`wlname[${'wlkeysdefault'}]`)
+        //form.resetFields('wlkeys') //重置工作负载选项
+        //form.resetFields(`wlname[${'wlkeysdefault'}]`)
         //给工作负载选择组件中配置合适的 option 选项
-        this.setState({
-            selectwldata:this.state.workloaddata.filter(item=>item.namespace===value)
-        }) 
+   //  this.setState({
+     //       selectwldata:this.state.workloaddata.filter(item=>item.namespace===value)
+      //  }) 
     }   
     remove = (keytype,k) => { //移除
         const { form } = this.props;
@@ -129,6 +156,27 @@ class CreateSvc extends React.Component {
             console.log('remove data',data)
           }  
         }  
+        if(keytype=='selkeys') {
+          //console.log('wlkeys',k)
+          form.setFieldsValue({
+            selkeys: keys.filter(key => key !== k),
+          });
+          if(k.indexOf('default')!==-1){
+            const name=form.getFieldValue(`selname[${k}]`)
+            const value=form.getFieldValue(`selvalue[${k}]`)
+            var data=this.state.dataSource
+            data.selectors=data.selectors.filter(item=>{
+              if(item.value==value&&item.name==name)
+                {return false}
+                else{
+                  return true
+                }
+            } )
+            
+             
+            console.log('remove data',data)
+          }  
+        }
         if(keytype=='portkeys'){
           form.setFieldsValue({
             portkeys: keys.filter(key => key !== k),
@@ -175,6 +223,10 @@ class CreateSvc extends React.Component {
         if(keytype=='wlkeys')  
         form.setFieldsValue({
            wlkeys: nextKeys,
+        });
+        if(keytype=='selkeys')  
+        form.setFieldsValue({
+          selkeys: nextKeys,
         });
         if(keytype=='portkeys')  
         form.setFieldsValue({
@@ -255,8 +307,8 @@ class CreateSvc extends React.Component {
       return formItems;
     }
 
-    //初始化标签label key表单数组
-    initlabelKeysItem =(keytype,keys,dataSource,labellength)=>{
+    //初始化标签selectors key表单数组
+    initselKeysItem =(keytype,keys,dataSource,sellength)=>{
         const { getFieldDecorator } = this.props.form;
        
         const formItems = keys.map((k, index) => ( //根据key的数量显示form内容行数
@@ -265,8 +317,8 @@ class CreateSvc extends React.Component {
           <FormItem 
             label={index === 0 ? '键' : ''} 
           >
-            {getFieldDecorator(`label[${k}]`, {
-              initialValue:index<labellength?dataSource.label[index].name:'',
+            {getFieldDecorator(`selname[${k}]`, {
+              initialValue:index<sellength?dataSource.selectors[index].name:'',
               rules: [{
                 required: true,
                 whitespace: true,
@@ -284,8 +336,8 @@ class CreateSvc extends React.Component {
             label={index === 0 ? '值' : ''} 
           >
             <div> 
-            {getFieldDecorator(`value[${k}]`, {
-              initialValue:index<labellength?dataSource.label[index].value:'', 
+            {getFieldDecorator(`selvalue[${k}]`, {
+              initialValue:index<sellength?dataSource.selectors[index].value:'', 
             })(   
               <Input placeholder="" style={{width:'80%',marginRight:'8%'}}  />    
              )}
@@ -303,6 +355,54 @@ class CreateSvc extends React.Component {
         ));
         return formItems;
     }
+    //初始化标签label key表单数组
+    initlabelKeysItem =(keytype,keys,dataSource,labellength)=>{
+      const { getFieldDecorator } = this.props.form;
+     
+      const formItems = keys.map((k, index) => ( //根据key的数量显示form内容行数
+        <Row key={index} gutter={16}> 
+        <Col span='12'  > 
+        <FormItem 
+          label={index === 0 ? '键' : ''} 
+        >
+          {getFieldDecorator(`label[${k}]`, {
+            initialValue:index<labellength?dataSource.label[index].name:'',
+            rules: [{
+              required: true,
+              whitespace: true,
+              message: "不能为空",
+            }],
+          })( 
+            <Input placeholder="" style={{width:'80%',marginRight:'8%' }}  />   
+          )}
+           =
+        </FormItem>
+        </Col>
+         
+        <Col span='12'  > 
+        <FormItem
+          label={index === 0 ? '值' : ''} 
+        >
+          <div> 
+          {getFieldDecorator(`value[${k}]`, {
+            initialValue:index<labellength?dataSource.label[index].value:'', 
+          })(   
+            <Input placeholder="" style={{width:'80%',marginRight:'8%'}}  />    
+           )}
+          {keys.length > 0 ? (
+            <Icon
+              className="dynamic-delete-button"
+              type="minus-circle-o"
+              onClick={() => this.remove(keytype,k)}
+            />
+             ) : null}
+            </div> 
+        </FormItem>
+        </Col> 
+        </Row>
+      ));
+      return formItems;
+  }
     //初始化端口映射port表单数组
     initPortsItem =(keytype,keys,svctype,dataSource,portlength)=>{
         //console.log('svctype:',svctype)
@@ -375,7 +475,7 @@ class CreateSvc extends React.Component {
             
           </FormItem>
           </Col>
-          <Col span={(svctype =='nodeport'  ) ? '5':'10'}  > 
+          <Col span={(svctype =='NodePort'  ) ? '5':'10'}  > 
           <FormItem 
             label={index === 0 ? '容器端口' : ''}  
           >
@@ -387,7 +487,7 @@ class CreateSvc extends React.Component {
                 min={0}
               ></InputNumber> 
             )} 
-            { (svctype =='nodeport'  ) ? '':  
+            { (svctype =='NodePort'  ) ? '':  
                 (keys.length > 0 ? (
                   <Icon
                     className="dynamic-delete-button"
@@ -398,7 +498,7 @@ class CreateSvc extends React.Component {
             } 
           </FormItem>
           </Col>
-          {  (svctype =='nodeport'  ) ?  
+          {  (svctype =='NodePort'  ) ?  
           <Col span='6'  >
           <FormItem
             label={index === 0 ? '主机端口' : ''} 
@@ -428,6 +528,9 @@ class CreateSvc extends React.Component {
         return formItems;
     }
     handleSelecttype =(value)=>{
+      this.setState({
+        type:value
+      })
       console.log('value',value)
        
     }
@@ -444,7 +547,7 @@ class CreateSvc extends React.Component {
             sm: { span: 20 },
           },
         }; 
-        let wl,wllength;
+        /*let wl,wllength;
         if(dataSource){ //读取默认的环境变量env值
             wl=dataSource.workload
             }
@@ -458,11 +561,12 @@ class CreateSvc extends React.Component {
         }
         const wlkeys = getFieldValue('wlkeys'); //获取port的key
         const wlformItems  = this.initWlKeysItem('wlkeys',wlkeys,dataSource,wllength) //根据key数量设定port表单item
-        
+        */
         let port,portlength,type;
         if(dataSource){ //读取默认的环境变量env值
           port=dataSource.ports
-          type=getFieldValue('type')?getFieldValue('type'):dataSource.type
+         // type=getFieldValue('type')?getFieldValue('type'):dataSource.type
+         type=this.state.type
         } 
         if(port){//如果存在env变量则添加默认值
                 this.props.form.getFieldDecorator('portkeys', { initialValue: port.map((item,index)=>'defaultportkeys'+index) });//定义port的key 
@@ -489,6 +593,21 @@ class CreateSvc extends React.Component {
         const labelkeys = getFieldValue('labelkeys'); //获取label的key
         const labelformItems = this.initlabelKeysItem('labelkeys',labelkeys,dataSource,labellength) //根据key数量设定label表单item
         
+        let sel,sellength;
+        if(dataSource){ //读取默认的环境变量env值
+          sel=dataSource.selectors
+        }
+        if(sel){//如果存在env变量则添加默认值
+                this.props.form.getFieldDecorator('selkeys', { initialValue: sel.map((item,index)=>'defaultselkeys'+index) });//定义selectors变量的key
+                sellength=sel.length;
+        }else{
+                this.props.form.getFieldDecorator('selkeys', { initialValue: [] });//定义label的key
+                labellength=0
+        }
+        const selkeys = getFieldValue('selkeys'); //获取label的key
+        const selformItems = this.initselKeysItem('selkeys',selkeys,dataSource,sellength) //根据key数量设定label表单item
+        
+
         let exip,exiplength;
         if(dataSource){ //读取默认的环境变量env值
           exip=dataSource.externalip
@@ -560,16 +679,16 @@ class CreateSvc extends React.Component {
                 <Panel header="工作负载" key="1" >  
                     <Row gutter={16}> 
 
-                    <Col span='12'> 
+                    <Col span='6'> 
                     <FormItem  >
-                    <Button type='primary' onClick={()=>this.add('wlkeys')}    >
+                    <Button type='primary' onClick={()=>this.add('selkeys')}    >
                     <Icon type="plus" />添加工作负载
                     </Button>
                     </FormItem>
                     </Col>
 
-                    <Col span='12'> 
-                    {wlformItems}
+                    <Col span='18'> 
+                    {selformItems}
                     </Col> 
 
                     </Row>
@@ -577,16 +696,17 @@ class CreateSvc extends React.Component {
                 <Panel header="端口映射" key="2" > 
                     <Row gutter={16}> 
                     <Col span='12'> 
-                     <FormItem label= '类型'  >  
-                        {getFieldDecorator('type',{ 
+                     <FormItem label= '类型'  > 
+                     {getFieldDecorator('type',{ 
                           initialValue:dataSource.type
                         })(
                             <Select  style={{ width: wwidth }} onSelect={this.handleSelecttype}>
-                              <Option value={'clusterip'}>{'clusterip'}</Option>
-                              <Option value='headless'>{'headless'}</Option> 
-                              <Option value='nodeport'>{'nodeport'}</Option> 
+                              <Option value={'ClusterIP'}>{'ClusterIP'}</Option>
+                              <Option value='Headless' disabled={true}>{'Headless'}</Option> 
+                              <Option value='NodePort'>{'NodePort'}</Option> 
                             </Select>
                         )}  
+                         
                     </FormItem>
                     </Col>
                     { 
@@ -633,3 +753,90 @@ class CreateSvc extends React.Component {
 }
 
 export default Form.create()(CreateSvc); 
+
+function Service(values) {
+  var svc=new Object(); 
+  const { name,namespace,
+          selkeys,
+          selvalue,  
+          selname,
+
+          type,
+
+          exipkeys,
+          exip,
+
+          portkeys,
+          portname,
+          porttype,
+          svcport,
+          targetport,
+          nodeport,
+           
+
+          labelkeys,
+          label,
+          value,
+
+           
+          } = values;
+  svc.name=name;
+  svc.namespace=namespace
+  svc.type=type        
+  var selectors=[]       
+  selkeys.map(key=>{
+    var sel={
+      name:selname[key],
+      value:selvalue[key],
+    }
+    selectors=selectors.concat(sel)
+  })
+  svc.selectors=selectors
+
+  var target={}
+  selectors.map(sel=>{
+    target[sel.name]=sel.value
+  })
+  svc.target=target  
+  
+  var ports=[]
+  portkeys.map(key=>{
+    if(type=='NodePort'){
+      var p={
+        name:portname[key],
+        port:svcport[key],
+        portocol:porttype[key],
+        targetport:targetport[key],
+        nodeport:nodeport[key],
+      }
+    }else{
+      var p={
+        name:portname[key],
+        port:svcport[key],
+        portocol:porttype[key],
+        targetport:targetport[key],
+      }
+    }
+    ports=ports.concat(p)
+  }) 
+  svc.ports=ports 
+
+  var labels=[]
+  labelkeys.map(key=>{
+    var l={
+      name:label[key],
+      value:value[key],
+    }
+    labels=labels.concat(l)
+  })
+
+  svc.label=labels
+    
+  var exips=[] 
+  exipkeys.map(key=>{
+    exips=exips.concat[exip[key]]
+  })
+  svc.externalip=exips 
+   
+  return svc
+}

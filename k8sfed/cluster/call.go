@@ -143,6 +143,59 @@ func Call(method, path, master string, data interface{}) (io.ReadCloser, int, er
 
 }
 
+func PatchCall(method, path, master string, data []byte) (io.ReadCloser, int, error) {
+
+	params := bytes.NewBuffer(nil)
+
+	if data != nil {
+		if _, err := params.Write(data); err != nil {
+			return nil, -1, err
+		}
+	}
+
+	req, err := http.NewRequest(method, path, params)
+
+	if err != nil {
+		return nil, -1, err
+	}
+	req.URL.Host = master
+	req.URL.Scheme = "http"
+
+	if data != nil {
+		if method == "PATCH" {
+			req.Header.Set("Content-Type", "application/strategic-merge-patch+json")
+		} else {
+			req.Header.Set("Content-Type", "application/json")
+		}
+
+	} else if method == "POST" {
+		req.Header.Set("Content-Type", "application/text")
+	}
+	resp, err := HTTPClient().Do(req)
+
+	if err != nil {
+		return nil, -1, err
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
+		body, err := ioutil.ReadAll(resp.Body)
+
+		if err != nil {
+			return nil, -1, err
+		}
+
+		if len(body) == 0 {
+			return nil, resp.StatusCode, fmt.Errorf("Error: request returned %s, check if the server supports the requested API version",
+				http.StatusText(resp.StatusCode))
+		}
+
+		return nil, resp.StatusCode, fmt.Errorf("Error response form daemon: %s", bytes.TrimSpace(body))
+	}
+
+	return resp.Body, resp.StatusCode, nil
+
+}
+
 // func Stream(method, path, master string, stdout io.Writer, header map[string][]string) error {
 // 	req, err := http.NewRequest(method, path, nil)
 // 	req.URL.Host = master

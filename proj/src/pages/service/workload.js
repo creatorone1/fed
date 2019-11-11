@@ -32,12 +32,10 @@ export default class Workload extends React.Component {
             revision:1,
             env:[{
                     name:'a',
-                    value:'b'
-
+                    value:'b' 
                  },{
                     name:'c',
-                    value:'d'
-
+                    value:'d' 
                  },
             ],  
             label:[{
@@ -77,8 +75,8 @@ export default class Workload extends React.Component {
                 value:'h'
             },],
             request:{
-                cpurequst:100,
-                memoryrequst:96
+                cpurequest:100,
+                memoryrequest:96
             },
             limit:{
                 cpulimit:200,
@@ -192,7 +190,7 @@ export default class Workload extends React.Component {
 
     }
     componentDidMount(){//请求数据
-       // this.request();
+        this.request('fed','All');//默认是联邦
        this.setState({
         currentcluster:this.props.currentcluster,
         currentnamespace:this.props.currentnamespace,
@@ -205,8 +203,9 @@ export default class Workload extends React.Component {
             currentcluster:nextProps.currentcluster,
             currentnamespace:nextProps.currentnamespace, 
         })
-        console.log('Workload state currentcluster:',nextProps.currentcluster)
-        console.log('Workload state currentnamespaces:',nextProps.currentnamespace)
+        this.request(nextProps.currentcluster,nextProps.currentnamespace);
+        console.log('Workload state currentcluster:',this.state.currentcluster)
+        console.log('Workload state currentnamespaces:',this.state.currentnamespace)
 
         console.log('Workload get props currentcluster:',nextProps.currentcluster)
         console.log('Workload get props currentnamespaces:',nextProps.currentnamespace)
@@ -215,18 +214,25 @@ export default class Workload extends React.Component {
         
     }
 
-    request = () => { //初始化数据请求
-        fetch('http://localhost:9091/apis/apps/v1beta1/deployments',{
-        method:'GET'
+    request = (clustername,namespace) => { //初始化数据请求
+        fetch('http://localhost:9090/api/cluster/'+clustername+'/deployments',{
+        method:'GET',
+        mode: 'cors', 
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
         }).then((data) => {
             console.log('data:',data)
-
+            var datas=[]
+            if(namespace!='All'&&namespace!=''&&namespace!=undefined){
+                datas=data.filter(item=>item.namespace==namespace)
+            }else{
+                datas=data
+            }
             this.setState({ //表格选中状态清空
                 selectedRowKeys:[],
                 selectedRows:null,
+                dataSource:datas
             })
              
             return data;
@@ -246,13 +252,43 @@ export default class Workload extends React.Component {
             title:'确认',
             content:'您确认要删除此条数据吗？'+record.name ,
             onOk:()=>{ 
-                message.success('删除成功');
-                //发送删除请求
-                this.request();
-                //有了后台后删除
-                this.setState({
-                    dataSource:this.state.dataSource.filter(item => item.name!==record.name)
-                })
+                var datas={
+                    items:[]
+                }  
+                var ditem={
+                        name:record.name, 
+                        namespace:record.namespace,
+                 }
+                datas.items=datas.items.concat(ditem)
+               
+               // console.log(JSON.stringify(datas))
+                //下面URL的 集群 名称 以后需要替换掉
+                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/deployments?data='+JSON.stringify(datas),{
+                    method:'DELETE',
+                    mode: 'cors', 
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request(this.props.currentcluster,this.props.currentnamespace);
+                        return data;
+                    }).catch( (e)=> {  
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request(this.props.currentcluster,this.props.currentnamespace);
+                        console.log(e);
+                    }) 
+                
             }
         })
     }
@@ -269,40 +305,30 @@ export default class Workload extends React.Component {
         }) 
 
     }
-     
+    statechange=()=>{ //创建服务之后回调
+        this.request(this.state.currentcluster,this.props.currentnamespace)
+    }   
     // 回滚操作
     handleRollback = (key,text,record)=>{
         console.log("回滚！") 
  
         let sysTime = Util.formateDate(new Date().getTime()); //获取格式化的时间
     
-        fetch('url'+record.name,{  //查找该工作负载的副本集,修改 this.state.rollback 数据
+        fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/namespace/'+record.namespace+'/deployment/'+record.name+'/history',{  //查找该工作负载的副本集,修改 this.state.rollback 数据
                 method:'GET'
             }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
              }).then((data) => {
+             
+
+            data.map(item=>{
+                item.createtime=Util.formateDate(new Date(item.createtime))
+            }) 
             console.log('data:',data) 
             this.setState({    //传入获取的版本数据 
-                //rollbackdata:data,  以后由后台传入数据 
-                rollbackdata:[
-                    {
-                        name:'nginx1-d58g7',
-                        revision:1,
-                        createtime:sysTime
-                    },
-                    {
-                        name:'nginx1-d58g8',
-                        revision:2,
-                        createtime:sysTime
-                    },
-                    {
-                        name:'nginx1-d58g9',
-                        revision:3,
-                        createtime:sysTime
-                    },
-                ],
-                
+                //rollbackdata:data,  以后由后台传入数据  
+                rollbackdata:data, 
                 rbvisible:true,   
             })  
         }).catch((e)=> {  //写箭头函数，不要写function(e) {} 
@@ -310,29 +336,11 @@ export default class Workload extends React.Component {
             console.log("Error:   以后记得删除catch里的setState");
             this.setState({     //传入获取的版本数据
                 //rollbackdata:data,  以后由后台传入数据
-                operationdata:record, // 传入要操作数据
-                rollbackdata:[
-                    {
-                        name:'nginx1-d58g7',
-                        revision:1,
-                        createtime:sysTime
-                    },
-                    {
-                        name:'nginx1-d58g8',
-                        revision:2,
-                        createtime:sysTime
-                    },
-                    {
-                        name:'nginx1-d58g9',
-                        revision:3,
-                        createtime:sysTime
-                    },
-                ],
-                
+               // operationdata:record, // 传入要操作数据 
                 rbvisible:true,   
             })
             /**以后用以下内容替代错误信息 */
-           // message.success('网络请求错误！') 
+             message.success('网络请求错误！') 
              
             console.log("Error: ",e);
         }) 
@@ -362,13 +370,46 @@ export default class Workload extends React.Component {
             title:'暂停负载',
             content:'您确认要暂停此条数据吗？'+this.state.selectedRows.map(item=>item.name),
             onOk:()=>{
-                this.setState({  //取消选中行
-                    selectedRowKeys: [ ],  
-                    selectedRows: null
+                var datas={
+                    items:[]
+                }  
+                this.state.selectedRows.map(item=>{
+                    var depitem={
+                        name:item.name,
+                        namespace:item.namespace,
+                    }
+                    datas.items=datas.items.concat(depitem)
                 })
-                message.success('暂停成功');
-                //发送暂停请求
-                this.request();
+                
+                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/pause/deployments?data='+JSON.stringify(datas),{
+                    method:'GET',
+                    mode: 'cors', 
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [],  
+                            selectedRows: null
+                        })
+                        message.success('暂停成功');
+                         
+                        //刷新数据
+                        this.request(this.props.currentcluster,this.props.currentnamespace);
+                        return data;
+                    }).catch( (e)=> {  
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [],  
+                            selectedRows: null
+                        })
+                        message.success('暂停失败');
+                        
+                         
+                        this.request(this.props.currentcluster,this.props.currentnamespace);
+                        console.log(e);
+                    })
+
+                 
             }
         })
     }
@@ -388,13 +429,43 @@ export default class Workload extends React.Component {
             title:'恢复负载',
             content:'您确认要恢复此条数据吗？'+this.state.selectedRows.map(item=>item.name) ,
             onOk:()=>{
-                this.setState({  //取消选中行
-                    selectedRowKeys: [ ],  
-                    selectedRows: null
+                var datas={
+                    items:[]
+                }  
+                this.state.selectedRows.map(item=>{
+                    var depitem={
+                        name:item.name,
+                        namespace:item.namespace,
+                    }
+                    datas.items=datas.items.concat(depitem)
                 })
-                message.success('恢复成功');
-                //发送恢复请求
-                this.request();
+                
+                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/resume/deployments?data='+JSON.stringify(datas),{
+                    method:'GET',
+                    mode: 'cors', 
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [],  
+                            selectedRows: null
+                        })
+                        message.success('恢复成功');
+                        //刷新数据
+                        this.request(this.props.currentcluster,this.props.currentnamespace);
+                        return data;
+                    }).catch( (e)=> {  
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [],  
+                            selectedRows: null
+                        })
+                        message.success('恢复失败');
+                        this.request(this.props.currentcluster,this.props.currentnamespace);
+                        console.log(e);
+                    })
+
+                 
             }
         })
     }
@@ -435,6 +506,15 @@ export default class Workload extends React.Component {
                 search:false
             })    
         }
+        if(content!==''){
+            //console.log('this.state.searchname:',this.state.searchname)
+            //console.log(this.state.dataSource.map(item=>item.name.indexOf(this.state.searchname)))
+            this.setState({
+                searchdata:this.state.dataSource.filter(item=>item.name.indexOf(content)!==-1),
+                search:true
+            })
+             
+        } 
     }
     //点击搜索按钮
     handleSearch = ()=>{
@@ -454,6 +534,9 @@ export default class Workload extends React.Component {
             
         }
     }
+
+    
+
     //选择回滚版本
     handleSelectRb=(value)=>{
         this.setState({
@@ -476,6 +559,7 @@ export default class Workload extends React.Component {
                 title:'名称',
                 key:'name',
                 dataIndex: 'name',
+                width:"20%"
             },
             {
                 title:'状态',
@@ -500,6 +584,7 @@ export default class Workload extends React.Component {
                 title:'镜像',
                 key:'image',
                 dataIndex: 'image',
+                width:'20%'
             },
             {
                 title:'创建时间',
@@ -567,11 +652,11 @@ export default class Workload extends React.Component {
                     
                 </Col>
                 <Col span='5' className='Button-right'> 
-                    <CreateWl namespaces={this.props.namespaces} currentcluster={this.props.currentcluster}></CreateWl>
+                    <CreateWl statechange={this.statechange} namespaces={this.props.namespaces} currentcluster={this.props.currentcluster}></CreateWl>
                      
                 </Col>
                 <Col span='3' className='Button-right'> 
-                 <ConfigWL namespaces={this.props.namespaces} currentcluster={this.props.currentcluster}></ConfigWL>
+                 <ConfigWL statechange={this.statechange} namespaces={this.props.namespaces} currentcluster={this.props.currentcluster}></ConfigWL>
                  
                 </Col>
                 
@@ -598,17 +683,39 @@ export default class Workload extends React.Component {
                             }
                     onOk={()=>{
                          //console.log('revision: '+this.state.revision)
-                         if(this.state.revision!==undefined)
-                        {   this.request('url'+this.state.operationdata.name+this.state.revision); //发送回滚请求
-                            message.success('回滚成功');
-                            this.setState({
-                                rbvisible:false,
-                                revision:undefined
+                         if(this.state.revision!==undefined&&this.state.operationdata!==undefined)
+                        {  // this.request('url'+this.state.operationdata.name+this.state.revision); //发送回滚请求
+                        fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/namespace/'+this.state.operationdata.namespace+'/deployment/'+this.state.operationdata.name+'/rollback?revision='+this.state.revision,{
+                            method:'PUT',
+                            mode: 'cors', 
+                            }).then((response) => {
+                                console.log('response:',response.ok)
+                                return response.json();
+                            }).then((data) => {
+                                message.success('回滚成功');
+                                this.setState({
+                                    rbvisible:false,
+                                    revision:undefined
+                                }) 
+                                //刷新数据
+                                this.request(this.props.currentcluster,this.props.currentnamespace);
+                                return data;
+                            }).catch( (e)=> {  
+                                this.setState({
+                                    rbvisible:false,
+                                    revision:undefined
+                                })
+                                message.success('请求失败');
+                                this.request(this.props.currentcluster,this.props.currentnamespace);
+                                console.log(e);
                             })
+
+                            
                         }else{
-                            this.setState({
+                            message.info('请选择回滚版本');
+                            /*this.setState({
                                 rbvisible:false
-                            })
+                            })*/
                          }  
                         }}
                 > 
@@ -637,14 +744,38 @@ export default class Workload extends React.Component {
                             }
                     onOk={()=>{
                          console.log('scalenum: '+this.state.scalenum)
-                         if(this.state.scalenum!==undefined)
-                        {   this.request('url'+(this.state.operationdata===undefined ? '':this.state.operationdata.name)
-                                              +this.state.scalenum); //发送回滚请求
-                            message.success('更改成功');
-                            this.setState({
-                                scvisible:false,
-                                scalenum:undefined
-                            })
+                         if(this.state.scalenum!==undefined&&this.state.operationdata!==undefined)
+                        {   
+                              
+                            fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/namespace/'+this.state.operationdata.namespace+'/deployment/'+this.state.operationdata.name+'/scale?replicanum='+this.state.scalenum,{
+                                method:'PUT',
+                                mode: 'cors', 
+                                }).then((response) => {
+                                    console.log('response:',response.ok)
+                                    return response.json();
+                                }).then((data) => {
+                                    this.setState({
+                                        scvisible:false,
+                                        scalenum:undefined
+                                    })
+                                    message.success('更改成功'); 
+                                    //刷新数据
+                                    this.request(this.props.currentcluster,this.props.currentnamespace);
+                                    return data;
+                                }).catch( (e)=> {  
+                                    this.setState({
+                                        scvisible:false,
+                                        scalenum:undefined
+                                    })
+                                    message.success('更改失败');
+                                    this.request(this.props.currentcluster,this.props.currentnamespace); 
+                                    console.log(e);
+                                })
+
+                           // this.request('url'+(this.state.operationdata===undefined ? '':this.state.operationdata.name)
+                           //                   +this.state.scalenum); //发送回滚请求
+                           // message.success('更改成功');
+                             
 
                         }else{
                             this.setState({
@@ -674,7 +805,7 @@ export default class Workload extends React.Component {
                 </Modal>
                 {//console.log('this.state.editvisible:',this.state.editvisible)
                 } 
-                <EditWL dataSource={this.state.operationdata} namespaces={this.props.namespaces} editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}
+                <EditWL statechange={this.statechange} dataSource={this.state.operationdata} namespaces={this.props.namespaces} editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}
                     currentcluster={this.props.currentcluster}
                 />
                  

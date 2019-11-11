@@ -4,6 +4,7 @@ import React from 'react';
 import { HashRouter, Route, Switch, Redirect,Link,NavLink} from 'react-router-dom'
 import ClusterList from './clustelist'
 import FedNamespaceList from'./fednamespace'
+import utils from'./../../utils/utils'
 const Option = Select.Option;
 const TabPane = Tabs.TabPane;
 export default class Cluster extends React.Component {
@@ -50,7 +51,7 @@ export default class Cluster extends React.Component {
         }).then((data) => {
             console.log('data:',data)
             return data;
-        }).catch(function (e) {
+        }).catch((e)=>{
             console.log(e);
         })
     }
@@ -173,14 +174,12 @@ export default class Cluster extends React.Component {
         handleRedirect=(clusterdetail)=>{
             console.log('跳转！')
             sessionStorage.setItem('clustername',clusterdetail.name)
-          
+             
            // Header.nodedetail=nodedetail
         }
+       
     render(){ 
    
-
-        
-        
         const selectedRowKeys=this.state.selectedRowKeys;
         const rowSelection={ 
             type: 'checkbox',
@@ -210,7 +209,7 @@ export default class Cluster extends React.Component {
                         <ClusterList /> 
                         </TabPane>
                     <TabPane tab="联邦命名空间" key="2"  style={{backgroundColor:'white',marginTop:-16 }}>
-                        <FedNamespaceList />
+                        <FedNamespaceList  currentcluster={'fed'} />
                         </TabPane>
                      
                 </Tabs> 

@@ -3,7 +3,7 @@ import React from 'react'
 //import {Modal,message,Badge,Table, Checkbox, Button,Input, Row,Col,Icon,Dropdown,Menu, }from 'antd'
  
 import {
-    Modal,Form,Tree, Input,Radio, Icon, Button,InputNumber ,Collapse , Select,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
+    Modal,Form,Tree, Input,Radio,Switch , Icon, Button,InputNumber ,Collapse , Select,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
 } from 'antd';
 const { TreeNode } = Tree;  
 
@@ -22,6 +22,7 @@ class EditUser extends React.Component {
         autoExpandParent: true,
         checkedKeys: [],
         selectedKeys: [],
+        pwdchecked:false,
     }
     componentDidMount(){//初始化数据，只调用一次
           //...
@@ -59,6 +60,9 @@ class EditUser extends React.Component {
       form.resetFields();  //重置表单 触发了componentWillReceiveProps 函数
        
       //console.log('this.state.dataSource:',this.state.dataSource)
+      this.setState({
+        pwdchecked:false,
+      })
       this.props.handleUpdate(false)
        
     }
@@ -83,7 +87,9 @@ class EditUser extends React.Component {
             //成功了则关闭弹窗且初始化
             const { form } = this.props; 
             form.resetFields();  //重置表单
-
+            this.setState({
+              pwdchecked:false,
+            })
             this.props.handleUpdate(false)
           }
           else{ //否则报错 
@@ -173,7 +179,11 @@ class EditUser extends React.Component {
           return <TreeNode key={item.key} {...item} />;
         });
     
-         
+      handlerSwitch = (checked)=>{
+        this.setState({
+          pwdchecked:checked
+        })
+      }    
      
     render() {  
       //console.log(' render dataSource:',this.state.dataSource )
@@ -293,32 +303,54 @@ class EditUser extends React.Component {
                             } 
                         </FormItem>
                     <Collapse defaultActiveKey={['1','2']}  className="collwrap">
-                        <Panel header="密码管理" key="1" >   
-                        <FormItem  label='新密码'
-                            {...formItemLayout}
-                            hasFeedback >
-                              {
-                            getFieldDecorator('password',{  
+                        <Panel header="密码管理" key="1" >
+                        <FormItem 
+                          label='修改密码'
+                          {...formItemLayout}
+                          >
+                          {
+                            getFieldDecorator('pwdchecked',{ 
+                                initialValue:false,
                                 rules:[       //规则数组
-                                    {
-                                    required:true,
-                                    message:'密码不能为空'
-                                    },{
-                                        min:6,
-                                        message: '密码不能少于6个字符',
-                                      }, {
-                                        max:15,
-                                        message: '密码不能大于15个字符',
-                                     },{
-                                        validator: this.validateToNextPassword,
-                                      }, 
+                                    
                                 ] 
                             }) (
-                                <Input type="password"style={{ width: wwidth }}/>
+                               <Switch loading={false} onChange={this.handlerSwitch}></Switch>
                                 )
                             }
-                        </FormItem>  
+                        </FormItem>   
 
+                        {
+                          this.state.pwdchecked?
+                          <FormItem  label='新密码'
+                          {...formItemLayout}
+                          hasFeedback >
+                            {
+                          getFieldDecorator('password',{  
+                              rules:[       //规则数组
+                                  {
+                                  required:true,
+                                  message:'密码不能为空'
+                                  },{
+                                      min:6,
+                                      message: '密码不能少于6个字符',
+                                    }, {
+                                      max:15,
+                                      message: '密码不能大于15个字符',
+                                   },{
+                                      validator: this.validateToNextPassword,
+                                    }, 
+                              ] 
+                          }) (
+                              <Input type="password"style={{ width: wwidth }}/>
+                              )
+                          }
+                      </FormItem>   :null 
+                        }
+                         
+
+                        {
+                          this.state.pwdchecked?
                         <FormItem  label='确认密码'
                             {...formItemLayout} 
                             hasFeedback >
@@ -337,6 +369,7 @@ class EditUser extends React.Component {
                                 ) 
                             }
                         </FormItem> 
+                        :null}
                         </Panel>
                         {
                             /***根据用户身份进行选择是否显示权限管理 */

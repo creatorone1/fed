@@ -17,9 +17,9 @@ class CreateApp extends React.Component {
         namespaces:[],
     }
     componentDidMount(){//请求数据
-        //this.request();
+       // this.request();
         //console.log('createApp')
-        this.setState({
+        /*this.setState({
             clusters:[{
                 name:'全局',
                 namespaces:['defaultall','systemall']
@@ -30,7 +30,7 @@ class CreateApp extends React.Component {
                 name:'cluster2',
                 namespaces:['default2','system2']
             }]
-        })
+        })*/
         //console.log('open the modal')
     }
     componentWillReceiveProps(nextProps){ 
@@ -43,22 +43,26 @@ class CreateApp extends React.Component {
             //console.log('object:',JSON.parse(data)) 
             this.setState({  
             //这儿 必须是深拷贝，不然会影响传入的值,并且只能初始化这个参数一次，以后的form的set操作不能影响该值
-            dataSource:JSON.parse(data) //
+            dataSource:JSON.parse(data), // 
+            clusters:nextProps.clusters,  
             }) 
           }
     }
     request = () => {
-        fetch('url',{
-        method:'GET'
-        }).then((response) => {
-            console.log('response:',response.ok)
-            return response.json();
-        }).then((data) => {
-            console.log('data:',data)
-            return data;
-        }).catch(function (e) {
-            console.log(e);
-        })
+        fetch('http://localhost:9090/api/clusters',{
+            method:'GET'
+            }).then((response) => {
+                console.log('response:',response.ok)
+                return response.json();
+            }).then((data) => {
+                console.log('data:',data)
+                this.setState({
+                    clusters:data.filter(item=>item.status!="NotReady")
+                })
+                return data;
+            }).catch( (e)=>{
+                console.log(e);
+            })
     }
 
      
@@ -83,14 +87,34 @@ class CreateApp extends React.Component {
                 cluster,namespace,
                 charturl,  
               } = values;  
-            
-            //成功了则关闭弹窗且初始化
-            const { form } = this.props; 
-            form.resetFields();  //重置表单
-            this.setState({
-                namespaces:[],
-            })  
-            this.props.handleCreate(false)
+              fetch('http://localhost:9090/api/app',{
+                method:'POST',
+                mode: 'cors', 
+                body:JSON.stringify(values)
+                }).then((response) => {
+                    console.log('response:',response.ok)
+                    return response.json();
+                }).then((data) => {
+                    console.log('data:',data)
+                  //成功了则关闭弹窗且初始化
+                    const { form } = this.props; 
+                    form.resetFields();  //重置表单
+                    this.setState({
+                        namespaces:[],
+                    })  
+                    this.props.handleCreate(false)
+                    return data;
+                }).catch((e)=>{
+                    //成功了则关闭弹窗且初始化
+                    const { form } = this.props; 
+                    form.resetFields();  //重置表单
+                    this.setState({
+                        namespaces:[],
+                    })  
+                    this.props.handleCreate(false)
+                    console.log(e);
+                })
+             
           }
           else{ //否则报错 
             const { name,podsnum,image ,
@@ -238,7 +262,7 @@ class CreateApp extends React.Component {
                     }) ( 
                         <Select  placeholder={this.state.namespaces.length===0?'请先选择集群':''}  style={{ width: wwidth }} onSelect={()=>this.handleSelectCluster}> 
                             {this.state.namespaces.map(item=>(
-                                <Option key={item} value={item}>{item}</Option>
+                                <Option key={item.name} value={item.name}>{item.name}</Option>
                             ) 
                             )}
                         </Select> 

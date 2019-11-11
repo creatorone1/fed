@@ -3,10 +3,23 @@ import { Select } from 'antd'
 const Option = Select.Option;
 export default {
      nodedetail:undefined, 
+     clusterdetail:undefined, 
     formateDate(time){
         if(!time)return '';
         let date = new Date(time);
-        return date.getFullYear()+'-'+(date.getMonth()+1)+'-'+date.getDate()+' '+date.getHours()+':'+date.getMinutes()+':'+date.getSeconds();
+        function formatDate(date) {
+            var year = date.getFullYear()
+            var month = format(date.getMonth() + 1)
+            var da = format(date.getDate())
+            var h = format(date.getHours())
+            var m = format(date.getMinutes())
+            var s = format(date.getSeconds())
+            return year + '-' + month + '-' + da + ' ' + h + ':' + m + ':' + s
+          }
+          function format(val) {
+            return Number(val) < 10 ? '0' + val : '' + val
+          }
+        return formatDate(date);
     },
     pagination(data,callback){
         return {

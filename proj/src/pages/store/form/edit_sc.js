@@ -111,10 +111,34 @@ class EditSC extends React.Component {
                 reclaimPolicy 
               } = values;  
             
-            //成功了则关闭弹窗且初始化
-            const { form } = this.props; 
-            form.resetFields();  //重置表单 
-            this.props.handleUpdate(false)
+              var sc = new SC(values)
+              console.log('sc:',JSON.stringify(sc)) 
+                
+              fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/sc/'+name,{
+                method:'PUT',
+                mode: 'cors', 
+                body:JSON.stringify(sc)
+                }).then((response) => {
+                    console.log('response:',response.ok)
+                    return response.json();
+                }).then((data) => {
+                    console.log('data:',data)
+                     //成功了则关闭弹窗且初始化
+                     const { form } = this.props; 
+                     form.resetFields();  //重置表单 
+                     this.props.handleUpdate(false)
+                    this.props.statechange()//更新成功刷新数据
+                    return data;
+                }).catch( (e)=>{ 
+                      
+                    //成功了则关闭弹窗且初始化
+                    const { form } = this.props; 
+                    form.resetFields();  //重置表单 
+                    this.props.handleUpdate(false)
+                    console.log(e);
+                })  
+
+ 
           }
           else{ //否则报错 
             const { name,podsnum,image,namepace,
@@ -159,7 +183,7 @@ class EditSC extends React.Component {
         }).then((data) => {
             console.log('data:',data)
             return data;
-        }).catch(function (e) {
+        }).catch((e)=>{
             console.log(e);
         })
     } 
@@ -222,7 +246,7 @@ class EditSC extends React.Component {
                         > 
                             {
                             getFieldDecorator('provisioner',{ 
-                            initialValue:'',//初始化  
+                            initialValue:'example.com/nfs',//初始化  
                                   
                             }) (
                                 <span style={{ width: wwidth }}> 
@@ -255,3 +279,15 @@ class EditSC extends React.Component {
         }
     }
 export default Form.create()(EditSC); 
+function SC(values){
+    var sc=new Object(); 
+    const { name,
+            provisioner,
+            reclaimPolicy,  
+            } = values;
+    sc.name=name 
+    sc.provisioner=provisioner
+    sc.reclaimPolicy=reclaimPolicy 
+
+    return sc
+}

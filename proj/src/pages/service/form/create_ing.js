@@ -16,27 +16,48 @@ class CreateIng extends React.Component {
     /**注意创建的后端 域名+路径唯一，不能有重复的 */
     state = { 
         visible: false, 
-        Servicesdata:[  //根据当前命名空间获取的服务
-            {
-                name:'nginx1',
-                port:[80,443]
-            },
-            {
-                name:'nginx2',
-                port:[81,445]
-            },
-            {
-                name:'nginx3',
-                port:[88,446]
-            },
+        Servicesdata:[  //根据当前命名空间获取的服务 
               
        ],
         defaultport:[]
     }
     componentWillUnmount(){
        // console.log('CreateIng destroy')
-    }
+    } 
+    request = (clustername) => { //初始化数据请求
+        fetch('http://localhost:9090/api/cluster/'+clustername+'/services',{
+        method:'GET',
+        mode: 'cors', 
+        }).then((response) => {
+            console.log('response:',response.ok)
+            return response.json();
+        }).then((data) => {
+            console.log('data:',data)
+            var services=[]
+            data.map(item=>{
+                var ports=[]
+                item.ports.map(p=>{
+                    ports=ports.concat(p.port)
+                })
+              var service={
+                name:item.name,
+                port:ports,
+                namespace:item.namespace
+              } 
+              services=services.concat(service)
+            })
+            this.setState({ //表格选中状态清空 
+              services:services
+            })
+             
+            return data;
+        }).catch( (e)=> {  
+            console.log(e);
+        })
+       } 
+
     showModal = () => {
+        this.request(this.props.currentcluster)
         const { form } = this.props;
         form.resetFields();
         form.resetFields('backendkeys')
@@ -58,9 +79,15 @@ class CreateIng extends React.Component {
         console.log('select namespaces: 配置当前命名空间下的服务'+value)
         //选取当前命名空间下的服务 给后端backend中 的 option 选项
         this.setState({
+            Servicesdata:this.state.services.filter(item=>item.namespace==value)
             //selectsvcdata:this.state.svcdata.filter(item=>item.namespace===value)
+            
         })  
-       
+        this.props.form.resetFields('ports') //重置工作负载选项
+        this.props.form.resetFields(`serviceport`)
+        this.props.form.resetFields(`servicename`)
+        this.props.form.resetFields(`defaultname`)  //重置右边下拉菜单
+        this.props.form.resetFields('defaultport')  //重置右边下拉菜单
     }  
     handleOk =()=>{ //点击确认按钮 
         this.props.form.validateFields((err, values) => {
@@ -80,13 +107,44 @@ class CreateIng extends React.Component {
                 defaultname,defaultport
                  } = values;   
             //console.log('env_label name :', keys.map(key => env_label[key]));
-            //成功了则关闭弹窗且初始化
-            const { form } = this.props; 
-            form.resetFields();  //重置表单
-            id=0;
-            this.setState({
-              visible: false, 
-            });
+            var ing = new Ingress(values)
+            console.log('ingjson',JSON.stringify(ing))
+            fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/ingress',{
+            method:'POST',
+            mode: 'cors', 
+            body:JSON.stringify(ing)
+          }).then((response) => {
+              console.log('response:',response.ok)
+              return response.json();
+          }).then((data) => {
+              console.log('data:',data)
+  
+              /*this.setState({ //表格选中状态清空
+                  selectedRowKeys:[],
+                  selectedRows:null,
+                  dataSource:data
+              })*/
+              //成功了则关闭弹窗且初始化
+                const { form } = this.props; 
+                form.resetFields();  //重置表单
+                id=0;
+                this.props.statechange()//创建成功刷新数据
+                this.setState({
+                visible: false, 
+                });
+              return data;
+          }).catch( (e)=> {  
+            ///成功了则关闭弹窗且初始化
+                const { form } = this.props; 
+                form.resetFields();  //重置表单
+                id=0;
+                this.setState({
+                visible: false, 
+                });
+              console.log(e);
+          }) 
+            
+             
           }
           else{ //否则报错 
             /*const { name,podsnum,image,namepace,
@@ -237,9 +295,9 @@ class CreateIng extends React.Component {
                 label={index === 0 ? '服务' : ''} 
             >
                 {getFieldDecorator(`servicename[${k}]`, {
-                initialValue:'' , 
+               // initialValue:'' , 
                 })( 
-                <Select  style={{width:'80%',marginRight:'8%' }} onChange={(value)=>this.Selectsvc(value,rulekey,k)}  >
+                <Select   placeholder={this.props.form.getFieldValue('namespace')===""?'先选择命名空间':''}  style={{width:'80%',marginRight:'8%' }} onChange={(value)=>this.Selectsvc(value,rulekey,k)}  >
                   {   this.state.Servicesdata.map(item=>
                         <Option value={item.name} key={item.name} >{item.name}</Option>
                       ) 
@@ -518,3 +576,49 @@ class CreateIng extends React.Component {
 
  
 export default Form.create()(CreateIng); //创建表单
+function Ingress(values) {
+    var ing=new Object(); 
+    const { name,namespace,
+            defaultport,
+            defaultname,  
+            
+            ruleskeys, 
+            dnsname, 
+            
+            backendkeys,
+            servicename,
+            serviceport,
+            path, 
+             
+            } = values;
+    ing.name=name;
+    ing.namespace=namespace
+    var backend={
+        servicename:defaultname,
+        serviceport:defaultport
+    }   
+    ing.backend= backend    
+    var rules=[]
+    ruleskeys.map(key =>{
+      var backends=[]
+       backendkeys[key].map(bkey=>{
+        var b={
+            path:path[bkey],
+            servicename:servicename[bkey],
+            serviceport:serviceport[bkey],
+        }
+        backends=backends.concat(b)
+      })  
+      var r ={
+        host: dnsname[key],
+        backend:backends, 
+      }
+
+      
+      rules=rules.concat(r)
+    })       
+    ing.rules= rules    
+
+     
+    return ing
+}

@@ -20,7 +20,7 @@ export default class Ingress extends React.Component {
         search:false,
         dataSource:[{
             name:'myins1',
-            status:'running',
+            status:'Active',
             namespace:'default',
             rules:[{
                 host:'example.com',
@@ -41,7 +41,11 @@ export default class Ingress extends React.Component {
                      serviceport:443
                 }]
             }],
-            target: ['example.com/nginx' ,'nginx'],
+            target: [{
+                domin:'example2.com/nginx',
+                des:'nginx2'
+            } 
+            ],
             createtime:"2019-4-11",  
             key:'1',
             backend:{
@@ -52,17 +56,31 @@ export default class Ingress extends React.Component {
         },
         {
             name:'nginxins',
-            status:'initializing',
+            status:'Initializing',
             namespace:'default',
-            target: ['example2.com/nginx' ,'nginx2'],
+            target: [{
+                domin:'example2.com/nginx',
+                des:'nginx2'
+            }, {
+                domin:'example3.com/nginx',
+                des:'nginx3'
+            },
+            ],
             createtime:"2019-4-11",  
             key:'2'
         },
         {
             name:'webins',
-            status:'initializing',
+            status:'Initializing',
             namespace:'default',
-            target: ['example3.com/nginx' ,'nginx3'],
+            target: [{
+                domin:'example2.com/nginx',
+                des:'nginx2'
+            }, {
+                domin:'example3.com/nginx',
+                des:'nginx3'
+            },
+            ],
             createtime:"2019-4-11",  
             key:'3'
         },
@@ -74,34 +92,51 @@ export default class Ingress extends React.Component {
 
     }
     componentDidMount(){//请求数据
-      // this.request();
+        
        this.setState({
         currentcluster:this.props.currentcluster,
         currentnamespace:this.props.currentnamespace,
 
       })
+      this.request(this.props.currentcluster,this.props.currentnamespace);
+      console.log('ingress  currentcluster:',this.props.currentcluster)
     }
     componentWillReceiveProps(nextProps){
+         
         //接收参数后更新数据
         this.setState({
             currentcluster:nextProps.currentcluster,
             currentnamespace:nextProps.currentnamespace,
 
         }) 
+        this.request(nextProps.currentcluster,nextProps.currentnamespace);
         console.log('ingress get props currentcluster:',nextProps.currentcluster)
         console.log('ingress get props currentnamespaces:',nextProps.currentnamespace)
 
     }
-    request = () => {
-        fetch('url',{
+    request = (clustername,namespace) => {
+        fetch('http://localhost:9090/api/cluster/'+clustername+'/ingresses',{
         method:'GET'
         }).then((response) => {
             console.log('response:',response.ok)
+            
             return response.json();
         }).then((data) => {
             console.log('data:',data)
+            var datas=[]
+            if(namespace!='All'&&namespace!=''&&namespace!=undefined){
+                datas=data.filter(item=>item.namespace==namespace)
+            }else{
+                datas=data
+            }
+            this.setState({ //表格选中状态清空
+                selectedRowKeys:[],
+                selectedRows:null,
+                dataSource:datas
+            })
+             
             return data;
-        }).catch(function (e) {
+        }).catch((e)=>{
             console.log(e);
         })
     }
@@ -116,10 +151,44 @@ export default class Ingress extends React.Component {
         Modal.confirm({
             title:'确认删除',
             content:'您确认要删除此条数据吗？'+record.name ,
-            onOk:()=>{
-                message.success('删除成功');
-                //发送删除请求
-                this.request();
+            onOk:()=>{ 
+                var datas={
+                    items:[]
+                }  
+                var ditem={
+                        name:record.name, 
+                        namespace:record.namespace,
+                 }
+                datas.items=datas.items.concat(ditem)
+               
+               // console.log(JSON.stringify(datas))
+                //下面URL的 集群 名称 以后需要替换掉
+                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/ingresses?data='+JSON.stringify(datas),{
+                    method:'DELETE',
+                    mode: 'cors', 
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request(this.props.currentcluster,this.props.currentnamespace);
+                        return data;
+                    }).catch( (e)=> {  
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request(this.props.currentcluster,this.props.currentnamespace);
+                        console.log(e);
+                    }) 
+                
             }
         })
     }
@@ -140,6 +209,7 @@ export default class Ingress extends React.Component {
         this.setState({ 
             operationdata:record, // 传入要操作数据
         })
+        console.log('operationdata',record)
         if(key==='1'){ //如果是升级
             this.handleUpdate(true)
         }
@@ -164,13 +234,44 @@ export default class Ingress extends React.Component {
             title:'确认删除',
             content:'您确认要删除这些数据吗？'+this.state.selectedRows.map(item=>item.name) ,
             onOk:()=>{
-                this.setState({  //取消选中行
-                    selectedRowKeys: [ ],  
-                    selectedRows: null
+
+                var datas={
+                    items:[]
+                }  
+                this.state.selectedRows.map(item=>{
+                    var ditem={
+                        name:item.name, 
+                        namespace:item.namespace,
+                    }
+                    datas.items=datas.items.concat(ditem)
                 })
-                message.success('删除成功');
-                //发送删除请求
-                this.request();
+               // console.log(JSON.stringify(datas))
+                //下面URL的 集群 名称 以后需要替换掉
+                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/ingresses?data='+JSON.stringify(datas),{
+                    method:'DELETE',
+                    mode: 'cors', 
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request(this.props.currentcluster,this.props.currentnamespace);
+                        return data;
+                    }).catch( (e)=> {  
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request(this.props.currentcluster,this.props.currentnamespace);
+                        console.log(e);
+                    }) 
             }
         })
     }
@@ -185,6 +286,15 @@ export default class Ingress extends React.Component {
                 this.setState({
                     search:false
                 })    
+            }
+            if(content!==''){
+                //console.log('this.state.searchname:',this.state.searchname)
+                //console.log(this.state.dataSource.map(item=>item.name.indexOf(this.state.searchname)))
+                this.setState({
+                    searchdata:this.state.dataSource.filter(item=>item.name.indexOf(content)!==-1),
+                    search:true
+                })
+                 
             }
         }
     //点击搜索按钮
@@ -205,13 +315,16 @@ export default class Ingress extends React.Component {
                 
             }
     }
-    
+    statechange=()=>{ //创建服务之后回调
+        this.request(this.state.currentcluster,this.props.currentnamespace)
+    } 
     render(){
         const columns=[
             { 
                 title:'名称',
                 key:'name',
                 dataIndex: 'name',
+                width:"20%"
             }, 
             { 
                 title:'状态',
@@ -219,8 +332,8 @@ export default class Ingress extends React.Component {
                 dataIndex: 'status',
                 render(status){
                     let config = {
-                        'running': <Tag  color="#87d068" style={{cursor:'auto' }} >running</Tag>,
-                        'initializing': <Tag  color="#faad14" style={{cursor:'auto' }} >Initializing</Tag> ,  
+                        'Active': <Tag  color="#87d068" style={{cursor:'auto' }} >Active</Tag>,
+                        'Initializing': <Tag  color="#faad14" style={{cursor:'auto' }} >Initializing</Tag> ,  
                     }
                     return config[status];
                 }
@@ -235,8 +348,14 @@ export default class Ingress extends React.Component {
                 key:'target',
                 dataIndex: 'target',
                 render(target){
+                    var tars=[]
+                    if(target)
+                    target.map( (item,index)=>{
+                        var tar=<div key={index}><a href={'http://'+item.domin} target='_blank'>{item.domin}</a><Icon type="right" />{ item.des}</div>
+                        tars=tars.concat(tar)
+                    })
                     return(
-                        <span> <a href={'http://'+target[0]} target='_blank'>{target[0]}</a><Icon type="right" />{ target[1]} </span>
+                        <div>{tars}</div>
                     )
                 }
             },  
@@ -288,7 +407,7 @@ export default class Ingress extends React.Component {
                      
                 </Col>
                 <Col span='4' className='Button-right'> 
-                    <CreateIng namespaces={this.props.namespaces} ></CreateIng>
+                    <CreateIng statechange={this.statechange} namespaces={this.props.namespaces} currentcluster={this.props.currentcluster} ></CreateIng>
                 </Col>
                 </Row>
                 <Table  
@@ -297,7 +416,7 @@ export default class Ingress extends React.Component {
                     columns={columns }  
                     rowClassName={(record,index)=>index%2===0?'table1':'table2'}
                 />
-                <EditIng dataSource={this.state.operationdata} namespaces={this.props.namespaces} editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}/>
+                <EditIng statechange={this.statechange} currentcluster={this.props.currentcluster} dataSource={this.state.operationdata} namespaces={this.props.namespaces} editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}/>
                
             </div>
         )

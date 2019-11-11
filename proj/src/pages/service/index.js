@@ -16,17 +16,15 @@ export default class Service extends React.Component {
             'Cluster1',
             'Cluster2'
         ],
-        namespaces:[ 
-            'default',
-            'system'
-        ],
+        namespaces:[ ],
+        fednamespaces:[],
         currentcluster:'All',
         currentnamespace:'All',
         loading:false,  //设置为true则可以显示加载状态框
         
     }
     componentDidMount(){//请求数据
-        // this.request();
+        this.request();
         /*setTimeout(()=> {
               this.setState({
                   loading:false,  //数据加载结束则取消加载框
@@ -37,20 +35,58 @@ export default class Service extends React.Component {
     }
     // 动态获取mock数据 
     request = () => {
-        fetch('url',{
-        method:'GET'
-        }).then((response) => {
-            console.log('response:',response.ok)
-            return response.json();
-        }).then((data) => {
-            console.log('data:',data)
-            return data;
-        }).catch(function (e) {
-            console.log(e);
-        })
+        fetch('http://localhost:9090/api/clusters',{
+            method:'GET'
+            }).then((response) => {
+                console.log('response:',response.ok)
+                return response.json();
+            }).then((data) => {
+                console.log('data:',data)
+                this.setState({
+                    cluster:data.filter(item=>item.status!="NotReady")
+                })
+                fetch('http://localhost:9090/api/cluster/fed/namespaces',{
+                    method:'GET'
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        console.log('data:',data)
+                        var nms=[]
+                        data.map(nm=>{
+                            nms=nms.concat(nm.name)
+                        })    
+                        this.setState({
+                            namespaces:nms,
+                            fednamespaces:nms
+                        })
+                        
+                        return data;
+                    }).catch((e)=>{
+                        console.log(e);
+                    }) 
+                return data;
+            }).catch((e)=>{
+                console.log(e);
+            })
     }
 
     handleClustertChange=(value)=> {
+        var cluster = this.state.cluster.filter(item=>item.name==value)[0]
+        //console.log(cluster)
+        if(cluster){
+            var nms=[] 
+            cluster.namespaces.map(nm=>{
+                nms=nms.concat(nm.name)
+            })    
+            this.setState({
+                namespaces:nms
+            })
+        }else{
+            this.setState({
+                namespaces:this.state.fednamespaces
+             })
+        } 
         this.setState({
             currentcluster:value 
         })
@@ -70,7 +106,7 @@ export default class Service extends React.Component {
     render(){ 
 
         const clusterdata=this.state.cluster.map( (item)=>( 
-            <Option value={item} key={item}>{item}</Option>
+            <Option value={item.name} key={item.name}>{item.name}</Option>
          )
         )
         const namespacesdata=this.state.namespaces.map( (item)=>(

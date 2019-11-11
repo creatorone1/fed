@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"k8s_v2/cluster"
-	"k8s_v2/cluster/pod"
+	"k8sfed/cluster"
+	"k8sfed/cluster/pod"
 )
 
 type Spec struct {

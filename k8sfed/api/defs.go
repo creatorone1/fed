@@ -90,26 +90,32 @@ type Deployment struct {
 	Limit        ReLimit      `json:"limit,omitempty"`
 	Schnodename  string       `json:"schnodename,omitempty"`
 }
-
+type TemRes struct {
+	Name string    `json:"name,omitempty"`
+	Re   ReRequest `json:"request,omitempty"`
+	Li   ReLimit   `json:"limit,omitempty"`
+}
 type Rule struct {
-	Host    string    `json:"host,omitempty"`
-	Backend []Backend `json:"backend,omitempty"`
+	Host    string   `json:"host,omitempty"`
+	Backend []Backen `json:"backend,omitempty"`
 }
-type Backend struct {
-	Path        string `json:"path,omitempty"`
-	Service     string `json:"service,omitempty"`
-	Serviceport int64  `json:"serviceport,omitempty"`
+type Backen struct {
+	Path        string      `json:"path,omitempty"`
+	Servicename string      `json:"servicename,omitempty"`
+	Serviceport interface{} `json:"serviceport,omitempty"`
 }
-type Target struct {
+type IngTarget struct {
 	Domin string `json:"domin,omitempty"`
 	Des   string `json:"des,omitempty"`
 }
 type Ingress struct {
-	Name       string `json:"name,omitempty"`
-	Status     string `json:"status,omitempty"`
-	Namespace  string `json:"namespace,omitempty"`
-	Rules      []Rule `json:"rules,omitempty"`
-	Createtime string `json:"createtime,omitempty"`
+	Name       string      `json:"name,omitempty"`
+	Status     string      `json:"status,omitempty"`
+	Namespace  string      `json:"namespace,omitempty"`
+	Rules      []Rule      `json:"rules,omitempty"`
+	Target     []IngTarget `json:"target,omitempty"`
+	Backend    Backen      `json:"backend,omitempty"`
+	Createtime string      `json:"createtime,omitempty"`
 }
 
 type Service struct {
@@ -117,13 +123,17 @@ type Service struct {
 	Namespace  string            `json:"namespace,omitempty"`
 	Createtime string            `json:"createtime,omitempty"`
 	Target     map[string]string `json:"target,omitempty"`
+	Selectors   []SvcSelector       `json:"selectors,omitempty"`
 	Type       string            `json:"type,omitempty"`
 	Ports      []SVCPort         `json:"ports,omitempty"`
 	Label      []Label           `json:"label,omitempty"`
 	Externalip []string          `json:"externalip,omitempty"`
 	Workload   []string          `json:"workload,omitempty"`
 }
-
+type SvcSelector struct {
+	Name  string `json:"name,omitempty"`
+	Value string `json:"value,omitempty"`
+}
 type SVCPort struct {
 	Name       string      `json:"name,omitempty"`
 	Port       int64       `json:"port,omitempty"`
@@ -153,6 +163,13 @@ type PVC struct {
 	Storageclass string   `json:"storageclass,omitempty"`
 	Createtime   string   `json:"createtime,omitempty"`
 	Accessmodes  []string `json:"accessmodes,omitempty"`
+}
+type StorageClass struct {
+	Name          string `json:"name,omitempty"`
+	Status        string `json:"status,omitempty"`
+	Provisioner   string `json:"provisioner,omitempty"`
+	Createtime    string `json:"createtime,omitempty"`
+	ReclaimPolicy string `json:"reclaimPolicy,omitempty"`
 }
 
 type Node struct {
@@ -233,4 +250,75 @@ type MetaData struct {
 }
 type MetaDatas struct {
 	Items []MetaData `json:"items,omitempty"`
+}
+
+type ReplicaSet struct {
+	Name       string `json:"name,omitempty"`
+	Namespace  string `json:"namespace,omitempty"`
+	Deployment string `json:"deployment,omitempty"`
+	Revision   string `json:"revision,omitempty"`
+	Createtime string `json:"createtime,omitempty"`
+}
+
+type DepPause struct {
+	Spe DepSpec `json:"spec"`
+}
+type DepRollback struct {
+	Revision int64 `json:"revision,omitempty"`
+}
+type DepSpec struct {
+	Paused     bool         `json:"paused"`
+	RollbackTo *DepRollback `json:"rollbackTo,omitempty"`
+}
+
+type NodePause struct {
+	Spe NodeSpec `json:"spec"`
+}
+type NodeSpec struct {
+	Unschedulable bool `json:"unschedulable"`
+}
+type Pod struct {
+	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+	Nodename  string `json:"nodename,omitempty"`
+	Own       Owner  `json:"owner,omitempty"`
+}
+type Owner struct {
+	Name string `json:"name,omitempty"`
+	Kind string `json:"kind,omitempty"`
+}
+
+type Chart struct {
+	Name        string    `json:"name,omitempty"`
+	Description string    `json:"description,omitempty"`
+	Iconurl     string    `json:"iconurl,omitempty"`
+	Versions    []Version `json:"versions,omitempty"`
+}
+type Version struct {
+	Version string `json:"version,omitempty"`
+	Url     string `json:"url,omitempty"`
+}
+
+type AppRelease struct {
+	Name         AppName `json:"name,omitempty"`
+	Chartname    string  `json:"chartname,omitempty"`
+	Chartversion string  `json:"chartversion,omitempty"`
+	Version      int64   `json:"version,omitempty"`
+	Status       string  `json:"status,omitempty"`
+	Namespace    string  `json:"namespace,omitempty"`
+	Cluster      string  `json:"cluster,omitempty"`
+	Createtime   string  `json:"createtime,omitempty"`
+	Appversion   string  `json:"appversion,omitempty"`
+}
+type AppName struct {
+	Name    string `json:"name,omitempty"`
+	Iconurl string `json:"iconurl,omitempty"`
+}
+
+type ReleaseMeta struct {
+	Name      string `json:"name,omitempty"`
+	Namespace string `json:"namespace,omitempty"`
+	Cluster   string `json:"cluster,omitempty"`
+	Charturl  string `json:"charturl,omitempty"`
+	Version   string `json:"version,omitempty"`
 }

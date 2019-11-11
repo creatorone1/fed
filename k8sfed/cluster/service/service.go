@@ -64,6 +64,7 @@ func NewPort(name, protocol string, port, targetPort, nodePort int64) *Port {
 	return p
 }
 
+/*
 func NewService(name, namespace string, labels, selector map[string]string, portType, clusterIP string, ports []*Port) *Service {
 
 	if namespace == "" {
@@ -90,7 +91,7 @@ func NewService(name, namespace string, labels, selector map[string]string, port
 		Spe:        spec,
 	}
 
-}
+}*/
 
 func (service *Service) Get(master string) error {
 
@@ -110,7 +111,9 @@ func (service *Service) Get(master string) error {
 func (service *Service) Create(master string) (io.ReadCloser, int, error) {
 	return cluster.Call("POST", "/api/v1/namespaces/"+service.Meta.Namespace+"/services", master, service)
 }
-
+func (service *Service) Replace(master string) (io.ReadCloser, int, error) {
+	return cluster.Call("PUT", "/api/v1/namespaces/"+service.Meta.Namespace+"/services/"+service.Meta.Name, master, service)
+}
 func (service *Service) Delete(master string) (io.ReadCloser, int, error) {
 	b := cluster.NewBody(0, false)
 	return cluster.Call("DELETE", "/api/v1/namespaces/"+service.Meta.Namespace+"/services/"+service.Meta.Name, master, b)

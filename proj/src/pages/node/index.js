@@ -4,7 +4,7 @@ import React from 'react';
 import { HashRouter, Route, Switch, Redirect,Link,NavLink} from 'react-router-dom'
 import EditNode from './form/nodeedit'
 import Header from './../../components/Header'
- 
+import utils from '../../utils/utils';
 const Option = Select.Option;
 const TabPane = Tabs.TabPane;
 export default class Node extends React.Component {
@@ -19,7 +19,7 @@ export default class Node extends React.Component {
         ],
         searchname:'',
         searchdata:[],
-        dataSource:[{
+         dataSource:[/*{
             name:'node1',
             status:'Ready',
             pods:['20','35'],
@@ -127,99 +127,152 @@ export default class Node extends React.Component {
             }],
             key:5
 
-        }
-        /*,{
-            name:'node2',
-            status:'NotReady',
-            pods:['15','26'],
-            role:'Worker',
-            version:'v1.10.0',
-            cpu:['0.8','24'],
-            memory:['0.5','32'],
-            key:7
-
-        }
-        ,{
-            name:'node2',
-            status:'NotReady',
-            pods:['15','26'],
-            role:'Worker',
-            version:'v1.10.0',
-            cpu:['0.8','24'],
-            memory:['0.5','32'],
-            key:8
-
-        }
-        ,{
-            name:'node2',
-            status:'NotReady',
-            pods:['15','26'],
-            role:'Worker',
-            version:'v1.10.0',
-            cpu:['0.8','24'],
-            memory:['0.5','32'],
-            key:9
-
-        }
-        ,{
-            name:'node2',
-            status:'NotReady',
-            pods:['15','26'],
-            role:'Worker',
-            version:'v1.10.0',
-            cpu:['0.8','24'],
-            memory:['0.5','32'],
-            key:10
-
-        }
-        ,{
-            name:'node2',
-            status:'NotReady',
-            pods:['15','26'],
-            role:'Worker',
-            version:'v1.10.0',
-            cpu:['0.8','24'],
-            memory:['0.5','32'],
-            key:11
-
-        }
-        ,{
-            name:'node2',
-            status:'NotReady',
-            pods:['15','26'],
-            role:'Worker',
-            version:'v1.10.0',
-            cpu:['0.8','24'],
-            memory:['0.5','32'],
-            key:12
         }*/
-        ]
+        
+         
+        ], 
+        alldatas:[] //所有集群下的node数据
         ,
-        pauseop:false
-
+        pauseop:false,
+        currentcluster:'fed'
     }
     componentDidMount(){//请求数据
         //按集群读取节点数据
+        this.request()
      }
     // 动态获取mock数据
-    request = () => {
-        fetch('url',{
-        method:'GET'
-        }).then((response) => {
-            console.log('response:',response.ok)
-            return response.json();
-        }).then((data) => {
-            console.log('data:',data)
-            return data;
-        }).catch(function (e) {
-            console.log(e);
-        })
-    }
+    request = () => { //初始化数据请求
+        fetch('http://localhost:9090/api/clusters',{
+                method:'GET'
+            }).then((response) => {
+                    console.log('response:',response.ok)
+                    return response.json();
+            }).then((data) => {
+                    console.log('data:',data)
+                    this.setState({
+                        cluster:data.filter(item=>item.status!="NotReady")
+                })
 
+                fetch('http://localhost:9090/api/cluster/fed/namespaces',{
+                        method:'GET'
+                        }).then((response) => {
+                            console.log('response:',response.ok)
+                            return response.json();
+                        }).then((data) => {
+                            console.log('data:',data)
+                            var nms=[]
+                            data.map(nm=>{
+                                nms=nms.concat(nm.name)
+                            })    
+                            this.setState({
+                                namespaces:nms,
+                                fednamespaces:nms
+                            })
+                            
+                            return data;
+                        }).catch((e)=>{
+                            console.log(e);
+                        }) 
+
+                    //请求节点数据
+                    var nodes=[]
+                    var clustercount=0  
+                    var clength=  data.length
+                    data.map(cluster=>{
+                            fetch('http://localhost:9090/api/cluster/'+cluster.name+'/nodes',{
+                        method:'GET',
+                        mode: 'cors', 
+                        }).then((response) => {
+                            console.log('response:',response.ok)
+                            return response.json();
+                        }).then((data) => {
+                            console.log('data:',data)
+                            clustercount++
+                            nodes=nodes.concat(data)
+                            if(clustercount==clength){
+                                var nowdata=[]
+                                if(this.state.currentcluster!='All'||this.state.currentcluster!='fed'){
+                                    nowdata=nodes.filter(item=>item.cluster==this.state.currentcluster)
+
+                                }else{
+                                    nowdata=nodes
+                                }
+                                this.setState({ //表格选中状态清空
+                                    selectedRowKeys:[],
+                                    selectedRows:null,
+                                    dataSource: nowdata,
+                                    alldatas:nodes
+                                })
+                            }else{ 
+                            } 
+                            return data;
+                        }).catch( (e)=> { 
+                            clustercount++ 
+                            if(clustercount==clength){
+                                var nowdata=[]
+                                if(this.state.currentcluster!='All'&&this.state.currentcluster!='fed'){
+                                    nowdata=nodes.filter(item=>item.cluster==this.state.currentcluster)
+
+                                }else{
+                                    nowdata=nodes
+                                }
+                                this.setState({ //表格选中状态清空
+                                    selectedRowKeys:[],
+                                    selectedRows:null,
+                                    dataSource: nowdata,
+                                    alldatas:nodes
+                                })
+                            }else{ 
+                            }
+                            console.log(e);
+                        })
+                        })
+                    return data;
+                }).catch(function (e) {
+                    console.log(e);
+                })
+
+         
+    }  
+    requestnode = (clustername) => { //初始化数据请求
+     
+        fetch('http://localhost:9090/api/cluster/'+clustername+'/nodes',{
+                        method:'GET',
+                        mode: 'cors', 
+                        }).then((response) => {
+                            console.log('response:',response.ok)
+                            return response.json();
+                        }).then((data) => {
+                            console.log('data:',data)
+
+                            this.setState({ //表格选中状态清空
+                                selectedRowKeys:[],
+                                selectedRows:null,
+                                dataSource:data,
+                            })
+                            
+                            return data;
+                        }).catch( (e)=> {  
+                            console.log(e);
+                        })
+                  
+
+         
+    }
     handleClustertChange=(value)=> {
+        var data=[]
+        if(value!='All'){
+            data=this.state.alldatas.filter(item=>item.cluster==value)
+
+        }else{
+            data=this.state.alldatas 
+        }
+        
         this.setState({
-            currentcluster:value 
+            currentcluster:value ,
+            dataSource:data
         })
+
         //进行筛选Clustert数据操作
         console.log(`cluster selected ${value}`);
     }
@@ -245,13 +298,44 @@ export default class Node extends React.Component {
                 title:'暂停节点',
                 content:'您确认要暂停这些节点吗？'+this.state.selectedRows.map(item=>item.name) ,
                 onOk:()=>{
-                    this.setState({  //取消选中行
-                        selectedRowKeys: [ ],  
-                        selectedRows: null
+                    var datas={
+                        items:[]
+                    }  
+                    this.state.selectedRows.map(item=>{
+                        var depitem={
+                            name:item.name ,
+                            clustername:item.cluster
+                        }
+                        datas.items=datas.items.concat(depitem)
                     })
-                    message.success('暂停成功');
-                    //发送暂停请求
-                    this.request();
+                    
+                    fetch('http://localhost:9090/api/cluster/'+this.state.selectedRows[0].cluster+'/pause/nodes?data='+JSON.stringify(datas),{
+                        method:'GET',
+                        mode: 'cors', 
+                        }).then((response) => {
+                            console.log('response:',response.ok)
+                            return response.json();
+                        }).then((data) => {
+                            this.setState({  //取消选中行
+                                selectedRowKeys: [],  
+                                selectedRows: null
+                            })
+                            message.success('暂停成功');
+                             
+                            //刷新数据
+                            this.request();
+                            return data;
+                        }).catch( (e)=> {  
+                            this.setState({  //取消选中行
+                                selectedRowKeys: [],  
+                                selectedRows: null
+                            })
+                            message.success('暂停失败');
+                            //this.requestnode(this.state.selectedRows[0].cluster);
+                            this.request();
+                            console.log(e);
+                        }) 
+                     
                 }
             })
      }
@@ -276,13 +360,42 @@ export default class Node extends React.Component {
                 title:'恢复节点',
                 content:'您确认要恢复这些节点吗？'+this.state.selectedRows.map(item=>item.name) ,
                 onOk:()=>{
-                    this.setState({  //取消选中行
-                        selectedRowKeys: [ ],  
-                        selectedRows: null
+                    var datas={
+                        items:[]
+                    }  
+                    this.state.selectedRows.map(item=>{
+                        var depitem={
+                            name:item.name, 
+                        }
+                        datas.items=datas.items.concat(depitem)
                     })
-                    message.success('恢复成功');
-                    //发送恢复请求
-                    this.request();
+                    
+                    fetch('http://localhost:9090/api/cluster/'+this.state.selectedRows[0].cluster+'/resume/nodes?data='+JSON.stringify(datas),{
+                        method:'GET',
+                        mode: 'cors', 
+                        }).then((response) => {
+                            console.log('response:',response.ok)
+                            return response.json();
+                        }).then((data) => {
+                            this.setState({  //取消选中行
+                                selectedRowKeys: [],  
+                                selectedRows: null
+                            })
+                            message.success('恢复成功');
+                            //刷新数据
+                            //this.requestnode(this.state.selectedRows[0].cluster);
+                            this.request();
+                            return data;
+                        }).catch( (e)=> {  
+                            this.setState({  //取消选中行
+                                selectedRowKeys: [],  
+                                selectedRows: null
+                            })
+                            message.success('恢复失败');
+                            //this.requestnode(this.state.selectedRows[0].cluster);
+                            this.request();
+                            console.log(e);
+                        }) 
                 }
             })
         }  
@@ -307,13 +420,42 @@ export default class Node extends React.Component {
                 title:'驱逐节点',
                 content:'您确认要驱逐这些节点吗？'+this.state.selectedRows.map(item=>item.name),
                 onOk:()=>{
-                    this.setState({  //取消选中行
-                        selectedRowKeys: [ ],  
-                        selectedRows: null
+                    var datas={
+                        items:[]
+                    }  
+                    this.state.selectedRows.map(item=>{
+                        var depitem={
+                            name:item.name, 
+                        }
+                        datas.items=datas.items.concat(depitem)
                     })
-                    message.success('驱逐成功');
-                    //发送恢复请求
-                    this.request();
+                    
+                    fetch('http://localhost:9090/api/cluster/'+this.state.selectedRows[0].cluster+'/drain/nodes?data='+JSON.stringify(datas),{
+                        method:'GET',
+                        mode: 'cors', 
+                        }).then((response) => {
+                            console.log('response:',response.ok)
+                            return response.json();
+                        }).then((data) => {
+                            this.setState({  //取消选中行
+                                selectedRowKeys: [],  
+                                selectedRows: null
+                            })
+                            message.success('驱逐成功');
+                            //刷新数据
+                            //this.requestnode(this.state.selectedRows[0].cluster);
+                            this.request();
+                            return data;
+                        }).catch( (e)=> {  
+                            this.setState({  //取消选中行
+                                selectedRowKeys: [],  
+                                selectedRows: null
+                            })
+                            message.success('驱逐失败');
+                            //this.requestnode(this.state.selectedRows[0].cluster);
+                            this.request();
+                            console.log(e);
+                        }) 
                 }
             })
         }         
@@ -358,10 +500,41 @@ export default class Node extends React.Component {
             title:'暂停节点',
             content:'您确认要暂停这节点吗？'+record.name,
             onOk:()=>{
+                var datas={
+                    items:[]
+                }   
+                var depitem={
+                    name:record.name,
+                }
+                datas.items=datas.items.concat(depitem) 
                 
-                message.success('暂停成功');
-                //发送暂停请求
-                this.request();
+                fetch('http://localhost:9090/api/cluster/'+record.cluster+'/pause/nodes?data='+JSON.stringify(datas),{
+                    method:'GET',
+                    mode: 'cors', 
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [],  
+                            selectedRows: null
+                        })
+                        message.success('暂停成功');
+                         
+                        //刷新数据
+                        //this.requestnode(this.state.currentcluster);
+                        this.request();
+                        return data;
+                    }).catch( (e)=> {  
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [],  
+                            selectedRows: null
+                        })
+                        message.success('暂停失败');
+                        //this.requestnode(this.state.currentcluster);
+                        this.request();
+                        console.log(e);
+                    }) 
                  
             }
         }) 
@@ -379,11 +552,41 @@ export default class Node extends React.Component {
             title:'驱逐节点',
             content:'您确认要驱逐这节点吗？'+record.name,
             onOk:()=>{
+                var datas={
+                    items:[]
+                }  
                 
-                message.success('驱逐成功');
-                //发送暂停请求
-                this.request();
-                 
+                 var depitem={
+                     name:record.name,
+                 }
+                 datas.items=datas.items.concat(depitem)
+                
+                fetch('http://localhost:9090/api/cluster/'+record.cluster+'/drain/nodes?data='+JSON.stringify(datas),{
+                    method:'GET',
+                    mode: 'cors', 
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [],  
+                            selectedRows: null
+                        })
+                        message.success('驱逐成功');
+                        //刷新数据
+                        //this.requestnode(record.cluster);
+                        this.request();
+                        return data;
+                    }).catch( (e)=> {  
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [],  
+                            selectedRows: null
+                        })
+                        message.success('驱逐失败');
+                        //this.requestnode(record.cluster);
+                        this.request();
+                        console.log(e);
+                    }) 
             }
         })
     }
@@ -410,12 +613,42 @@ export default class Node extends React.Component {
         Modal.confirm({
             title:'恢复节点',
             content:'您确认要恢复此节点吗？'+record.name ,
-            onOk:()=>{ 
-                message.success('恢复成功');
-                //发送恢复请求
-                this.request();
+            onOk:()=>{
+                var datas={
+                    items:[]
+                }  
                 
-                 
+                 var depitem={
+                     name:record.name,
+                 }
+                 datas.items=datas.items.concat(depitem)
+                
+                fetch('http://localhost:9090/api/cluster/'+record.cluster+'/resume/nodes?data='+JSON.stringify(datas),{
+                    method:'GET',
+                    mode: 'cors', 
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [],  
+                            selectedRows: null
+                        })
+                        message.success('恢复成功');
+                        //刷新数据
+                        //this.requestnode(record.cluster);
+                        this.request();
+                        return data;
+                    }).catch( (e)=> {  
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [],  
+                            selectedRows: null
+                        })
+                        message.success('恢复失败');
+                        //this.requestnode(record.cluster);
+                        this.request();
+                        console.log(e);
+                    }) 
             }
         })
     }
@@ -431,13 +664,42 @@ export default class Node extends React.Component {
             title:'删除节点',
             content:'您确认要删除此节点吗？'+record.name ,
             onOk:()=>{ 
-                message.success('删除成功');
-                //发送删除请求
-                this.request();
-                //有了后台后删除
-                this.setState({
-                    dataSource:this.state.dataSource.filter(item => item.name!==record.name)
-                })
+                var datas={
+                    items:[]
+                }  
+                var ditem={
+                        name:record.name,  
+                 }
+                datas.items=datas.items.concat(ditem)
+               
+               // console.log(JSON.stringify(datas))
+                //下面URL的 集群 名称 以后需要替换掉
+                fetch('http://localhost:9090/api/cluster/'+record.cluster+'/nodes?data='+JSON.stringify(datas),{
+                    method:'DELETE',
+                    mode: 'cors', 
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request();
+                        return data;
+                    }).catch( (e)=> {  
+                        this.setState({  //取消选中行
+                            selectedRowKeys: [ ],  
+                            selectedRows: null
+                        })
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request();
+                        console.log(e);
+                    }) 
+                
             }
         })
     }
@@ -452,6 +714,15 @@ export default class Node extends React.Component {
                 this.setState({
                     search:false
                 })    
+            }
+            if(content!==''){
+                //console.log('this.state.searchname:',this.state.searchname)
+                //console.log(this.state.dataSource.map(item=>item.name.indexOf(this.state.searchname)))
+                this.setState({
+                    searchdata:this.state.dataSource.filter(item=>item.name.indexOf(content)!==-1),
+                    search:true
+                })
+                 
             }
         }
         //点击搜索按钮
@@ -477,8 +748,13 @@ export default class Node extends React.Component {
         console.log('跳转！')
         sessionStorage.setItem('nodename',nodedetail.name)
         sessionStorage.setItem('nodecluster',nodedetail.cluster)
-       // Header.nodedetail=nodedetail
+         utils.nodedetail=nodedetail
     }
+
+    statechange=()=>{ //创建服务之后回调
+        console.log('refresh!')
+        this.request()
+    } 
     render(){ 
         const columns=[
             {
@@ -596,8 +872,9 @@ export default class Node extends React.Component {
             }
         } 
         const clusterdata=this.state.cluster.map( (item)=>( 
-            <Option value={item} key={item}>{item}</Option>
-         )
+            <Option value={item.name} key={item.name}>{item.name}</Option>
+         
+            )
         )
         return (
             
@@ -616,6 +893,7 @@ export default class Node extends React.Component {
                     <span style={{marginRight:10,fontSize:15}}>集群：</span>
                     <Select defaultValue='All' style={{ width: 120 }} onSelect={this.handleClustertChange}  >
                          <Option value='All'  key='All'>全局</Option>
+                          
                          {clusterdata}
                     </Select> 
                    
@@ -650,7 +928,7 @@ export default class Node extends React.Component {
                     />
                      
                 </div>  
-                <EditNode dataSource={this.state.operationdata}  editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}></EditNode>
+                <EditNode statechange={this.statechange} currentcluster={this.state.currentcluster} dataSource={this.state.operationdata}  editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}></EditNode>
             </div>
                  )} 
 

@@ -39,7 +39,7 @@ type Condition struct {
 	Type               string `json:"type,omitempty"`
 	Status             string `json:"status,omitempty"`
 	LastUpdateTime     string `json:"lastUpdateTime,omitempty"`
-	LastTransitionTime string `json:"lastTransitionTime,omitmepty"`
+	LastTransitionTime string `json:"lastTransitionTime,omitempty"`
 	Reason             string `json:"reason,omitempty"`
 	Message            string `json:"message,omitempty"`
 }
@@ -62,6 +62,7 @@ type Deployment struct {
 	Status     *State            `json:"status,omitempty"`
 }
 
+/*
 func NewDeployment(name, namespace string, matchLabels interface{}, labels map[string]string,
 	replicas int64, podTemplate *pod.Pod, stategy *Strategy) *Deployment {
 
@@ -93,10 +94,16 @@ func NewDeployment(name, namespace string, matchLabels interface{}, labels map[s
 		Spe:        spec,
 	}
 
-}
+}*/
 
 func (deloyment *Deployment) Create(master string) (io.ReadCloser, int, error) {
 	return cluster.Call("POST", "/apis/apps/v1beta1/namespaces/"+deloyment.Meta.Namespace+"/deployments", master, deloyment)
+}
+func (deployment *Deployment) Update(master string, data []byte) (io.ReadCloser, int, error) {
+	return cluster.PatchCall("PATCH", "/apis/apps/v1beta1/namespaces/"+deployment.Meta.Namespace+"/deployments/"+deployment.Meta.Name, master, data)
+}
+func (deployment *Deployment) Replace(master string) (io.ReadCloser, int, error) {
+	return cluster.Call("PUT", "/apis/apps/v1beta1/namespaces/"+deployment.Meta.Namespace+"/deployments/"+deployment.Meta.Name, master, deployment)
 }
 
 func (deloyment *Deployment) Get(master string) error {

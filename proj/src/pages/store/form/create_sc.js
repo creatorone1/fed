@@ -9,10 +9,10 @@ const Option=Select.Option;
 const Panel = Collapse.Panel;
 class CreateSC extends React.Component {
     state = {
-        /**pv与存储类的数据从网络获取 
+        /**
          * 
         */
-        pvData:[{
+       /* pvData:[{
             name:'pv1',
             namespace:'default',
             status:'Available',
@@ -72,7 +72,8 @@ class CreateSC extends React.Component {
             createtime:'2019-5-11', 
             key:'3',
         }
-        ], 
+        ], */
+        
         selectdata:[],// 存储源数据，pv或sc 
         accessmodes: [
             { label: '单主机读写', value: 'RWO' },
@@ -113,12 +114,43 @@ class CreateSC extends React.Component {
                 reclaimPolicy 
               } = values;  
             
-            //成功了则关闭弹窗且初始化
-            const { form } = this.props; 
-            form.resetFields();  //重置表单
-            this.setState({
-              visible: false, 
-            });
+              var sc=new SC(values)
+              //console.log('svc',pvc)
+               //console.log(JSON.stringify(pvc))
+              fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/sc',{
+               method:'POST',
+               mode: 'cors', 
+               body:JSON.stringify(sc)
+             }).then((response) => {
+                 console.log('response:',response.ok)
+                 return response.json();
+             }).then((data) => {
+                 console.log('data:',data)
+                
+                 /*this.setState({ //表格选中状态清空
+                     selectedRowKeys:[],
+                     selectedRows:null,
+                     dataSource:data
+                 })*/
+                 
+                this.props.statechange() 
+                 //成功了则关闭弹窗且初始化
+                const { form } = this.props; 
+                form.resetFields();  //重置表单
+                this.setState({
+                  visible: false, 
+                });
+                 return data;
+             }).catch( (e)=> {  
+               //成功了则关闭弹窗且初始化
+               const { form } = this.props; 
+               form.resetFields();  //重置表单
+               this.setState({
+                 visible: false, 
+               });
+                 console.log(e);
+             }) 
+             
           }
           else{ //否则报错 
             const { name,podsnum,image,namepace,
@@ -149,7 +181,7 @@ class CreateSC extends React.Component {
         }).then((data) => {
             console.log('data:',data)
             return data;
-        }).catch(function (e) {
+        }).catch((e)=>{
             console.log(e);
         })
     } 
@@ -229,7 +261,7 @@ class CreateSC extends React.Component {
                         > 
                             {
                             getFieldDecorator('provisioner',{ 
-                            initialValue:'',//初始化  
+                            initialValue:'example.com/nfs',//初始化  
                                   
                             }) (
                                 <span style={{ width: wwidth }}> 
@@ -261,3 +293,15 @@ class CreateSC extends React.Component {
         }
     }
 export default Form.create()(CreateSC); 
+function SC(values){
+    var sc=new Object(); 
+    const { name,
+            provisioner,
+            reclaimPolicy,  
+            } = values;
+    sc.name=name 
+    sc.provisioner=provisioner
+    sc.reclaimPolicy=reclaimPolicy 
+
+    return sc
+}

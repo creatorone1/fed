@@ -15,7 +15,7 @@ type Clusters struct {
 
 type Cluster struct {
 	Kind       string            `json:"kind,omitempty"`
-	ApiVersion string            `json:"apiVersion, omitempty"`
+	ApiVersion string            `json:"apiVersion,omitempty"`
 	Meta       *cluster.Metadata `json:"metadata,omitempty"`
 	Spe        *Spec             `json:"spec,omitempty"`
 	Status     *State            `json:"status,omitempty"`
@@ -64,7 +64,9 @@ func (cs *Cluster) Delete(master string) (io.ReadCloser, int, error) {
 	b := cluster.NewBody(0, false)
 	return cluster.Call("DELETE", "/apis/federation/v1beta1/clusters/"+cs.Meta.Name, master, b)
 }
-
+func (cs *Cluster) Update(master string, data []byte) (io.ReadCloser, int, error) {
+	return cluster.PatchCall("PATCH", "/apis/federation/v1beta1/clusters/"+cs.Meta.Name, master, data)
+}
 func GetVersion(master string) (map[string]string, error) {
 	//return cluster.Call("GET", "/api/v1/nodes", master, nil)
 	body, _, err := cluster.ReadBody(cluster.Call("GET", "/version", master, nil))

@@ -97,7 +97,9 @@ func (pv *Pv) Get(master string) error {
 func (pv *Pv) Create(master string) (io.ReadCloser, int, error) {
 	return cluster.Call("POST", "/api/v1/persistentvolumes", master, pv)
 }
-
+func (pv *Pv) Replace(master string) (io.ReadCloser, int, error) {
+	return cluster.Call("PUT", "/api/v1/persistentvolumes/"+pv.Meta.Name, master, pv)
+}
 func (pv *Pv) Delete(master string) (io.ReadCloser, int, error) {
 	b := cluster.NewBody(0, false)
 	return cluster.Call("DELETE", "/api/v1/persistentvolumes/"+pv.Meta.Name, master, b)

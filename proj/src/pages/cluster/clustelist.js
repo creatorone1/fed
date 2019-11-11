@@ -4,7 +4,7 @@ import React from 'react';
 import { HashRouter, Route, Switch, Redirect,Link,NavLink} from 'react-router-dom'
 import EditCluster from './form/clusteredit'
 import CreateCluster from './form/createcluster'
-
+import utils from './../../utils/utils'
 
 const Option = Select.Option;
 const TabPane = Tabs.TabPane;
@@ -51,28 +51,31 @@ export default class ClusterList extends React.Component {
        
     }
     componentDidMount(){//请求数据
-        // this.request()
+        this.request()
 
      }
     // 动态获取mock数据
-    request = () => {
-        var token='token-d4wjm:kf6fv6lv7gr78hlssplpxtwxvf4z9rxftvc7pp8sv9bk7c6qnptn7l'
-        fetch('/rancher',{
+    request = () => { //初始化数据请求
+        fetch('http://localhost:9090/api/clusters',{
         method:'GET',
-        headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
-          }
+        mode: 'cors', 
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
         }).then((data) => {
             console.log('data:',data)
+
+            this.setState({ //表格选中状态清空
+                selectedRowKeys:[],
+                selectedRows:null,
+                dataSource:data
+            })
+             
             return data;
-        }).catch(function (e) {
+        }).catch( (e)=> {  
             console.log(e);
         })
-    }
+    } 
 
 
 
@@ -169,6 +172,15 @@ export default class ClusterList extends React.Component {
                         search:false
                     })    
                 }
+                if(content!==''){
+                    //console.log('this.state.searchname:',this.state.searchname)
+                    //console.log(this.state.dataSource.map(item=>item.name.indexOf(this.state.searchname)))
+                    this.setState({
+                        searchdata:this.state.dataSource.filter(item=>item.name.indexOf(content)!==-1),
+                        search:true
+                    })
+                     
+                }
             }
             //点击搜索按钮
         handleSearch = ()=>{
@@ -192,9 +204,14 @@ export default class ClusterList extends React.Component {
         handleRedirect=(clusterdetail)=>{
             console.log('跳转！')
             sessionStorage.setItem('clustername',clusterdetail.name)
-          
+            utils.clusterdetail=clusterdetail
+            //console.log('utils.clusterdetail',utils.clusterdetail)
            // Header.nodedetail=nodedetail
         }
+        statechange=()=>{ //创建服务之后回调
+            console.log('refresh!')
+            this.request(this.props.currentcluster)
+        } 
     render(){ 
         const columns=[
             {
@@ -245,6 +262,7 @@ export default class ClusterList extends React.Component {
                 key:'deployments',
                 dataIndex:'deployments', 
                 render(deployments){ //第一个是running中的deployment 第二个是deployment总数
+                    if(deployments)
                     return(deployments[0]+'/'+deployments[1])
                 }
             }

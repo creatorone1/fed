@@ -9,7 +9,7 @@ const Option=Select.Option;
 const Panel = Collapse.Panel;
 class CreatePVC extends React.Component {
     state = {
-        /**pv与存储类的数据从网络获取 
+        /**pv与存储类sc的数据从网络获取 
          * 
         */
         pvData:[{
@@ -19,7 +19,8 @@ class CreatePVC extends React.Component {
             capacity:'10GB',
             pvc:'myvo1',
             storageclass:'nfs',
-            accessmodes:['RWO','ROX'],
+             
+            accessmodes:['RWO','ReadOnlyMany'],
             createtime:'2019-5-10',
             key:'1',
 
@@ -29,7 +30,7 @@ class CreatePVC extends React.Component {
             capacity:'20GB',
             pvc:'myvo2',
             storageclass:'nfs',
-            accessmodes:['RWX','ROX'],
+            accessmodes:['ReadWriteMany','ReadOnlyMany'],
             createtime:'2019-5-11',
             key:'2',
         },{
@@ -38,7 +39,7 @@ class CreatePVC extends React.Component {
             capacity:'30GB',
             pvc:'',
             storageclass:'',
-            accessmodes:['RWX'],
+            accessmodes:['ReadWriteMany'],
             createtime:'2019-5-11', 
             key:'3',
         },{
@@ -47,7 +48,7 @@ class CreatePVC extends React.Component {
             capacity:'30GB',
             pvc:'',
             storageclass:'',
-            accessmodes:['ROX','RWO','RWX'],
+            accessmodes:['RWO','ReadOnlyMany','ReadWriteMany'],
             createtime:'2019-5-11',
             key:'4',
         },
@@ -75,22 +76,23 @@ class CreatePVC extends React.Component {
         ], 
         selectdata:[],// 存储源数据，pv或sc 
         accessmodes: [
-            { label: '单主机读写', value: 'RWO' },
-            { label: '多主机只读', value: 'ROX' },
-            { label: '多主机读写', value: 'RWX' },
+            { label: '单主机读写', value: 'ReadWriteOnce' },
+            { label: '多主机只读', value: 'ReadOnlyMany' },
+            { label: '多主机读写', value: 'ReadWriteMany' },
         ] 
     }
     showModal = () => {
+        this.request(this.props.currentcluster)
         const { form } = this.props;
         form.resetFields(); //重置表单数据 
         this.setState({
           visible: true, 
           selectdata:[],
           accessmodes: [
-            { label: '单主机读写', value: 'RWO' },
-            { label: '多主机只读', value: 'ROX' },
-            { label: '多主机读写', value: 'RWX' },
-          ] 
+            { label: '单主机读写', value: 'ReadWriteOnce' },
+            { label: '多主机只读', value: 'ReadOnlyMany' },
+            { label: '多主机读写', value: 'ReadWriteMany' },
+            ]
         }); 
        
       }
@@ -114,12 +116,43 @@ class CreatePVC extends React.Component {
                 capacity,accessmodes 
               } = values;  
             
-            //成功了则关闭弹窗且初始化
-            const { form } = this.props; 
-            form.resetFields();  //重置表单
-            this.setState({
-              visible: false, 
-            });
+              var pvc=new PVC(values)
+              //console.log('svc',pvc)
+               //console.log(JSON.stringify(pvc))
+              fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/pvc',{
+               method:'POST',
+               mode: 'cors', 
+               body:JSON.stringify(pvc)
+             }).then((response) => {
+                 console.log('response:',response.ok)
+                 return response.json();
+             }).then((data) => {
+                 console.log('data:',data)
+     
+                 /*this.setState({ //表格选中状态清空
+                     selectedRowKeys:[],
+                     selectedRows:null,
+                     dataSource:data
+                 })*/
+                 //成功了则关闭弹窗且初始化
+                    this.props.statechange() 
+                    const { form } = this.props; 
+                    form.resetFields();  //重置表单
+                    this.setState({
+                    visible: false, 
+                    });
+                 return data;
+             }).catch( (e)=> {  
+               //成功了则关闭弹窗且初始化
+                const { form } = this.props; 
+                form.resetFields();  //重置表单
+                this.setState({
+                visible: false, 
+                }); 
+                 console.log(e);
+             }) 
+
+             
           }
           else{ //否则报错 
             const { name,podsnum,image,namepace,
@@ -141,19 +174,44 @@ class CreatePVC extends React.Component {
         //接收参数后更新数据
 
     }
-    request = () => {
-        fetch('url',{
-        method:'GET'
+    request = (clustername) => { //初始化数据请求
+        fetch('http://localhost:9090/api/cluster/'+clustername+'/pvs',{
+        method:'GET',
+        mode: 'cors', 
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
         }).then((data) => {
             console.log('data:',data)
+
+            this.setState({ //表格选中状态清空
+                selectedRowKeys:[],
+                selectedRows:null,
+                pvData:data
+            })
+             
             return data;
-        }).catch(function (e) {
+        }).catch( (e)=> {  
             console.log(e);
         })
-    }
+
+        fetch('http://localhost:9090/api/cluster/'+clustername+'/scs',{
+            method:'GET'
+            }).then((response) => {
+                console.log('response:',response.ok)
+                return response.json();
+            }).then((data) => {
+                console.log('data:',data) 
+                this.setState({ //表格选中状态清空
+                    selectedRowKeys:[],
+                    selectedRows:null,
+                    SCData:data
+                }) 
+                return data;
+            }).catch((e)=>{
+                console.log(e);
+            })
+    } 
     handleSelecttype=(value)=>{ //选择存储源类型
         console.log('select type: '+value)
         const {form}=this.props
@@ -171,10 +229,10 @@ class CreatePVC extends React.Component {
             this.setState({     
                 selectdata:this.state.SCData,
                 accessmodes: [
-                    { label: '单主机读写', value: 'RWO' },
-                    { label: '多主机只读', value: 'ROX' },
-                    { label: '多主机读写', value: 'RWX' },
-                ] 
+                    { label: '单主机读写', value: 'ReadWriteOnce' },
+                    { label: '多主机只读', value: 'ReadOnlyMany' },
+                    { label: '多主机读写', value: 'ReadWriteMany' },
+                ]
             })
         } 
     } 
@@ -192,9 +250,10 @@ class CreatePVC extends React.Component {
                           
             //设置访问模式
             var options=this.state.accessmodes 
-             options[0].disabled=!pv[0].accessmodes.includes('RWO')
-             options[1].disabled=!pv[0].accessmodes.includes('ROX')
-             options[2].disabled=!pv[0].accessmodes.includes('RWX')
+           
+             options[0].disabled=!pv[0].accessmodes.includes('ReadWriteOnce')&&!pv[0].accessmodes.includes('RWO')
+             options[1].disabled=!pv[0].accessmodes.includes('ReadOnlyMany')&&!pv[0].accessmodes.includes('ROX')
+             options[2].disabled=!pv[0].accessmodes.includes('ReadWriteMany')&&!pv[0].accessmodes.includes('RWX')
             console.log(options)
             this.setState({
                 accessmodes:options
@@ -384,3 +443,24 @@ class CreatePVC extends React.Component {
         }
     }
 export default Form.create()(CreatePVC); 
+
+function PVC(values){
+    var pvc=new Object(); 
+    const { name,namespace,
+             capacity,
+             storesourcename,
+             storesourcetype,
+             accessmodes, 
+            } = values;
+    pvc.name=name
+    pvc.namespace=namespace
+    pvc.size=capacity+'Gi'
+    if(storesourcetype=='PV'){
+        pvc.volume=storesourcename
+    }else{
+        pvc.storageclass=storesourcename
+    }
+    pvc.accessmodes=accessmodes
+
+    return pvc
+}
