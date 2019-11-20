@@ -164,7 +164,7 @@ export default class DetaiNode extends React.Component {
             getdata:true
         })
 
-        fetch('url',{
+        fetch(utils.urlprefix+'url',{
         method:'GET'
         }).then((response) => {
             console.log('response:',response.ok)

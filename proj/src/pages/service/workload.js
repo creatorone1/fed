@@ -9,6 +9,7 @@ import ConfigWL from'./form/config_wl'
 import { now } from 'moment';
 import Util from './../../utils/utils'
 import EditWL from './form/edit_wl';
+import utils from './../../utils/utils'
 const Option = Select.Option;
 export default class Workload extends React.Component {
       
@@ -215,7 +216,7 @@ export default class Workload extends React.Component {
     }
 
     request = (clustername,namespace) => { //初始化数据请求
-        fetch('http://localhost:9090/api/cluster/'+clustername+'/deployments',{
+        fetch(utils.urlprefix+'/api/cluster/'+clustername+'/deployments',{
         method:'GET',
         mode: 'cors', 
         }).then((response) => {
@@ -263,7 +264,7 @@ export default class Workload extends React.Component {
                
                // console.log(JSON.stringify(datas))
                 //下面URL的 集群 名称 以后需要替换掉
-                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/deployments?data='+JSON.stringify(datas),{
+                fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/deployments?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
                     }).then((response) => {
@@ -314,7 +315,7 @@ export default class Workload extends React.Component {
  
         let sysTime = Util.formateDate(new Date().getTime()); //获取格式化的时间
     
-        fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/namespace/'+record.namespace+'/deployment/'+record.name+'/history',{  //查找该工作负载的副本集,修改 this.state.rollback 数据
+        fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/namespace/'+record.namespace+'/deployment/'+record.name+'/history',{  //查找该工作负载的副本集,修改 this.state.rollback 数据
                 method:'GET'
             }).then((response) => {
             console.log('response:',response.ok)
@@ -381,7 +382,7 @@ export default class Workload extends React.Component {
                     datas.items=datas.items.concat(depitem)
                 })
                 
-                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/pause/deployments?data='+JSON.stringify(datas),{
+                fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/pause/deployments?data='+JSON.stringify(datas),{
                     method:'GET',
                     mode: 'cors', 
                     }).then((response) => {
@@ -440,7 +441,7 @@ export default class Workload extends React.Component {
                     datas.items=datas.items.concat(depitem)
                 })
                 
-                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/resume/deployments?data='+JSON.stringify(datas),{
+                fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/resume/deployments?data='+JSON.stringify(datas),{
                     method:'GET',
                     mode: 'cors', 
                     }).then((response) => {
@@ -664,6 +665,7 @@ export default class Workload extends React.Component {
 
                 <Table  
                     dataSource={this.state.search?this.state.searchdata:this.state.dataSource}
+                    rowKey={record => record.name+record.namespace}
                     rowSelection={rowSelection}
                     columns={columns} 
                     rowClassName={(record,index)=>index%2===0?'table1':'table2'}
@@ -685,7 +687,7 @@ export default class Workload extends React.Component {
                          //console.log('revision: '+this.state.revision)
                          if(this.state.revision!==undefined&&this.state.operationdata!==undefined)
                         {  // this.request('url'+this.state.operationdata.name+this.state.revision); //发送回滚请求
-                        fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/namespace/'+this.state.operationdata.namespace+'/deployment/'+this.state.operationdata.name+'/rollback?revision='+this.state.revision,{
+                        fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/namespace/'+this.state.operationdata.namespace+'/deployment/'+this.state.operationdata.name+'/rollback?revision='+this.state.revision,{
                             method:'PUT',
                             mode: 'cors', 
                             }).then((response) => {
@@ -747,7 +749,7 @@ export default class Workload extends React.Component {
                          if(this.state.scalenum!==undefined&&this.state.operationdata!==undefined)
                         {   
                               
-                            fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/namespace/'+this.state.operationdata.namespace+'/deployment/'+this.state.operationdata.name+'/scale?replicanum='+this.state.scalenum,{
+                            fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/namespace/'+this.state.operationdata.namespace+'/deployment/'+this.state.operationdata.name+'/scale?replicanum='+this.state.scalenum,{
                                 method:'PUT',
                                 mode: 'cors', 
                                 }).then((response) => {

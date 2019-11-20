@@ -5,6 +5,7 @@ import './store.less'
 import {Modal,message,Badge,InputNumber,Tag,Table, Checkbox, Button,Input, Row,Col,Icon,Dropdown,Menu,  
 } from 'antd'; 
 import CreatePVC from './form/create_pvc'
+import utils from './../../utils/utils'
 export default class PVC extends React.Component {
     state = {
         selectedRowKeys:[],
@@ -49,11 +50,12 @@ export default class PVC extends React.Component {
         this.request(this.props.currentcluster,this.props.currentnamespace);
     }
     componentWillReceiveProps(nextProps){
+        console.log('nextProps.currentcluster',nextProps.currentcluster)
         //接收参数后更新数据
         this.request(nextProps.currentcluster,nextProps.currentnamespace);
     }
     request = (clustername,namespace) => { //初始化数据请求
-        fetch('http://localhost:9090/api/cluster/'+clustername+'/pvcs',{
+        fetch(utils.urlprefix+'/api/cluster/'+clustername+'/pvcs',{
         method:'GET',
         mode: 'cors', 
         }).then((response) => {
@@ -100,7 +102,7 @@ export default class PVC extends React.Component {
                
                // console.log(JSON.stringify(datas))
                 //下面URL的 集群 名称 以后需要替换掉
-                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/pvcs?data='+JSON.stringify(datas),{
+                fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/pvcs?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
                     }).then((response) => {
@@ -158,7 +160,7 @@ export default class PVC extends React.Component {
                 })
                // console.log(JSON.stringify(datas))
                 //下面URL的 集群 名称 以后需要替换掉
-                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/pvcs?data='+JSON.stringify(datas),{
+                fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/pvcs?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
                     }).then((response) => {
@@ -340,6 +342,7 @@ export default class PVC extends React.Component {
                 </Row>
                 <Table  
                     dataSource={this.state.search?this.state.searchdata:this.state.dataSource}
+                    rowKey={record => record.name+record.namespace}
                     rowSelection={rowSelection }
                     columns={columns }  
                     rowClassName={(record,index)=>index%2===0?'table1':'table2'}

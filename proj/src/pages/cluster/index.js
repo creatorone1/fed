@@ -39,7 +39,7 @@ export default class Cluster extends React.Component {
     // 动态获取mock数据
     request = () => {
         var token='token-b2q8g:ql4lb8mnw26fdwjgfwmhjsh2j6ssm2nmgm584bz6fqgrnp6klqhz2k'
-        fetch('https://10.103.240.133/v3',{
+        fetch(utils.urlprefix+'/v3',{
         method:'GET',
         headers: {
             Authorization: `Bearer ${token}`,

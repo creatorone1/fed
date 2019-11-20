@@ -28,3 +28,13 @@ func (deloyment *Deployment) Delete(master string) (io.ReadCloser, int, error) {
 	return bb, 0, nil*/
 
 }
+func (deloyment *Deployment) DeleteFed(master string) (io.ReadCloser, int, error) { //note: return value is diffence from Create and Get.
+
+	b := cluster.NewBody(0, false)
+	return cluster.Call("DELETE", "/apis/extensions/v1beta1/namespaces/"+deloyment.Meta.Namespace+"/deployments/"+deloyment.Meta.Name, master, b)
+	/*data, _ := json.Marshal(b)
+	fmt.Printf("%s", data)
+	var bb io.ReadCloser
+	return bb, 0, nil*/
+
+}

@@ -5,9 +5,10 @@ import React from 'react'
 import {
     Tree,Modal,Form, Radio,Input, Icon, Button,InputNumber ,Collapse , Select,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
 } from 'antd';
+import utils from './../../../utils/utils'
 import { height } from 'window-size';
 const { TreeNode } = Tree; 
-
+ 
  
 const FormItem = Form.Item;
 const Option=Select.Option;
@@ -43,7 +44,7 @@ class CreateUser extends React.Component {
           
         });
       }  
-    handleOk =()=>{ //点击确认按钮
+      handleOk =()=>{ //点击确认按钮
      
         this.props.form.validateFields((err, values) => {
           if (!err) {   //如果没有错则传输数据 
@@ -51,23 +52,74 @@ class CreateUser extends React.Component {
              //keys表示env名字env_label与值value的key
             //labelkeys表示label名字env_label与值value的key
             //portkeys表示portnum与porttype的key
-            const { username,status,
-                password,role, 
-              } = values;  
-            var auths=this.state.checkedKeys//权限数组
-
-            //成功了则关闭弹窗且初始化
-            const { form } = this.props; 
-            form.resetFields();  //重置表单
-            this.setState({
-              visible: false, 
-            });
+            const { id,name,password,status,rool,fedpermission,clusterpermission,modulepermission,createtime,permissiontime,} = values;
+          //  console.log('env_label name :', keys.map(key => env_label[key]));
+           var usr = new User(values)
+           var clusterpermissionarray=[]
+           var modulepermissionarray=[]
+           var i = 0
+           for (i = 0; i < this.state.checkedKeys.length; i++) {
+                if(this.state.checkedKeys[i]=="federationauth"){
+                  usr.fedpermission=1
+                }else if(this.state.checkedKeys[i].indexOf("clustercheck") !=-1){
+                  clusterpermissionarray.push(this.state.checkedKeys[i].replace('clustercheck:', ''))
+                }else if(this.state.checkedKeys[i].indexOf("modulecheck") !=-1){
+                  modulepermissionarray.push(this.state.checkedKeys[i].replace('modulecheck:', ''))
+                }
+            }
+           usr.clusterpermission=clusterpermissionarray.join(",")
+           usr.modulepermission=modulepermissionarray.join(",")
+           console.log('usr:',JSON.stringify(usr))
+              
+            
+            fetch(utils.urlprefix+'/api/user',{
+              method:'POST',
+              mode: 'cors', 
+              body:JSON.stringify(usr)
+            }).then((response) => {
+                console.log('response:',response.ok)
+                return response.json();
+            }).then((data) => {
+                console.log('data:',data)
+    
+                /*this.setState({ //表格选中状态清空
+                    selectedRowKeys:[],
+                    selectedRows:null,
+                    dataSource:data
+                })*/
+                 //成功了则关闭弹窗且初始化
+                const { form } = this.props; 
+                form.resetFields();  //重置表单
+                //id=0;
+                this.props.statechange()//创建成功刷新数据
+                this.setState({
+                  visible: false, 
+                  advanced:false,
+                  schedule:''
+                });
+                this.request()
+                return data;
+            }).catch( (e)=> {  
+              //成功了则关闭弹窗且初始化
+                const { form } = this.props; 
+                form.resetFields();  //重置表单
+                //id=0;
+                this.setState({
+                  visible: false, 
+                  advanced:false,
+                  schedule:''
+                });
+                console.log(e);
+            }) 
+  
+  
+             
           }
           else{ //否则报错 
             const { name,podsnum,image,namepace,
               keys,labelkeys,portkeys,env_label,value
               , portnum, porttype,
-              cpurequst,cpulimit,memoryrequst,memorylimit,gpurequst,
+              cpurequest,cpulimit,memoryrequest,memorylimit,gpurequest,
               nodename
               } = values;  
             console.log(' values: ', values);   
@@ -77,15 +129,15 @@ class CreateUser extends React.Component {
       }
          
     componentDidMount(){//请求数据
-        //this.request();
+        this.request();
     }
     componentWillReceiveProps(nextProps){
         //接收参数后更新数据
 
     }
     request = () => {
-        fetch('url',{
-        method:'GET'
+        fetch(utils.urlprefix+'/api/user',{
+        method:'post'
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
@@ -121,7 +173,7 @@ class CreateUser extends React.Component {
             role:e.target.value
         })
 
-        if(e.target.value=='CommonUser'){
+        if(e.target.value==0){
             console.log('reset')
             this.setState({ checkedKeys:[],expandedKeys:[]});
         }
@@ -208,10 +260,10 @@ class CreateUser extends React.Component {
                     title:'模块权限',
                     key:'moduleauth',
                     children:[
-                        { title: '应用管理', key: 'application' },
-                        { title: '服务管理', key: 'service' },
-                        { title: '存储管理', key: 'store' },
-                        { title: '节点管理', key: 'node' }, 
+                        { title: '应用管理', key: 'modulecheck:application' },
+                        { title: '服务管理', key: 'modulecheck:service' },
+                        { title: '存储管理', key: 'modulecheck:store' },
+                        { title: '节点管理', key: 'modulecheck:node' }, 
                     ]
                 }
             ]
@@ -275,8 +327,8 @@ class CreateUser extends React.Component {
                                 ] 
                             }) (
                                 <Radio.Group  style={{ width: wwidth }}   >
-                                    <Radio value={'Active'}>启用</Radio>
-                                    <Radio value={'inActive'}>停用</Radio> 
+                                    <Radio value={1}>启用</Radio>
+                                    <Radio value={0}>停用</Radio> 
                                 </Radio.Group> 
                                 )
                             } 
@@ -342,10 +394,10 @@ class CreateUser extends React.Component {
                                 ] 
                                 }) (
                                 <Radio.Group onChange={this.handleRoleChange}  >
-                                    <Radio style={radioStyle} value={'Administrator'}>
+                                    <Radio style={radioStyle} value={1}>
                                         管理员
                                     </Radio>
-                                    <Radio style={radioStyle} value={'CommonUser'}>
+                                    <Radio style={radioStyle} value={0}>
                                         普通用户
                                     </Radio> 
                                 </Radio.Group>
@@ -353,7 +405,7 @@ class CreateUser extends React.Component {
                              }    
                             </FormItem>  
 
-                             {this.state.role=='CommonUser'?   
+                             {this.state.role==0  ?   
                              <FormItem label='自定义权限'
                                 {...formItemLayout} >
                                 {
@@ -396,5 +448,81 @@ class CreateUser extends React.Component {
   //const WrappedDynamicFieldSet = Form.create({ name: 'dynamic_form_item' })(CreateWL);
   export default Form.create()(CreateUser); 
 
+  function User(values) {
+    var usr=new Object(); 
+    const { id,username,password,status,role,fedpermission,clusterpermission,modulepermission,createtime,permissiontime,} = values;
+    usr.id=id;
+    usr.name=username
+    usr.password=password
+    usr.status=status
+    usr.rool=role
+    usr.createtime=createtime
+    usr.permissiontime=permissiontime
 
+    usr.fedpermission=fedpermission
+    usr.clusterpermission=clusterpermission
+    usr.modulepermission=modulepermission
+
+/*
+    var env=[]
+    keys.map(key =>{
+      var e ={
+        name: env_label[key],
+        value:value[key]
+      }
+      env=env.concat(e)
+    })       
+    node.env= env  
+
+    var label=[]
+    labelkeys.map(key =>{
+      var l ={
+        name: env_label[key],
+        value:value[key]
+      }
+      label=label.concat(l)
+    })       
+    node.label= label
+
+    node.schedule=  schedule     
+    if(schedule=="LABEL"){
+        var nodematch=[]
+        nodematchkeys.map(key =>{
+          var nm = {
+            label: matchlabel[key],
+            op:matchop[key],
+            value:matchvalue[key]
+          }
+          nodematch=nodematch.concat(nm)
+        })       
+        node.nodematch= nodematch
+    }
+    if(schedule=="NODE"){
+      node.nodename= nodename
+    }
+
+    var ports=[]
+    portkeys.map(key =>{
+      var p ={
+        containerPort: portnum[key],
+        protocol:porttype[key]
+      }
+      ports=ports.concat(p)
+    })       
+    node.ports= ports
+
+    var request={
+      cpurequest:cpurequest,
+      memoryrequest:memoryrequest,
+      gpurequest:gpurequest
+    }
+    node.request= request
+
+    var limit={
+      cpulimit:cpulimit,
+      memorylimit:memorylimit 
+    }
+    node.limit= limit*/
+    return usr
+}
 

@@ -89,6 +89,18 @@ type Deployment struct {
 	Request      ReRequest    `json:"request,omitempty"`
 	Limit        ReLimit      `json:"limit,omitempty"`
 	Schnodename  string       `json:"schnodename,omitempty"`
+	Volumes      []Volume     `json:"volumes,omitempty"`
+}
+type Volume struct {
+	Name         string      `json:"name,omitempty"`
+	Pvcname      string      `json:"pvcname,omitempty"`
+	VolumeMounts []VolumeMount `json:"volumemounts,omitempty"`
+}
+type VolumeMount struct {
+	Name     string `json:"name,omitempty"`
+	MountPath     string `json:"mountpath,omitempty"`
+	ReadOnly bool   `json:"readonly,omitempty"`
+	SubPath  string `json:"subpath,omitempty"`
 }
 type TemRes struct {
 	Name string    `json:"name,omitempty"`
@@ -123,7 +135,7 @@ type Service struct {
 	Namespace  string            `json:"namespace,omitempty"`
 	Createtime string            `json:"createtime,omitempty"`
 	Target     map[string]string `json:"target,omitempty"`
-	Selectors   []SvcSelector       `json:"selectors,omitempty"`
+	Selectors  []SvcSelector     `json:"selectors,omitempty"`
 	Type       string            `json:"type,omitempty"`
 	Ports      []SVCPort         `json:"ports,omitempty"`
 	Label      []Label           `json:"label,omitempty"`

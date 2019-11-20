@@ -96,6 +96,9 @@ func (pvc *Pvc) Get(master string) error {
 func (pvc *Pvc) Replace(master string) (io.ReadCloser, int, error) {
 	return cluster.Call("PUT", "/api/v1/namespaces/"+pvc.Meta.Namespace+"/persistentvolumeclaims/"+pvc.Meta.Name, master, pvc)
 }
+func (pvc *Pvc) Patch(master string, datas []byte) (io.ReadCloser, int, error) {
+	return cluster.PatchCall("PATCH", "/api/v1/namespaces/"+pvc.Meta.Namespace+"/persistentvolumeclaims/"+pvc.Meta.Name, master, datas)
+}
 func (pvc *Pvc) Delete(master string) (io.ReadCloser, int, error) {
 	b := cluster.NewBody(0, false)
 	return cluster.Call("DELETE", "/api/v1/namespaces/"+pvc.Meta.Namespace+"/persistentvolumeclaims/"+pvc.Meta.Name, master, b)

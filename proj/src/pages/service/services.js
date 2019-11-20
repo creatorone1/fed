@@ -5,6 +5,7 @@ import {Modal,message,Badge,InputNumber,Tag,Table, Checkbox, Button,Input, Row,C
 } from 'antd'; 
 import CreateSvc from './form/create_svc'  
 import EditSvc from './form/edit_svc' 
+import utils from './../../utils/utils'
 export default class Services extends React.Component {
       
     state = {
@@ -96,7 +97,7 @@ export default class Services extends React.Component {
         console.log("change")
     }
     request = (clustername,namespace) => { //初始化数据请求
-        fetch('http://localhost:9090/api/cluster/'+clustername+'/services',{
+        fetch(utils.urlprefix+'/api/cluster/'+clustername+'/services',{
         method:'GET',
         mode: 'cors', 
         }).then((response) => {
@@ -155,7 +156,7 @@ export default class Services extends React.Component {
                
                // console.log(JSON.stringify(datas))
                 //下面URL的 集群 名称 以后需要替换掉
-                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/services?data='+JSON.stringify(datas),{
+                fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/services?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
                     }).then((response) => {
@@ -238,7 +239,7 @@ export default class Services extends React.Component {
                 })
                // console.log(JSON.stringify(datas))
                 //下面URL的 集群 名称 以后需要替换掉
-                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/services?data='+JSON.stringify(datas),{
+                fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/services?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
                     }).then((response) => {
@@ -424,6 +425,7 @@ export default class Services extends React.Component {
 
             <Table  
                 dataSource={this.state.search?this.state.searchdata:this.state.dataSource}
+                rowKey={record => record.name+record.namespace}
                 rowSelection={rowSelection }
                 columns={columns }  
                 rowClassName={(record,index)=>index%2===0?'table1':'table2'}

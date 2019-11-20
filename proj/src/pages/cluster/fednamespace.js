@@ -4,6 +4,7 @@ import React from 'react';
 import { HashRouter, Route, Switch, Redirect,Link,NavLink} from 'react-router-dom'
 import EditCluster from './form/clusteredit'
 import CreateFedNamespace from './form/createfednamespace' 
+import utils from './../../utils/utils'
 const Option = Select.Option;
 const TabPane = Tabs.TabPane;
 export default class FedNamespaceList extends React.Component {
@@ -59,7 +60,7 @@ export default class FedNamespaceList extends React.Component {
 
     // 动态获取mock数据
     request = (clustername) => { //初始化数据请求
-        fetch('http://localhost:9090/api/cluster/'+clustername+'/namespaces',{
+        fetch(utils.urlprefix+'/api/cluster/'+clustername+'/namespaces',{
         method:'GET',
         mode: 'cors', 
         }).then((response) => {
@@ -109,7 +110,7 @@ export default class FedNamespaceList extends React.Component {
                     })
                    // console.log(JSON.stringify(datas))
                     //下面URL的 集群 名称 以后需要替换掉
-                    fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/namespaces?data='+JSON.stringify(datas),{
+                    fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/namespaces?data='+JSON.stringify(datas),{
                         method:'DELETE',
                         mode: 'cors', 
                         }).then((response) => {
@@ -171,7 +172,7 @@ export default class FedNamespaceList extends React.Component {
                    
                    // console.log(JSON.stringify(datas))
                     //下面URL的 集群 名称 以后需要替换掉
-                    fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/namespaces?data='+JSON.stringify(datas),{
+                    fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/namespaces?data='+JSON.stringify(datas),{
                         method:'DELETE',
                         mode: 'cors', 
                         }).then((response) => {
@@ -334,6 +335,7 @@ export default class FedNamespaceList extends React.Component {
                     <Table  
                         style={{marginTop:16}}
                         dataSource={this.state.search?this.state.searchdata:this.state.dataSource}
+                        rowKey={record => record.name}
                         rowSelection={rowSelection }
                         columns={columns }  
                         rowClassName={(record,index)=>index%2===0?'table1':'table2'}

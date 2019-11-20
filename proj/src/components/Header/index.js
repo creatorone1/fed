@@ -4,13 +4,14 @@ import './index.less'
 import Util from '../../utils/utils'
 import axios from '../../axios'
 import { connect } from 'react-redux'
+import cookie from 'react-cookies'
 class Header extends React.Component{
     state={
       
     }
     componentWillMount(){
         this.setState({
-            userName:'Admin'
+            userName:'用户'+cookie.load("username")
         })
         setInterval(()=>{ //设置每秒执行一个任务
             let sysTime = Util.formateDate(new Date().getTime());

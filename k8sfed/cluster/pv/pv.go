@@ -100,6 +100,9 @@ func (pv *Pv) Create(master string) (io.ReadCloser, int, error) {
 func (pv *Pv) Replace(master string) (io.ReadCloser, int, error) {
 	return cluster.Call("PUT", "/api/v1/persistentvolumes/"+pv.Meta.Name, master, pv)
 }
+func (pv *Pv) Patch(master string, datas []byte) (io.ReadCloser, int, error) {
+	return cluster.PatchCall("PATCH", "/api/v1/persistentvolumes/"+pv.Meta.Name, master, datas)
+}
 func (pv *Pv) Delete(master string) (io.ReadCloser, int, error) {
 	b := cluster.NewBody(0, false)
 	return cluster.Call("DELETE", "/api/v1/persistentvolumes/"+pv.Meta.Name, master, b)

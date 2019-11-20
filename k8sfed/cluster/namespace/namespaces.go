@@ -30,6 +30,7 @@ func (namespaces *Namespaces) List(master string) error {
 	return nil
 }
 
+ 
 func (namespaces *Namespaces) Delete(master string) (io.ReadCloser, int, error) {
 	return cluster.Call("DELETE", "/api/v1/namespaces", master, nil)
 }

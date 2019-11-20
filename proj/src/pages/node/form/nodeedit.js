@@ -6,7 +6,7 @@ import {
     Modal,Form, Input, Icon, Button,InputNumber ,Collapse , Select,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
 } from 'antd';
 import { height } from 'window-size';
- 
+ import utils from './../../../utils/utils.js'
 
 let id = 0;
 const FormItem = Form.Item;
@@ -81,7 +81,7 @@ class EditNode extends React.Component {
             var node = new Node(values,this.state.deletelabels)
             console.log('node:',JSON.stringify(node)) 
              
-            fetch('http://localhost:9090/api/cluster/'+this.state.dataSource.cluster+'/node/'+name,{
+            fetch(utils.urlprefix+'/api/cluster/'+this.state.dataSource.cluster+'/node/'+name,{
               method:'PUT',
               mode: 'cors', 
               body:JSON.stringify(node)

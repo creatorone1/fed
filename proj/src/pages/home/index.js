@@ -7,6 +7,7 @@ import Liquid_pie  from './../echarts/liquidfill/index.js'
 import { Line } from 'echarts/lib/util/graphic';
 import  Panel from './../echarts/pie/panel'
 import axios from '../../axios'
+import utils from './../../utils/utils'
 export default class Home extends React.Component{
     state = {
         loading:true,
@@ -42,7 +43,7 @@ export default class Home extends React.Component{
     requestCluster=()=>{
          // 初始化  
          /** 获取联邦里面集群 */
-         fetch('http://localhost:9090/api/clusters'
+         fetch(utils.urlprefix+'/api/clusters'
          ,{
              method:'GET',
              mode: 'cors', 
@@ -95,7 +96,7 @@ export default class Home extends React.Component{
                 //初始化数据请求
                 var clusterdepcount=0
                 items.map(item=>{
-                    fetch('http://localhost:9090/api/cluster/'+item.name+'/deployments',{
+                    fetch(utils.urlprefix+'/api/cluster/'+item.name+'/deployments',{
                 method:'GET',
                 mode: 'cors', 
                 }).then((response) => {
@@ -150,7 +151,7 @@ export default class Home extends React.Component{
 
                 var clusterappcount=0
                 items.map(item=>{
-                    fetch('http://localhost:9090/api/cluster/'+item.name+'/apps',{
+                    fetch(utils.urlprefix+'/api/cluster/'+item.name+'/apps',{
                 method:'GET',
                 mode: 'cors', 
                 }).then((response) => {
@@ -223,7 +224,7 @@ export default class Home extends React.Component{
                     //nodes=this.state.nodes 
                    
 
-                    fetch('http://localhost:9090/api/cluster/'+item.name+'/nodes',{
+                    fetch(utils.urlprefix+'/api/cluster/'+item.name+'/nodes',{
                         method:'GET',
                         mode: 'cors',
                     }).then((response) => {

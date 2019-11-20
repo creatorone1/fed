@@ -4,7 +4,7 @@ import React from 'react'
 import {
     Modal,Form, Input, Icon, Button,InputNumber ,Collapse , Select ,Divider,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
 } from 'antd';
-
+import utils from './../../../utils/utils'
 const FormItem = Form.Item;
 const Option=Select.Option;
 const Panel = Collapse.Panel;
@@ -49,7 +49,7 @@ class CreateApp extends React.Component {
           }
     }
     request = () => {
-        fetch('http://localhost:9090/api/clusters',{
+        fetch(utils.urlprefix+'/api/clusters',{
             method:'GET'
             }).then((response) => {
                 console.log('response:',response.ok)
@@ -87,7 +87,7 @@ class CreateApp extends React.Component {
                 cluster,namespace,
                 charturl,  
               } = values;  
-              fetch('http://localhost:9090/api/app',{
+              fetch(utils.urlprefix+'/api/app',{
                 method:'POST',
                 mode: 'cors', 
                 body:JSON.stringify(values)
@@ -103,6 +103,7 @@ class CreateApp extends React.Component {
                         namespaces:[],
                     })  
                     this.props.handleCreate(false)
+                    this.props.HandleCreated()
                     return data;
                 }).catch((e)=>{
                     //成功了则关闭弹窗且初始化

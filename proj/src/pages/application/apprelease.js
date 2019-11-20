@@ -5,7 +5,7 @@ import {  Row,Col,Spin, Alert,Card,Tag, Input,Tabs,Table, Modal, Button, message
 import { height } from 'window-size';
 import Util from './../../utils/utils'
 import EditApp from './form/edit_app'
-
+import utils from './../../utils/utils'
 export default class AppRelease   extends React.Component {
     state = {
         selectedRowKeys:[],
@@ -49,7 +49,7 @@ export default class AppRelease   extends React.Component {
         } ]
     }
     componentDidMount(){//请求数据
-        this.request();
+        this.request(this.props.currentcluster);
         this.setState({
             currentcluster:this.props.currentcluster, 
            })
@@ -59,13 +59,13 @@ export default class AppRelease   extends React.Component {
         this.setState({
             currentcluster:nextProps.currentcluster, 
         })
-        this.request();
+        this.request(nextProps.currentcluster);
         console.log('AppRelease get props currentcluster:',nextProps.currentcluster)
     }
 
     //请求数据
-    request = () => {
-        fetch('http://localhost:9090/api/cluster/k8s-fed/apps',{
+    request = (clustername) => {
+        fetch(utils.urlprefix+'/api/cluster/'+clustername+'/apps',{
         method:'GET'
         }).then((response) => {
             console.log('response:',response.ok)
@@ -80,6 +80,9 @@ export default class AppRelease   extends React.Component {
             })
             return data;
         }).catch((e)=>{
+            this.setState({
+                dataSource:[]
+            })
             console.log(e);
         })
     }
@@ -105,7 +108,7 @@ export default class AppRelease   extends React.Component {
                 }
                 datas.items=datas.items.concat(ditem) 
                 //下面URL的 集群 名称 以后需要替换掉
-                fetch('http://localhost:9090/api/cluster/k8s-fed/releases?data='+JSON.stringify(datas),{
+                fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/releases?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
                     }).then((response) => {
@@ -118,7 +121,7 @@ export default class AppRelease   extends React.Component {
                         })
                         message.success('删除成功');
                         //发送删除请求
-                        this.request(); 
+                        this.request(this.props.currentcluster); 
                         return data;
                     }).catch( (e)=> {  
                         this.setState({  //取消选中行
@@ -127,7 +130,7 @@ export default class AppRelease   extends React.Component {
                         })
                         message.success('网络错误');
                         //发送删除请求
-                        this.request();
+                        this.request(this.props.currentcluster); 
                         console.log(e);
                     })
                
@@ -137,7 +140,9 @@ export default class AppRelease   extends React.Component {
     //批量删除操作
     handleMutiDelete = ()=>{
         console.log("MutiDelete")
-         
+        console.log("Pause")
+        console.log("selectedRowKeys",this.state.selectedRowKeys)
+        console.log("selectedRows",this.state.selectedRows) 
         //let id = record.id;
         if(this.state.selectedRowKeys.length===0){
             Modal.info({
@@ -160,7 +165,7 @@ export default class AppRelease   extends React.Component {
                     datas.items=datas.items.concat(ditem)
                 })
                 //下面URL的 集群 名称 以后需要替换掉
-                fetch('http://localhost:9090/api/cluster/k8s-fed/releases?data='+JSON.stringify(datas),{
+                fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/releases?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
                     }).then((response) => {
@@ -173,7 +178,7 @@ export default class AppRelease   extends React.Component {
                         })
                         message.success('删除成功');
                         //发送删除请求
-                        this.request(); 
+                        this.request(this.props.currentcluster); 
                         return data;
                     }).catch( (e)=> {  
                         this.setState({  //取消选中行
@@ -182,7 +187,7 @@ export default class AppRelease   extends React.Component {
                         })
                         message.success('删除成功');
                         //发送删除请求
-                        this.request();
+                        this.request(this.props.currentcluster); 
                         console.log(e);
                     })
                
@@ -241,7 +246,7 @@ export default class AppRelease   extends React.Component {
         onOk:()=>{ 
               
             //下面URL的 集群 名称 以后需要替换掉
-            fetch('http://localhost:9090/api/cluster/k8s-fed/app/'+record.name.name+'/rollback',{
+            fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/app/'+record.name.name+'/rollback',{
                 method:'PUT',
                 mode: 'cors', 
                 }).then((response) => {
@@ -254,7 +259,7 @@ export default class AppRelease   extends React.Component {
                     })
                     message.success('回滚成功');
                     //发送删除请求
-                    this.request(); 
+                    this.request(this.props.currentcluster); 
                     return data;
                 }).catch( (e)=> {  
                     this.setState({  //取消选中行
@@ -263,7 +268,7 @@ export default class AppRelease   extends React.Component {
                     })
                     message.success('网络错误');
                     //发送删除请求
-                    this.request();
+                    this.request(this.props.currentcluster); 
                     console.log(e);
                 })
            
@@ -347,7 +352,7 @@ export default class AppRelease   extends React.Component {
             editvisible:false
         }) 
         if(ok){
-            this.request()
+            this.request(this.props.currentcluster); 
         }
 
     } 
@@ -366,7 +371,10 @@ export default class AppRelease   extends React.Component {
             this.handleDelete(key, text, record)
         } 
     };
-     
+    statechange=()=>{ //创建服务之后回调
+        console.log('refresh!')
+        this.request(this.props.currentcluster)
+    }  
     render(){
         const columns=[
             {
@@ -458,11 +466,12 @@ export default class AppRelease   extends React.Component {
                     </Row>
                     <Table  
                         dataSource={this.state.search?this.state.searchdata:this.state.dataSource}
+                        rowKey={record => record.name.name+record.namespace} 
                         rowSelection={rowSelection }
                         columns={columns }  
                         rowClassName={(record,index)=>index%2===0?'table1':'table2'}
                     /> 
-                    <EditApp clusters={this.props.clusters} dataSource={this.state.operationdata}   editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}/>
+                    <EditApp  statechange={this.statechange} currentcluster={this.props.currentcluster} clusters={this.props.clusters} dataSource={this.state.operationdata}   editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}/>
                  
                  <Modal
                     width='560px'

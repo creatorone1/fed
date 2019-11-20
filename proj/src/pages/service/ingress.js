@@ -7,7 +7,7 @@ import {Modal,message,Badge,InputNumber,Tag,Table, Checkbox, Button,Input, Row,C
 } from 'antd';
 import CreateIng from './form/create_ing'  
 import EditIng from './form/edit_ing' 
-   
+import utils from './../../utils/utils'
 export default class Ingress extends React.Component {
        
     state = {  //初始化state
@@ -115,7 +115,7 @@ export default class Ingress extends React.Component {
 
     }
     request = (clustername,namespace) => {
-        fetch('http://localhost:9090/api/cluster/'+clustername+'/ingresses',{
+        fetch(utils.urlprefix+'/api/cluster/'+clustername+'/ingresses',{
         method:'GET'
         }).then((response) => {
             console.log('response:',response.ok)
@@ -163,7 +163,7 @@ export default class Ingress extends React.Component {
                
                // console.log(JSON.stringify(datas))
                 //下面URL的 集群 名称 以后需要替换掉
-                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/ingresses?data='+JSON.stringify(datas),{
+                fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/ingresses?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
                     }).then((response) => {
@@ -247,7 +247,7 @@ export default class Ingress extends React.Component {
                 })
                // console.log(JSON.stringify(datas))
                 //下面URL的 集群 名称 以后需要替换掉
-                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/ingresses?data='+JSON.stringify(datas),{
+                fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/ingresses?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
                     }).then((response) => {
@@ -412,6 +412,7 @@ export default class Ingress extends React.Component {
                 </Row>
                 <Table  
                     dataSource={this.state.search?this.state.searchdata:this.state.dataSource}
+                    rowKey={record => record.name+record.namespace}
                     rowSelection={rowSelection }
                     columns={columns }  
                     rowClassName={(record,index)=>index%2===0?'table1':'table2'}

@@ -142,7 +142,7 @@ export default class Node extends React.Component {
      }
     // 动态获取mock数据
     request = () => { //初始化数据请求
-        fetch('http://localhost:9090/api/clusters',{
+        fetch(utils.urlprefix+'/api/clusters',{
                 method:'GET'
             }).then((response) => {
                     console.log('response:',response.ok)
@@ -151,9 +151,9 @@ export default class Node extends React.Component {
                     console.log('data:',data)
                     this.setState({
                         cluster:data.filter(item=>item.status!="NotReady")
-                })
+                    })
 
-                fetch('http://localhost:9090/api/cluster/fed/namespaces',{
+                fetch(utils.urlprefix+'/api/cluster/fed/namespaces',{
                         method:'GET'
                         }).then((response) => {
                             console.log('response:',response.ok)
@@ -179,7 +179,7 @@ export default class Node extends React.Component {
                     var clustercount=0  
                     var clength=  data.length
                     data.map(cluster=>{
-                            fetch('http://localhost:9090/api/cluster/'+cluster.name+'/nodes',{
+                            fetch(utils.urlprefix+'/api/cluster/'+cluster.name+'/nodes',{
                         method:'GET',
                         mode: 'cors', 
                         }).then((response) => {
@@ -190,13 +190,15 @@ export default class Node extends React.Component {
                             clustercount++
                             nodes=nodes.concat(data)
                             if(clustercount==clength){
+                                console.log('get all nodes') 
                                 var nowdata=[]
-                                if(this.state.currentcluster!='All'||this.state.currentcluster!='fed'){
+                                if(this.state.currentcluster!='All'&& this.state.currentcluster!='fed'){
                                     nowdata=nodes.filter(item=>item.cluster==this.state.currentcluster)
-
+                                    //console.log('get all nodes')
                                 }else{
                                     nowdata=nodes
                                 }
+                                console.log('nowdata',nowdata)
                                 this.setState({ //表格选中状态清空
                                     selectedRowKeys:[],
                                     selectedRows:null,
@@ -207,15 +209,18 @@ export default class Node extends React.Component {
                             } 
                             return data;
                         }).catch( (e)=> { 
+                            console.log('getnode error:'+cluster.name+' '+e);
                             clustercount++ 
                             if(clustercount==clength){
                                 var nowdata=[]
                                 if(this.state.currentcluster!='All'&&this.state.currentcluster!='fed'){
                                     nowdata=nodes.filter(item=>item.cluster==this.state.currentcluster)
-
+                                    console.log('Not All')
                                 }else{
+                                    console.log(' All')
                                     nowdata=nodes
                                 }
+                                console.log('nowdata2',nowdata)
                                 this.setState({ //表格选中状态清空
                                     selectedRowKeys:[],
                                     selectedRows:null,
@@ -224,8 +229,8 @@ export default class Node extends React.Component {
                                 })
                             }else{ 
                             }
-                            console.log(e);
-                        })
+                            
+                            })
                         })
                     return data;
                 }).catch(function (e) {
@@ -236,7 +241,7 @@ export default class Node extends React.Component {
     }  
     requestnode = (clustername) => { //初始化数据请求
      
-        fetch('http://localhost:9090/api/cluster/'+clustername+'/nodes',{
+        fetch(utils.urlprefix+'/api/cluster/'+clustername+'/nodes',{
                         method:'GET',
                         mode: 'cors', 
                         }).then((response) => {
@@ -309,7 +314,7 @@ export default class Node extends React.Component {
                         datas.items=datas.items.concat(depitem)
                     })
                     
-                    fetch('http://localhost:9090/api/cluster/'+this.state.selectedRows[0].cluster+'/pause/nodes?data='+JSON.stringify(datas),{
+                    fetch(utils.urlprefix+'/api/cluster/'+this.state.selectedRows[0].cluster+'/pause/nodes?data='+JSON.stringify(datas),{
                         method:'GET',
                         mode: 'cors', 
                         }).then((response) => {
@@ -370,7 +375,7 @@ export default class Node extends React.Component {
                         datas.items=datas.items.concat(depitem)
                     })
                     
-                    fetch('http://localhost:9090/api/cluster/'+this.state.selectedRows[0].cluster+'/resume/nodes?data='+JSON.stringify(datas),{
+                    fetch(utils.urlprefix+'/api/cluster/'+this.state.selectedRows[0].cluster+'/resume/nodes?data='+JSON.stringify(datas),{
                         method:'GET',
                         mode: 'cors', 
                         }).then((response) => {
@@ -430,7 +435,7 @@ export default class Node extends React.Component {
                         datas.items=datas.items.concat(depitem)
                     })
                     
-                    fetch('http://localhost:9090/api/cluster/'+this.state.selectedRows[0].cluster+'/drain/nodes?data='+JSON.stringify(datas),{
+                    fetch(utils.urlprefix+'/api/cluster/'+this.state.selectedRows[0].cluster+'/drain/nodes?data='+JSON.stringify(datas),{
                         method:'GET',
                         mode: 'cors', 
                         }).then((response) => {
@@ -508,7 +513,7 @@ export default class Node extends React.Component {
                 }
                 datas.items=datas.items.concat(depitem) 
                 
-                fetch('http://localhost:9090/api/cluster/'+record.cluster+'/pause/nodes?data='+JSON.stringify(datas),{
+                fetch(utils.urlprefix+'/api/cluster/'+record.cluster+'/pause/nodes?data='+JSON.stringify(datas),{
                     method:'GET',
                     mode: 'cors', 
                     }).then((response) => {
@@ -561,7 +566,7 @@ export default class Node extends React.Component {
                  }
                  datas.items=datas.items.concat(depitem)
                 
-                fetch('http://localhost:9090/api/cluster/'+record.cluster+'/drain/nodes?data='+JSON.stringify(datas),{
+                fetch(utils.urlprefix+'/api/cluster/'+record.cluster+'/drain/nodes?data='+JSON.stringify(datas),{
                     method:'GET',
                     mode: 'cors', 
                     }).then((response) => {
@@ -623,7 +628,7 @@ export default class Node extends React.Component {
                  }
                  datas.items=datas.items.concat(depitem)
                 
-                fetch('http://localhost:9090/api/cluster/'+record.cluster+'/resume/nodes?data='+JSON.stringify(datas),{
+                fetch(utils.urlprefix+'/api/cluster/'+record.cluster+'/resume/nodes?data='+JSON.stringify(datas),{
                     method:'GET',
                     mode: 'cors', 
                     }).then((response) => {
@@ -674,7 +679,7 @@ export default class Node extends React.Component {
                
                // console.log(JSON.stringify(datas))
                 //下面URL的 集群 名称 以后需要替换掉
-                fetch('http://localhost:9090/api/cluster/'+record.cluster+'/nodes?data='+JSON.stringify(datas),{
+                fetch(utils.urlprefix+'/api/cluster/'+record.cluster+'/nodes?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
                     }).then((response) => {
@@ -922,6 +927,7 @@ export default class Node extends React.Component {
                     <Table  
                         style={{marginTop:16}}
                         dataSource={this.state.search?this.state.searchdata:this.state.dataSource}
+                        rowKey={record => record.name}
                         rowSelection={rowSelection }
                         columns={columns }  
                         rowClassName={(record,index)=>index%2===0?'table1':'table2'}

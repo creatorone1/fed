@@ -118,7 +118,10 @@ func (service *Service) Delete(master string) (io.ReadCloser, int, error) {
 	b := cluster.NewBody(0, false)
 	return cluster.Call("DELETE", "/api/v1/namespaces/"+service.Meta.Namespace+"/services/"+service.Meta.Name, master, b)
 }
-
+func (service *Service) Update(master string, data []byte) (io.ReadCloser, int, error) {
+	fmt.Printf("%s", data)
+	return cluster.PatchCall("PATCH", "/api/v1/namespaces/"+service.Meta.Namespace+"/services/"+service.Meta.Name, master, data)
+}
 func (service *Service) ToJsonString() string {
 	strs, err := json.Marshal(service)
 	if err != nil {

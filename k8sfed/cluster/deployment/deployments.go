@@ -26,7 +26,19 @@ func (deployments *Deployments) List(master string) error {
 
 	return nil
 }
+func (deployments *Deployments) ListFed(master string) error {
+	body, _, err := cluster.ReadBody(cluster.Call("GET", "/apis/extensions/v1beta1/deployments", master, nil))
 
+	if err != nil {
+		return err
+	}
+
+	if err := json.Unmarshal(body, deployments); err != nil {
+		return err
+	}
+
+	return nil
+}
 func (deployments *Deployments) ListOfNamespace(namespace, master string) (io.ReadCloser, int, error) {
 	if cluster.IsSpace(namespace) {
 		namespace = "default"
@@ -35,11 +47,9 @@ func (deployments *Deployments) ListOfNamespace(namespace, master string) (io.Re
 }
 
 func (deployments *Deployments) DeleteOfNamespace(namespace, master string) (io.ReadCloser, int, error) {
-
 	if cluster.IsSpace(namespace) {
 		return nil, -1, cluster.ParameterNotNULL("namespace")
-	}
-
+	} 
 	return cluster.Call("DELETE", "/apis/apps/v1beta1/namespaces/"+namespace+"/deployments", master, nil)
 }
 

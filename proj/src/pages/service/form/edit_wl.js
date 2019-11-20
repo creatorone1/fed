@@ -7,7 +7,7 @@ import {
 } from 'antd';
 import { height } from 'window-size';
 import './../service.less' 
-
+import utils from './../../../utils/utils'
 let id = 0;
 const FormItem = Form.Item;
 const Option=Select.Option;
@@ -16,7 +16,8 @@ class EditWL extends React.Component {
     state = { 
         visible: false, 
         advanced:false, 
-        schedule:''
+        schedule:'',
+        nodedata:[]
     }
     componentDidMount(){//初始化数据，只调用一次
           //...
@@ -41,12 +42,34 @@ class EditWL extends React.Component {
           dataSource:JSON.parse(data), //
           schedule:JSON.parse(data).schedule
           }) 
+          this.request(nextProps.currentcluster)
         }
         //console.log('nextProps:',  nextProps) 
         //console.log('nextProps.dataSource:', nextProps.dataSource) 
     }
   
-
+    request = (clustername) => { //初始化数据请求
+      fetch(utils.urlprefix+'/api/cluster/'+clustername+'/nodes',{
+      method:'GET',
+      mode: 'cors', 
+      }).then((response) => {
+          console.log('response:',response.ok)
+          return response.json();
+      }).then((data) => {
+          console.log('data:',data)
+          var nodedata=[]
+          data.map(item=>{  
+            nodedata=nodedata.concat(item.name)
+          })
+          this.setState({ //表格选中状态清空 
+            nodedata:nodedata
+          })
+           
+          return data;
+      }).catch( (e)=> {  
+          console.log(e);
+      })
+     } 
     showModal = () => {
       const { form } = this.props;
       form.resetFields(); 
@@ -93,7 +116,7 @@ class EditWL extends React.Component {
           console.log('dep:',JSON.stringify(dep))
              
 
-          fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/namespace/'+namespace+'/deployment/'+name,{
+          fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/namespace/'+namespace+'/deployment/'+name,{
             method:'PUT',
             mode: 'cors', 
             body:JSON.stringify(dep)
@@ -109,7 +132,8 @@ class EditWL extends React.Component {
                this.setState({
                  visible: false, 
                  advanced:false,
-                 schedule:''
+                 schedule:'',
+                 nodedata:[]
                  //dataSource:undefined
                });
                //通知父节点关闭弹窗
@@ -125,7 +149,8 @@ class EditWL extends React.Component {
                  this.setState({
                    visible: false, 
                    advanced:false,
-                   schedule:''
+                   schedule:'',
+                   nodedata:[]
                    //dataSource:undefined
                  });
                  //通知父节点关闭弹窗
@@ -695,7 +720,8 @@ class EditWL extends React.Component {
       );
       
       const wwidth='80%' //定义表单中空间宽度
-      const nodedata=['node1','node2','node3'] //先获取主机数据
+     // const nodedata=['node1','node2','node3'] //先获取主机数据
+     const nodedata=this.state.nodedata
       const nodenames = nodedata.map((item)=>(
           <Option value={item} key={item}>
               {item}
@@ -1094,7 +1120,7 @@ class EditWL extends React.Component {
         node.nodematch= nodematch
     }
     if(schedule=="NODE"){
-      node.nodename= nodename
+      node.schnodename= nodename
     }
 
     var ports=[]

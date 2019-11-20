@@ -7,7 +7,7 @@ import {
 } from 'antd';
 import { height } from 'window-size';
 import './../service.less' 
-
+import utils from './../../../utils/utils'
 let id = 0;
 const FormItem = Form.Item;
 const Option=Select.Option;
@@ -16,15 +16,38 @@ class CreateWL extends React.Component {
     state = { 
         visible: false, 
         advanced:false,
-        schedule:''
+        schedule:'',
+        nodedata:[]
     }
     componentWillUnmount(){
       //console.log('CreateWL destroy')
        
     }
-
+    request = (clustername) => { //初始化数据请求
+      fetch(utils.urlprefix+'/api/cluster/'+clustername+'/nodes',{
+      method:'GET',
+      mode: 'cors', 
+      }).then((response) => {
+          console.log('response:',response.ok)
+          return response.json();
+      }).then((data) => {
+          console.log('data:',data)
+          var nodedata=[]
+          data.map(item=>{  
+            nodedata=nodedata.concat(item.name)
+          })
+          this.setState({ //表格选中状态清空 
+            nodedata:nodedata
+          })
+           
+          return data;
+      }).catch( (e)=> {  
+          console.log(e);
+      })
+     } 
     
     showModal = () => {
+      this.request(this.props.currentcluster)
       const { form } = this.props;
       form.resetFields(); 
       id=0;
@@ -34,7 +57,7 @@ class CreateWL extends React.Component {
       }); 
      
     }
-  
+    
     hideModal = () => { //点击取消按钮
       const { form } = this.props; 
       form.resetFields();  //重置表单
@@ -42,7 +65,8 @@ class CreateWL extends React.Component {
       this.setState({
         visible: false, 
         advanced:false,
-        schedule:''
+        schedule:'',
+        nodedata:[]
       });
     }
 
@@ -65,7 +89,7 @@ class CreateWL extends React.Component {
          console.log('dep:',JSON.stringify(dep))
             
           
-          fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/deployment',{
+          fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/deployment',{
             method:'POST',
             mode: 'cors', 
             body:JSON.stringify(dep)
@@ -140,7 +164,7 @@ class CreateWL extends React.Component {
          var dep = new Deployment(values)
          console.log('dep:',JSON.stringify(dep)) 
           
-          fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/template/deployment',{
+          fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/template/deployment',{
             method:'POST',
             mode: 'cors', 
             body:JSON.stringify(dep)
@@ -162,7 +186,9 @@ class CreateWL extends React.Component {
               this.setState({
                 visible: false, 
                 advanced:false,
-                schedule:''
+                schedule:'',
+                nodedata:[]
+                
               });
               return data;
           }).catch( (e)=> {  
@@ -173,7 +199,8 @@ class CreateWL extends React.Component {
               this.setState({
                 visible: false, 
                 advanced:false,
-                schedule:''
+                schedule:'',
+                nodedata:[]
               });
               console.log(e);
           }) 
@@ -499,8 +526,9 @@ class CreateWL extends React.Component {
       );
       
       const wwidth='80%' //定义表单中空间宽度
-      const nodedata=['node1','node2','node3'] //先获取主机数据
-      const nodenames = nodedata.map((item)=>(
+     // const nodedata=['node1','node2','node3'] //先获取主机数据
+     const nodedata=this.state.nodedata
+     const nodenames = nodedata.map((item)=>(
           <Option value={item} key={item}>
               {item}
           </Option>
@@ -916,7 +944,7 @@ class CreateWL extends React.Component {
         node.nodematch= nodematch
     }
     if(schedule=="NODE"){
-      node.nodename= nodename
+      node.schnodename= nodename
     }
 
     var ports=[]

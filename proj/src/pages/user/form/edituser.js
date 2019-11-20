@@ -5,6 +5,7 @@ import React from 'react'
 import {
     Modal,Form,Tree, Input,Radio,Switch , Icon, Button,InputNumber ,Collapse , Select,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
 } from 'antd';
+import utils from './../../../utils/utils'
 const { TreeNode } = Tree;  
 
  
@@ -14,7 +15,7 @@ const Panel = Collapse.Panel;
 class EditUser extends React.Component {
     state={
         dataSource:undefined,
-        role:'', 
+        role:0, 
         confirmDirty:false,
          /***之后再comwillmount方法中初始化数据 */
         clusters:['cluster1','cluster2','cluster3'], 
@@ -38,15 +39,18 @@ class EditUser extends React.Component {
         if(nextProps.editvisible!==this.props.editvisible&&nextProps.editvisible){
           console.log('打开时候深拷贝dataSource') 
           //先把原数据 转换为json字符串 再转化为 对象
+          //this.getPermission();
+          
           let data=JSON.stringify(nextProps.dataSource)
           //console.log('json:',data)
           //console.log('object:',JSON.parse(data)) 
           this.setState({  
           //这儿 必须是深拷贝，不然会影响传入的值,并且只能初始化这个参数一次，以后的form的set操作不能影响该值
              dataSource:JSON.parse(data), //
-             role:JSON.parse(data).role, 
-             checkedKeys:JSON.parse(data).auths,
+             role:JSON.parse(data).Rool, 
           }) 
+          console.log(JSON.parse(data))
+          this.getPermission(JSON.parse(data));
         }
         //console.log('nextProps:',  nextProps) 
         //console.log('nextProps.dataSource:', nextProps.dataSource) 
@@ -58,60 +62,145 @@ class EditUser extends React.Component {
     hideModal = () => { //点击取消按钮
       const { form } = this.props; 
       form.resetFields();  //重置表单 触发了componentWillReceiveProps 函数
-       
+      
       //console.log('this.state.dataSource:',this.state.dataSource)
       this.setState({
         pwdchecked:false,
+       // checkedKeys:["auth", "federationauth", "federation", "clusterauth", "clustercheck:cluster1", "clustercheck:cluster2", "clustercheck:cluster3", "moduleauth", "modulecheck:application", "modulecheck:service", "modulecheck:store", "modulecheck:node"],
       })
       this.props.handleUpdate(false)
        
     }
+    
+    getPermission(data){
+
+     var clusterkey = []
+     var modulekey = []
+     var i = 0
+     var auth=[]
+
+
+    //languageNum = dubLanguageStr.split(",");
+     
+      clusterkey = data.Clusterpermission.split(",")
+      modulekey = data.Modulepermission.split(",")
+      
+
+      
+      auth.push("auth")
+      if(data.Fedpermission==1){
+        auth.push("federationauth")
+        auth.push("federation")
+      }
+      if(clusterkey.length!=0){
+        auth.push("clusterauth")
+        for(i=0;i<clusterkey.length;i++){
+          clusterkey[i]="clustercheck:"+clusterkey[i]
+          auth.push(clusterkey[i])
+        }
+      }
+      
+      if(modulekey.length!=0){
+        auth.push("moduleauth")
+        for(i=0;i<modulekey.length;i++){
+          modulekey[i]="modulecheck:"+modulekey[i]
+          auth.push(modulekey[i])
+        }
+      }
+      
+      console.log("*******",auth)
+      this.setState({
+        checkedKeys:auth
+      })
+
+
+      
+    }
 
     handleOk =()=>{ //点击确认按钮
         
-        this.props.form.validateFields((err, values) => {
-          if (!err) {   //如果没有错则传输数据 
-            console.log(' values  : ', values); 
-             //keys表示env名字env_label与值value的key
-            //labelkeys表示label名字env_label与值value的key
-            //portkeys表示portnum与porttype的key
-            console.log(' values  : ', values); 
-             //keys表示env名字env_label与值value的key
-            //labelkeys表示label名字env_label与值value的key
-            //portkeys表示portnum与porttype的key
-            const { username,status,
-                password,role, 
-              } = values;  
-            var auths=this.state.checkedKeys//权限数组
+      this.props.form.validateFields((err, values) => {
+        if (!err) {   //如果没有错则传输数据 
+          console.log(' values  : ', values); 
+           //keys表示env名字env_label与值value的key
+          //labelkeys表示label名字env_label与值value的key
+          //portkeys表示portnum与porttype的key
+         //const { password,} = values;
+        //  console.log('env_label name :', keys.map(key => env_label[key]));
+         var usr = new User(values,this.state.dataSource)
+         var clusterpermissionarray=[]
+         var modulepermissionarray=[]
+         var i = 0
+         for (i = 0; i < this.state.checkedKeys.length; i++) {
+              if(this.state.checkedKeys[i]=="federationauth"){
+                usr.fedpermission=1
+              }else if(this.state.checkedKeys[i].indexOf("clustercheck") !=-1){
+                clusterpermissionarray.push(this.state.checkedKeys[i].replace('clustercheck:', ''))
+              }else if(this.state.checkedKeys[i].indexOf("modulecheck") !=-1){
+                modulepermissionarray.push(this.state.checkedKeys[i].replace('modulecheck:', ''))
+              }
+          }
+          usr
+         usr.clusterpermission=clusterpermissionarray.join(",")
+         usr.modulepermission=modulepermissionarray.join(",")
+         console.log('usr:',JSON.stringify(usr))
             
+          
+          fetch(utils.urlprefix+'/api/user',{
+            method:'PUT',
+            mode: 'cors', 
+            body:JSON.stringify(usr)
+          }).then((response) => {
+              console.log('response:',response.ok)
+              return response.json();
+          }).then((data) => {
+              console.log('data:',data)
+  
+              /*this.setState({ //表格选中状态清空
+                  selectedRowKeys:[],
+                  selectedRows:null,
+                  dataSource:data
+              })*/
+               //成功了则关闭弹窗且初始化
+              const { form } = this.props; 
+              form.resetFields();  //重置表单
+              //id=0;
+              this.props.handleUpdate(false)
+              this.props.statechange()//创建成功刷新数据
+              this.setState({
+                visible: false, 
+                advanced:false,
+                schedule:''
+              });
+              this.request()
+              return data;
+          }).catch( (e)=> {  
             //成功了则关闭弹窗且初始化
-            const { form } = this.props; 
-            form.resetFields();  //重置表单
-            this.setState({
-              pwdchecked:false,
-            })
-            this.props.handleUpdate(false)
-          }
-          else{ //否则报错 
-              
-            console.log(' values: ', values);   
-            return
-          }
-        });
-      }
-      
-      request = () => {
-        fetch('url',{
-        method:'GET'
-        }).then((response) => {
-            console.log('response:',response.ok)
-            return response.json();
-        }).then((data) => {
-            console.log('data:',data)
-            return data;
-        }).catch(function (e) {
-            console.log(e);
-        })
+              const { form } = this.props; 
+              form.resetFields();  //重置表单
+              //id=0;
+              this.setState({
+                visible: false, 
+                advanced:false,
+                schedule:''
+              });
+              console.log(e);
+          }) 
+
+
+           
+        }
+        else{ //否则报错 
+          const { name,podsnum,image,namepace,
+            keys,labelkeys,portkeys,env_label,value
+            , portnum, porttype,
+            cpurequest,cpulimit,memoryrequest,memorylimit,gpurequest,
+            nodename
+            } = values;  
+          console.log(' values: ', values);   
+          return
+        }
+      });
     }
   //  密码验证 //自定义验证规则
   compareToFirstPassword = (rule, value, callback) => {
@@ -140,7 +229,7 @@ class EditUser extends React.Component {
             role:e.target.value
         })
 
-        if(e.target.value=='CommonUser'){
+        if(e.target.value==0){
             console.log('reset')
             this.setState({ checkedKeys:[],expandedKeys:[]});
         }
@@ -228,16 +317,20 @@ class EditUser extends React.Component {
               {
                   title:'集群权限',
                   key:'clusterauth',
-                  children: clusters
+                  children:[
+                    { title: 'cluster1', key: 'clustercheck:cluster1' },
+                    { title: 'cluster2', key: 'clustercheck:cluster2' },
+                    { title: 'cluster3', key: 'clustercheck:cluster3' },
+                ]
               },
               {
                   title:'模块权限',
                   key:'moduleauth',
                   children:[
-                      { title: '应用管理', key: 'application' },
-                      { title: '服务管理', key: 'service' },
-                      { title: '存储管理', key: 'store' },
-                      { title: '节点管理', key: 'node' }, 
+                      { title: '应用管理', key: 'modulecheck:application' },
+                      { title: '服务管理', key: 'modulecheck:service' },
+                      { title: '存储管理', key: 'modulecheck:store' },
+                      { title: '节点管理', key: 'modulecheck:node' }, 
                   ]
               }
           ]
@@ -273,21 +366,21 @@ class EditUser extends React.Component {
                         > 
                            {
                             getFieldDecorator('username',{ 
-                            initialValue:dataSource.username?dataSource.username:'',//初始化  
+                            initialValue:dataSource.Name,//初始化  
                                  
                             }) (
                                 <Input style={{ width: wwidth,display:'none' }}/>  
                                 )
                             }
-                             <span style={{ width: wwidth }}>{dataSource.username}</span>   
+                             <span style={{ width: wwidth }}>{dataSource.Name}</span>   
                         </FormItem>
                     <FormItem   label= '状态'  
                             {...formItemLayout}
                             
                         > 
                             {
-                            getFieldDecorator('status',{ 
-                                initialValue:dataSource.status?dataSource.status:'',
+                            getFieldDecorator('Status',{ 
+                                initialValue:dataSource.Status,
                                 rules:[       //规则数组
                                     {
                                     required:true,
@@ -296,8 +389,8 @@ class EditUser extends React.Component {
                                 ] 
                             }) (
                                 <Radio.Group  style={{ width: wwidth }}   >
-                                    <Radio value={'Active'}>启用</Radio>
-                                    <Radio value={'inActive'}>停用</Radio> 
+                                    <Radio value={1}>启用</Radio>
+                                    <Radio value={0}>停用</Radio> 
                                 </Radio.Group> 
                                 )
                             } 
@@ -378,8 +471,8 @@ class EditUser extends React.Component {
                             <FormItem label='用户角色'
                                 {...formItemLayout} >
                                      {
-                            getFieldDecorator('role',{  
-                                initialValue:dataSource.role?dataSource.role:'',
+                            getFieldDecorator('Rool',{  
+                                initialValue:dataSource.Rool,
                                 rules:[       //规则数组
                                     {
                                     required:true,
@@ -388,10 +481,10 @@ class EditUser extends React.Component {
                                 ] 
                                 }) (
                                 <Radio.Group onChange={this.handleRoleChange}  >
-                                    <Radio style={radioStyle} value={'Administrator'}>
+                                    <Radio style={radioStyle} value={1}>
                                         管理员
                                     </Radio>
-                                    <Radio style={radioStyle} value={'CommonUser'}>
+                                    <Radio style={radioStyle} value={0}>
                                         普通用户
                                     </Radio> 
                                 </Radio.Group>
@@ -399,7 +492,7 @@ class EditUser extends React.Component {
                              }    
                             </FormItem>  
 
-                             {this.state.role=='CommonUser'?   
+                             {this.state.role==0?   
                              <FormItem label='自定义权限'
                                 {...formItemLayout} >
                                 {
@@ -444,5 +537,85 @@ class EditUser extends React.Component {
   //const WrappedDynamicFieldSet = Form.create({ name: 'dynamic_form_item' })(CreateWL);
   export default Form.create()(EditUser); 
 
+  function User(values,dataSource) {
+    
+    var usr=new Object(); 
+    const { username,Status,pwdcheckedm,Rool,auth,confirmpwd,password} = values;
+    console.log("*******",values)
+    usr.id=dataSource.Id;
+    usr.name=username
+    usr.password=dataSource.Password
+    
+    if(password!=""){
+      usr.password=password
+    }
+    console.log("*******",usr.password,dataSource.Password)
+    
+    usr.status=Status
+    usr.rool=Rool
+    usr.createtime=dataSource.Createtime
+    usr.permissiontime=dataSource.Permissiontime
 
+/*
+    var env=[]
+    keys.map(key =>{
+      var e ={
+        name: env_label[key],
+        value:value[key]
+      }
+      env=env.concat(e)
+    })       
+    node.env= env  
+
+    var label=[]
+    labelkeys.map(key =>{
+      var l ={
+        name: env_label[key],
+        value:value[key]
+      }
+      label=label.concat(l)
+    })       
+    node.label= label
+
+    node.schedule=  schedule     
+    if(schedule=="LABEL"){
+        var nodematch=[]
+        nodematchkeys.map(key =>{
+          var nm = {
+            label: matchlabel[key],
+            op:matchop[key],
+            value:matchvalue[key]
+          }
+          nodematch=nodematch.concat(nm)
+        })       
+        node.nodematch= nodematch
+    }
+    if(schedule=="NODE"){
+      node.nodename= nodename
+    }
+
+    var ports=[]
+    portkeys.map(key =>{
+      var p ={
+        containerPort: portnum[key],
+        protocol:porttype[key]
+      }
+      ports=ports.concat(p)
+    })       
+    node.ports= ports
+
+    var request={
+      cpurequest:cpurequest,
+      memoryrequest:memoryrequest,
+      gpurequest:gpurequest
+    }
+    node.request= request
+
+    var limit={
+      cpulimit:cpulimit,
+      memorylimit:memorylimit 
+    }
+    node.limit= limit*/
+    return usr
+}
 

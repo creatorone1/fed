@@ -7,7 +7,7 @@ import {
 } from 'antd';
 import { height } from 'window-size';
 import './../service.less' 
-
+import utils from './../../../utils/utils'
 let id = 0;
 const FormItem = Form.Item;
 const Option=Select.Option;
@@ -53,7 +53,7 @@ class CreateIng extends React.Component {
            
     }
     request = (clustername,namespace) => { //初始化数据请求
-        fetch('http://localhost:9090/api/cluster/'+clustername+'/services',{
+        fetch(utils.urlprefix+'/api/cluster/'+clustername+'/services',{
         method:'GET',
         mode: 'cors', 
         }).then((response) => {
@@ -122,7 +122,7 @@ class CreateIng extends React.Component {
             //成功了则关闭弹窗且初始化
             var ing = new Ingress(values)
             console.log('ing:',JSON.stringify(ing)) 
-            fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/namespace/'+namespace+'/ingress/'+name,{
+            fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/namespace/'+namespace+'/ingress/'+name,{
               method:'PUT',
               mode: 'cors', 
               body:JSON.stringify(ing)

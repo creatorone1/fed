@@ -4,7 +4,7 @@ import React from 'react'
 import {
     Modal,Form, Input, Icon, Button,InputNumber ,Collapse , Select ,Divider,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
 } from 'antd';
-
+import utils from './../../../utils/utils'
 const FormItem = Form.Item;
 const Option=Select.Option;
 const Panel = Collapse.Panel;
@@ -69,7 +69,7 @@ class EditApp extends React.Component {
           }
     }
     request = () => {
-        fetch('http://localhost:9090/api/charts',{
+        fetch(utils.urlprefix+'/api/charts',{
         method:'GET',
         mode: 'cors', 
         }).then((response) => {
@@ -132,7 +132,7 @@ class EditApp extends React.Component {
                  })  
                  this.props.handleUpdate(false)
              } else{
-                fetch('http://localhost:9090/api/cluster/'+this.state.dataSource.cluster+'/app',{
+                fetch(utils.urlprefix+'/api/cluster/'+this.state.dataSource.cluster+'/app',{
                     method:'PUT',
                     mode: 'cors', 
                     body:JSON.stringify(values)
@@ -148,6 +148,7 @@ class EditApp extends React.Component {
                             namespaces:[],
                         })  
                         this.props.handleUpdate(false,true)
+                        this.props.statechange()
                         return data;
                     }).catch( (e)=>{ 
                          //成功了则关闭弹窗且初始化

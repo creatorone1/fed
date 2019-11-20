@@ -4,6 +4,7 @@ import React from 'react'
 import {
     Modal,Form, Input, Icon, Button,InputNumber ,Collapse , Select ,Divider,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
 } from 'antd';
+import utils from './../../../utils/utils'
 const FormItem = Form.Item;
 const Option=Select.Option;
 const Panel = Collapse.Panel;
@@ -119,7 +120,7 @@ class CreatePVC extends React.Component {
               var pvc=new PVC(values)
               //console.log('svc',pvc)
                //console.log(JSON.stringify(pvc))
-              fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/pvc',{
+              fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/pvc',{
                method:'POST',
                mode: 'cors', 
                body:JSON.stringify(pvc)
@@ -175,7 +176,7 @@ class CreatePVC extends React.Component {
 
     }
     request = (clustername) => { //初始化数据请求
-        fetch('http://localhost:9090/api/cluster/'+clustername+'/pvs',{
+        fetch(utils.urlprefix+'/api/cluster/'+clustername+'/pvs',{
         method:'GET',
         mode: 'cors', 
         }).then((response) => {
@@ -195,7 +196,7 @@ class CreatePVC extends React.Component {
             console.log(e);
         })
 
-        fetch('http://localhost:9090/api/cluster/'+clustername+'/scs',{
+        fetch(utils.urlprefix+'/api/cluster/'+clustername+'/scs',{
             method:'GET'
             }).then((response) => {
                 console.log('response:',response.ok)
@@ -377,7 +378,7 @@ class CreatePVC extends React.Component {
                                 <Select placeholder={this.props.form.getFieldValue('storesourcetype')===""?'先选择存储源类型':''}  style={{ width: wwidth }} onSelect={this.handleSelectPv}> 
                                      {
                                           this.state.selectdata.map((item)=>(
-                                            <Option value={item.name} key={item.name}>
+                                            <Option value={item.name} key={item.name} disabled={(this.props.form.getFieldValue("storesourcetype")=="PV"&&item.status!="Available")?true:false}>
                                                 {item.name}
                                             </Option>
                                             ) )
@@ -406,7 +407,7 @@ class CreatePVC extends React.Component {
                                 <InputNumber placeholder={''} style={{ width: '90%' ,marginRight:'5px' }}
                                 min={0}
                                 max={this.props.form.getFieldValue('storesourcetype')==='PV'&&this.props.form.getFieldValue('storesourcename')!==undefined?
-                                parseInt(this.state.pvData.filter(item=>item.name===this.props.form.getFieldValue('storesourcename'))[0].capacity.substring(0,this.state.pvData.filter(item=>item.name===this.props.form.getFieldValue('storesourcename'))[0].capacity.indexOf('G')),10)
+                                parseFloat(this.state.pvData.filter(item=>item.name===this.props.form.getFieldValue('storesourcename'))[0].capacity.substring(0,this.state.pvData.filter(item=>item.name===this.props.form.getFieldValue('storesourcename'))[0].capacity.indexOf('G')),10)
                                 :undefined} 
                                 />
                                  

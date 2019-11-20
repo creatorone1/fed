@@ -31,11 +31,17 @@ import Cluster from './pages/cluster'
 import Node from './pages/node'
 import DetaiNode from './pages/node/detailpage'
 import DetaiCluster from './pages/cluster/detailpage'
+import cookie from 'react-cookies' 
+import Monitor from './pages/monitor'
+import Auth from './pages/auth'
 
 export default class ERouter extends React.Component{
 
     render(){
+
+        //console.log("test:::::",this.state.appauth,this.state.serviceauth,this.state.storeauth,this.state.clusterauth,this.state.nodeauth)
         return (
+            
             <HashRouter>
                 <App>
                     <Switch>
@@ -51,13 +57,51 @@ export default class ERouter extends React.Component{
                             <Admin>
                                 <Switch>
                                     <Route path='/home' component={Home} />
-                                    <Route path="/application" component={Application} />
-                                    <Route path="/service" component={Service} />
-                                    <Route path="/store" component={Store} /> 
+                                    <Route exact path="/application" render={() => (
+                                        cookie.load("appauth") ? (
+                                            <Redirect to="/applicationauth"/>
+                                            ) : (
+                                            <Redirect to="/auth"/>
+                                            )
+                                        )}/>
+                                    <Route exact path="/service" render={() => (
+                                        cookie.load("serviceauth") ? (
+                                            <Redirect to="/serviceauth"/>
+                                            ) : (
+                                            <Redirect to="/auth"/>
+                                            )
+                                        )}/>
+                                    <Route exact path="/cluster" render={() => (
+                                        cookie.load("clusterauth") ? (
+                                            <Redirect to="/clusterauth"/>
+                                            ) : (
+                                            <Redirect to="/auth"/>
+                                            )
+                                        )}/>
+                                    <Route exact path="/node" render={() => (
+                                        cookie.load("nodeauth") ? (
+                                            <Redirect to="/nodeauth"/>
+                                            ) : (
+                                            <Redirect to="/auth"/>
+                                            )
+                                        )}/>
+                                    <Route exact path="/store" render={() => (
+                                        cookie.load("storeauth") ? (
+                                            <Redirect to="/storeauth"/>
+                                            ) : (
+                                            <Redirect to="/auth"/>
+                                            )
+                                        )}/>
+
+                                    <Route path="/applicationauth" component={Application} onEnter={this.authRequired} />
+                                    <Route path="/serviceauth" component={Service} />
+                                    <Route path="/auth" component={Auth} />
+                                    <Route path="/storeauth" component={Store} /> 
                                     <Route path='/cluster/detailpage' component={DetaiCluster}/>
-                                    <Route path='/cluster' component={Cluster}/>
+                                    <Route path='/clusterauth' component={Cluster}/>
                                     <Route path='/node/detailpage' component={DetaiNode}/>
-                                    <Route path='/node' component={Node}/>
+                                    <Route path='/nodeauth' component={Node}/>
+                                    <Route path='/monitor' component={Monitor}/>
                                      
                                     <Route path="/ui/buttons" component={Buttons} />
                                     <Route path="/ui/modals" component={Modals} />
@@ -77,7 +121,7 @@ export default class ERouter extends React.Component{
                                     <Route path="/charts/pie" component={Pie} />
                                     <Route path="/charts/line" component={Line} />
                                     <Route path="/permission" component={Permission} />
-                                    <Redirect to="/home" />
+                                    <Redirect to="/login" />
                                     {/* <Route component={NoMatch} /> */}
                                 </Switch>
                             </Admin>         

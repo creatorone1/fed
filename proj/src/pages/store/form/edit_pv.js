@@ -5,7 +5,8 @@ import React from 'react'
 import {
     Modal,Form, Input, Icon, Button,InputNumber ,Collapse , Select,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
 } from 'antd';
- 
+
+import utils from './../../../utils/utils'
 
 let id = 0;
 const FormItem = Form.Item;
@@ -66,7 +67,7 @@ class EditPV extends React.Component {
         //console.log('nextProps.dataSource:', nextProps.dataSource) 
     }
     request = (clustername) => { //初始化数据请求
-      fetch('http://localhost:9090/api/cluster/'+clustername+'/scs',{
+      fetch(utils.urlprefix+'/api/cluster/'+clustername+'/scs',{
           method:'GET'
           }).then((response) => {
               console.log('response:',response.ok)
@@ -112,7 +113,7 @@ class EditPV extends React.Component {
               var pv = new PV(values)
               console.log('pv:',JSON.stringify(pv)) 
                 
-              fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/pv/'+name,{
+              fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/pv/'+name,{
                 method:'PUT',
                 mode: 'cors', 
                 body:JSON.stringify(pv)

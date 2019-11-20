@@ -56,7 +56,7 @@ export default class ClusterList extends React.Component {
      }
     // 动态获取mock数据
     request = () => { //初始化数据请求
-        fetch('http://localhost:9090/api/clusters',{
+        fetch(utils.urlprefix+'/api/clusters',{
         method:'GET',
         mode: 'cors', 
         }).then((response) => {
@@ -340,6 +340,7 @@ export default class ClusterList extends React.Component {
                     <Table  
                         style={{marginTop:16}}
                         dataSource={this.state.search?this.state.searchdata:this.state.dataSource}
+                        rowKey={record => record.name}
                         rowSelection={rowSelection }
                         columns={columns }  
                         rowClassName={(record,index)=>index%2===0?'table1':'table2'}

@@ -89,7 +89,7 @@ func NewDeployment(name, namespace string, matchLabels interface{}, labels map[s
 
 	return &Deployment{
 		Kind:       "Deployment",
-		ApiVersion: "apps/v1beta1",
+		ApiVersion: "apps/v1beta1",//"extensions/v1beta1"
 		Meta:       meta,
 		Spe:        spec,
 	}
@@ -99,13 +99,23 @@ func NewDeployment(name, namespace string, matchLabels interface{}, labels map[s
 func (deloyment *Deployment) Create(master string) (io.ReadCloser, int, error) {
 	return cluster.Call("POST", "/apis/apps/v1beta1/namespaces/"+deloyment.Meta.Namespace+"/deployments", master, deloyment)
 }
+func (deloyment *Deployment) CreateFed(master string) (io.ReadCloser, int, error) {
+	return cluster.Call("POST", "/apis/extensions/v1beta1/namespaces/"+deloyment.Meta.Namespace+"/deployments", master, deloyment)
+}
+
 func (deployment *Deployment) Update(master string, data []byte) (io.ReadCloser, int, error) {
 	return cluster.PatchCall("PATCH", "/apis/apps/v1beta1/namespaces/"+deployment.Meta.Namespace+"/deployments/"+deployment.Meta.Name, master, data)
+}
+func (deployment *Deployment) UpdateFed(master string, data []byte) (io.ReadCloser, int, error) {
+	//fmt.Printf("%s", data)
+	return cluster.PatchCall("PATCH", "/apis/extensions/v1beta1/namespaces/"+deployment.Meta.Namespace+"/deployments/"+deployment.Meta.Name, master, data)
 }
 func (deployment *Deployment) Replace(master string) (io.ReadCloser, int, error) {
 	return cluster.Call("PUT", "/apis/apps/v1beta1/namespaces/"+deployment.Meta.Namespace+"/deployments/"+deployment.Meta.Name, master, deployment)
 }
-
+func (deployment *Deployment) ReplaceFed(master string) (io.ReadCloser, int, error) {
+	return cluster.Call("PUT", "/apis/extensions/v1beta1/namespaces/"+deployment.Meta.Namespace+"/deployments/"+deployment.Meta.Name, master, deployment)
+}
 func (deloyment *Deployment) Get(master string) error {
 	body, _, err := cluster.ReadBody(cluster.Call("GET", "/apis/apps/v1beta1/namespaces/"+deloyment.Meta.Namespace+"/deployments/"+deloyment.Meta.Name, master, nil))
 	if err != nil {
@@ -118,7 +128,18 @@ func (deloyment *Deployment) Get(master string) error {
 
 	return nil
 }
+func (deloyment *Deployment) GetFed(master string) error {
+	body, _, err := cluster.ReadBody(cluster.Call("GET", "/apis/extensions/v1beta1/namespaces/"+deloyment.Meta.Namespace+"/deployments/"+deloyment.Meta.Name, master, nil))
+	if err != nil {
+		return err
+	}
 
+	if err := json.Unmarshal(body, deloyment); err != nil {
+		return err
+	}
+
+	return nil
+}
 func (deloyment *Deployment) PutScale(scale *Scale, master string) (io.ReadCloser, int, error) {
 	return scale.Put(deloyment.Meta.Name, deloyment.Meta.Namespace, master)
 }

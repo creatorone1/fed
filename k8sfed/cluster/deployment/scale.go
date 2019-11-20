@@ -51,7 +51,9 @@ func (scale *Scale) Get(dName, namespace, master string) (io.ReadCloser, int, er
 func (scale *Scale) Put(dName, namespace, master string) (io.ReadCloser, int, error) {
 	return cluster.Call("PUT", "/apis/apps/v1beta1/namespaces/"+namespace+"/deployments/"+dName+"/scale", master, scale)
 }
-
+func (scale *Scale) PutFed(dName, namespace, master string) (io.ReadCloser, int, error) {
+	return cluster.Call("PUT", "/apis/extensions/v1beta1/namespaces/"+namespace+"/deployments/"+dName+"/scale", master, scale)
+}
 func (scale *Scale) ToJsonString() string {
 	strs, err := json.Marshal(scale)
 

@@ -5,15 +5,14 @@ import { HashRouter, Route, Switch, Redirect,Link,NavLink} from 'react-router-do
 import Pv from './pv'
 import PvC from './pvc'
 import StorageClass from './storageclass'
-
+import utils from './../../utils/utils'
 const Option = Select.Option;
 const TabPane = Tabs.TabPane;
 export default class Store extends React.Component {
       
     state = {
-        cluster:[ 
-            'Cluster1',
-            'Cluster2'
+        cluster:[
+            {name:'fed1'}
         ],
         namespaces:[ 
             'default',
@@ -22,23 +21,28 @@ export default class Store extends React.Component {
         currentcluster:'All',
         currentnamespace:'All',
         loading:false,  //设置为true则可以显示加载状态框
+        requested:true,
     }
     componentDidMount(){//请求数据
         this.request();
      }
     // 动态获取mock数据
     request = () => {
-        fetch('http://localhost:9090/api/clusters',{
+        fetch(utils.urlprefix+'/api/clusters',{
             method:'GET'
             }).then((response) => {
                 console.log('response:',response.ok)
                 return response.json();
             }).then((data) => {
                 console.log('data:',data)
+
                 this.setState({
                     cluster:data.filter(item=>item.status!="NotReady")
+                    ,requested:false,
+                    currentcluster:data.filter(item=>item.status!="NotReady")[0].name,
                 })
-                fetch('http://localhost:9090/api/cluster/fed/namespaces',{
+                console.log('data[0].name',data.filter(item=>item.status!="NotReady")[0].name)
+                fetch(utils.urlprefix+'/api/cluster/fed/namespaces',{
                     method:'GET'
                     }).then((response) => {
                         console.log('response:',response.ok)
@@ -109,7 +113,7 @@ export default class Store extends React.Component {
         return (
             
             <HashRouter> 
-                { this.state.loading?(  <Spin tip="Loading...">
+                { this.state.requested?(  <Spin tip="Loading...">
                     <Alert
                     message="Loading"
                     description="数据加载中"
@@ -121,9 +125,23 @@ export default class Store extends React.Component {
             <div> 
                <div className="Dropdown-wrap"> 
                     <span style={{marginRight:10,fontSize:15}}>集群：</span>
-                    <Select defaultValue='All' style={{ width: 120 }} onSelect={this.handleClustertChange}  >
-                         <Option value='All'  key='All'>全局</Option>
-                         {clusterdata}
+                    {
+                        //<Select defaultValue='All' style={{ width: 120 }} onSelect={this.handleClustertChange}  ></Select>
+                       // console.log(this.state.cluster)
+                        
+                   } 
+                    {
+                        //<Select defaultValue='All' style={{ width: 120 }} onSelect={this.handleClustertChange}  ></Select>
+                     //   console.log('name',this.state.cluster.length>0?this.state.cluster[0].name:'')
+                        
+                   }
+                    <Select  defaultValue={this.state.cluster.length>0?this.state.cluster[0].name:''}  style={{ width: 120 }} onSelect={this.handleClustertChange}  >
+                         
+                        {
+                           // <Option value='All'  key='All'>全局</Option>
+                          
+                        }  
+                        {clusterdata}
                     </Select>
 
                     <span style={{margin:"0px 10px",fontSize:15}}>命名空间：</span>

@@ -7,7 +7,7 @@ import {
 } from 'antd';
 import { height } from 'window-size';
 import './../service.less' 
-
+import utils from './../../../utils/utils'
 let id = 0;
 const FormItem = Form.Item;
 const Option=Select.Option;
@@ -77,7 +77,7 @@ class ConfigWL extends React.Component {
                 value:'h'
             },],
             request:{
-                cpurequst:100,
+                cpurequest:100,
                 memoryrequest:96
             },
             limit:{
@@ -187,6 +187,7 @@ class ConfigWL extends React.Component {
                 },]
         },
         ] ,
+        nodedata:[]
     }
     componentDidMount(){//初始化数据，只调用一次
           //...
@@ -194,7 +195,7 @@ class ConfigWL extends React.Component {
           //   dataSource:this.props.dataSource 
           // })
           // console.log('this.props.dataSource:', this.props.dataSource)
-          this.request('fed')
+          //this.request('fed')
 
     } 
 
@@ -210,7 +211,7 @@ class ConfigWL extends React.Component {
          
       }
     request = (clustername) => { //初始化数据请求
-      fetch('http://localhost:9090/api/cluster/'+clustername+'/template/deployments',{
+      fetch(utils.urlprefix+'/api/cluster/'+clustername+'/template/deployments',{
       method:'GET',
       mode: 'cors', 
       }).then((response) => {
@@ -232,9 +233,32 @@ class ConfigWL extends React.Component {
       }).catch( (e)=> {  
           console.log(e);
       })
+      /***如果是联邦则获取所有集群节点 */
+      //获取当前集群节点  
+      fetch(utils.urlprefix+'/api/cluster/'+clustername+'/nodes',{
+        method:'GET',
+        mode: 'cors', 
+        }).then((response) => {
+            console.log('response:',response.ok)
+            return response.json();
+        }).then((data) => {
+            console.log('data:',data)
+            var nodedata=[]
+            data.map(item=>{  
+              nodedata=nodedata.concat(item.name)
+            })
+            this.setState({ //表格选中状态清空 
+              nodedata:nodedata
+            })
+             
+            return data;
+        }).catch( (e)=> {  
+            console.log(e);
+        })
      } 
   
     showModal = () => {
+      this.request(this.props.currentcluster)
         const { form } = this.props;
         form.resetFields(); 
         id=0;
@@ -244,7 +268,7 @@ class ConfigWL extends React.Component {
           schedule:'',
           dataSource:undefined,
         }); 
-        this.request(this.props.currentcluster)
+        
        
       }
  
@@ -273,14 +297,14 @@ class ConfigWL extends React.Component {
           const { name,podsnum,image,namespace,
             keys,labelkeys,portkeys,env_label,value
             , portnum, porttype,
-            cpurequst,cpulimit,memoryrequest,memorylimit,gpurequst,
+            cpurequest,cpulimit,memoryrequest,memorylimit,gpurequest,
             nodename
             } = values;  
           console.log('env_label name :', keys.map(key => env_label[key]));
           var dep = new Deployment(values)
           console.log('dep:',JSON.stringify(dep))
              
-          fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/deployment',{
+          fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/deployment',{
             method:'POST',
             mode: 'cors', 
             body:JSON.stringify(dep)
@@ -303,7 +327,8 @@ class ConfigWL extends React.Component {
                 this.setState({
                   visible: false, 
                   advanced:false,
-                  schedule:''
+                  schedule:'',
+                  nodedata:[]
                   //dataSource:undefined
                 });
                 //通知父节点关闭弹窗
@@ -316,7 +341,8 @@ class ConfigWL extends React.Component {
                 this.setState({
                   visible: false, 
                   advanced:false,
-                  schedule:''
+                  schedule:'',
+                  nodedata:[]
                   //dataSource:undefined
                 });
                 //通知父节点关闭弹窗
@@ -328,7 +354,7 @@ class ConfigWL extends React.Component {
           const { name,podsnum,image, 
             keys,labelkeys,portkeys,env_label,value
             , portnum, porttype,
-            cpurequst,cpulimit,memoryrequest,memorylimit,gpurequst,
+            cpurequest,cpulimit,memoryrequest,memorylimit,gpurequest,
             nodename
             } = values;  
           console.log(' values: ', values);   
@@ -788,15 +814,15 @@ class ConfigWL extends React.Component {
     render() {  
       //console.log(' render dataSource:',this.state.dataSource )
       var dataSource=this.state.dataSource 
-      let  cpurequst,memoryrequest,gpurequst,cpulimit,memorylimit=undefined
+      let  cpurequest,memoryrequest,gpurequest,cpulimit,memorylimit=undefined
       var podsnum
 
       if(dataSource){ //不为空再获取dataSource的属性值
         if(dataSource.request)//request不空
         {
-          cpurequst=dataSource.request.cpurequst  
+          cpurequest=dataSource.request.cpurequest  
           memoryrequest= dataSource.request.memoryrequest
-          gpurequst= dataSource.request.gpurequst 
+          gpurequest= dataSource.request.gpurequest 
         }
         if(dataSource.limit)//limit不空
         {
@@ -909,7 +935,8 @@ class ConfigWL extends React.Component {
       );
       
       const wwidth='80%' //定义表单中空间宽度
-      const nodedata=['node1','node2','node3'] //先获取主机数据
+      //const nodedata=['node1','node2','node3'] //先获取主机数据
+      const nodedata=this.state.nodedata
       const nodenames = nodedata.map((item)=>(
           <Option value={item} key={item}>
               {item}
@@ -1113,8 +1140,8 @@ class ConfigWL extends React.Component {
                         wrapperCol={{span:'16'}}
                       >
                        <div style={{  lineHeight:'100%', backgroundColor:'#d9d9d9'  }}>
-                        {getFieldDecorator('cpurequst', { 
-                            initialValue:cpurequst?cpurequst:undefined
+                        {getFieldDecorator('cpurequest', { 
+                            initialValue:cpurequest?cpurequest:undefined
                         })(
                            <InputNumber style={{ width: '50%' ,marginRight:'5px' }} 
                              min={0}  
@@ -1187,8 +1214,8 @@ class ConfigWL extends React.Component {
                         wrapperCol={{span:'16'}}
                       >
                         <div style={{  lineHeight:'100%', backgroundColor:'#d9d9d9'  }}> 
-                        {getFieldDecorator('gpurequst', {
-                            initialValue:gpurequst?gpurequst:undefined
+                        {getFieldDecorator('gpurequest', {
+                            initialValue:gpurequest?gpurequest:undefined
                            
                         })(
                            <InputNumber style={{ width: '70%' ,marginRight:'5px' }}
@@ -1353,7 +1380,7 @@ class ConfigWL extends React.Component {
         node.nodematch= nodematch
     }
     if(schedule=="NODE"){
-      node.nodename= nodename
+      node.schnodename= nodename
     }
 
     var ports=[]

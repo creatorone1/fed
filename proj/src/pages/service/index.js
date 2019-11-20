@@ -7,6 +7,7 @@ import Ingress from './ingress'
 import Services from './services'
 import { height } from 'window-size';
 import CreateWl from  './form/create_wl'
+import utils from './../../utils/utils'
 const Option = Select.Option;
 const TabPane = Tabs.TabPane;
 export default class Service extends React.Component {
@@ -35,7 +36,7 @@ export default class Service extends React.Component {
     }
     // 动态获取mock数据 
     request = () => {
-        fetch('http://localhost:9090/api/clusters',{
+        fetch(utils.urlprefix+'/api/clusters',{
             method:'GET'
             }).then((response) => {
                 console.log('response:',response.ok)
@@ -45,7 +46,7 @@ export default class Service extends React.Component {
                 this.setState({
                     cluster:data.filter(item=>item.status!="NotReady")
                 })
-                fetch('http://localhost:9090/api/cluster/fed/namespaces',{
+                fetch(utils.urlprefix+'/api/cluster/fed/namespaces',{
                     method:'GET'
                     }).then((response) => {
                         console.log('response:',response.ok)

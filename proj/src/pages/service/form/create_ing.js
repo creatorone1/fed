@@ -7,7 +7,7 @@ import {
 } from 'antd';
 import { height } from 'window-size';
 import './../service.less' 
-
+import utils from './../../../utils/utils'
 let id = 0;
 const FormItem = Form.Item;
 const Option=Select.Option;
@@ -25,7 +25,7 @@ class CreateIng extends React.Component {
        // console.log('CreateIng destroy')
     } 
     request = (clustername) => { //初始化数据请求
-        fetch('http://localhost:9090/api/cluster/'+clustername+'/services',{
+        fetch(utils.urlprefix+'/api/cluster/'+clustername+'/services',{
         method:'GET',
         mode: 'cors', 
         }).then((response) => {
@@ -78,11 +78,20 @@ class CreateIng extends React.Component {
     handleSlectn=(value)=>{ //选择当前命名空间下的服务
         console.log('select namespaces: 配置当前命名空间下的服务'+value)
         //选取当前命名空间下的服务 给后端backend中 的 option 选项
-        this.setState({
-            Servicesdata:this.state.services.filter(item=>item.namespace==value)
-            //selectsvcdata:this.state.svcdata.filter(item=>item.namespace===value)
-            
-        })  
+        if(this.state.services){
+            this.setState({
+                Servicesdata:this.state.services.filter(item=>item.namespace==value)
+                //selectsvcdata:this.state.svcdata.filter(item=>item.namespace===value)
+                
+            })
+        }
+          else{
+            this.setState({
+                Servicesdata:[]
+                //selectsvcdata:this.state.svcdata.filter(item=>item.namespace===value)
+                
+            })
+        } 
         this.props.form.resetFields('ports') //重置工作负载选项
         this.props.form.resetFields(`serviceport`)
         this.props.form.resetFields(`servicename`)
@@ -109,7 +118,7 @@ class CreateIng extends React.Component {
             //console.log('env_label name :', keys.map(key => env_label[key]));
             var ing = new Ingress(values)
             console.log('ingjson',JSON.stringify(ing))
-            fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/ingress',{
+            fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/ingress',{
             method:'POST',
             mode: 'cors', 
             body:JSON.stringify(ing)

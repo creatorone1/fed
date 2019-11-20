@@ -3,6 +3,7 @@ import React from 'react'
 import {
     Modal,Form, Input, Icon, Button,InputNumber ,Collapse , Select ,Radio ,Divider,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
 } from 'antd';
+import utils from './../../../utils/utils'
 const FormItem = Form.Item;
 const Option=Select.Option;
 const Panel = Collapse.Panel;
@@ -114,7 +115,7 @@ class EditSC extends React.Component {
               var sc = new SC(values)
               console.log('sc:',JSON.stringify(sc)) 
                 
-              fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/sc/'+name,{
+              fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/sc/'+name,{
                 method:'PUT',
                 mode: 'cors', 
                 body:JSON.stringify(sc)

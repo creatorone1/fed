@@ -45,6 +45,11 @@ func (namespace *Namespace) Delete(master string) (io.ReadCloser, int, error) {
 	return cluster.Call("DELETE", "/api/v1/namespaces/"+namespace.Meta.Name, master, b)
 }
 
+func (namespace *Namespace) Update(master string, update []byte) (io.ReadCloser, int, error) {
+	return cluster.PatchCall("PATCH", "/api/v1/namespaces/"+namespace.Meta.Name, master, update)
+	//return cluster.Update("PATCH", "/apis/apps/v1beta1/namespaces/"+ingress.Meta.Namespace+"/ingresses"+ingress.Meta.Name, master, update)
+}
+
 func (namespace *Namespace) Get(master string) (io.ReadCloser, int, error) {
 	return cluster.Call("GET", "/api/v1/namespaces/"+namespace.Meta.Name, master, nil)
 }

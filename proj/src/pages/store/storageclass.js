@@ -6,6 +6,7 @@ import {Modal,message,Badge,InputNumber,Tag,Table, Checkbox, Button,Input, Row,C
 } from 'antd'; 
 import CreateSc from './form/create_sc'
 import EditSc from './form/edit_sc'
+import utils from './../../utils/utils'
 export default class StorageClass extends React.Component {
     state = {
         selectedRowKeys:[],
@@ -48,7 +49,7 @@ export default class StorageClass extends React.Component {
         this.request(nextProps.currentcluster);
     }
     request = (clustername) => {
-        fetch('http://localhost:9090/api/cluster/'+clustername+'/scs',{
+        fetch(utils.urlprefix+'/api/cluster/'+clustername+'/scs',{
         method:'GET'
         }).then((response) => {
             console.log('response:',response.ok)
@@ -87,7 +88,7 @@ export default class StorageClass extends React.Component {
                
                // console.log(JSON.stringify(datas))
                 //下面URL的 集群 名称 以后需要替换掉
-                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/scs?data='+JSON.stringify(datas),{
+                fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/scs?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
                     }).then((response) => {
@@ -144,7 +145,7 @@ export default class StorageClass extends React.Component {
                 })
                // console.log(JSON.stringify(datas))
                 //下面URL的 集群 名称 以后需要替换掉
-                fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/scs?data='+JSON.stringify(datas),{
+                fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/scs?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
                     }).then((response) => {
@@ -318,6 +319,7 @@ export default class StorageClass extends React.Component {
                     </Row>
                     <Table  
                         dataSource={this.state.search?this.state.searchdata:this.state.dataSource}
+                        rowKey={record => record.name}
                         rowSelection={rowSelection }
                         columns={columns }  
                         rowClassName={(record,index)=>index%2===0?'table1':'table2'}

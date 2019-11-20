@@ -33,7 +33,7 @@ type Ing struct {
 }
 
 type Backend struct {
-	ServiceName string `json:"serviceName,omitempty"`
+	ServiceName string      `json:"serviceName,omitempty"`
 	ServicePort interface{} `json:"servicePort,omitempty"`
 }
 

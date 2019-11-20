@@ -4,6 +4,7 @@ import React from 'react'
 import {
     Modal,Form, Input, Icon, Button,InputNumber ,Collapse , Select ,Radio ,Divider,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
 } from 'antd';
+import utils from './../../../utils/utils'
 const FormItem = Form.Item;
 const Option=Select.Option;
 const Panel = Collapse.Panel;
@@ -117,7 +118,7 @@ class CreateSC extends React.Component {
               var sc=new SC(values)
               //console.log('svc',pvc)
                //console.log(JSON.stringify(pvc))
-              fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/sc',{
+              fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/sc',{
                method:'POST',
                mode: 'cors', 
                body:JSON.stringify(sc)

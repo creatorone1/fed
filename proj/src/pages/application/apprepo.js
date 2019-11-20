@@ -6,6 +6,7 @@ import { height } from 'window-size';
 import { Z_BLOCK } from 'zlib';
 import { color } from 'echarts/lib/export';
 import CreateApp from './form/create_app'
+import utils from './../../utils/utils'
 export default class AppRepo   extends React.Component {
     state = {
         dataSource:[{
@@ -80,7 +81,7 @@ export default class AppRepo   extends React.Component {
 
     }
     request = () => {
-        fetch('http://localhost:9090/api/charts',{
+        fetch(utils.urlprefix+'/api/charts',{
         method:'GET'
         }).then((response) => {
             console.log('response:',response.ok)
@@ -207,7 +208,7 @@ export default class AppRepo   extends React.Component {
                     <Row   >
                     {card   } 
                     </Row>  
-                    <CreateApp clusters={this.props.clusters}  dataSource={this.state.operationdata} createvisible={this.state.createvisible} handleCreate={this.handleCreate}></CreateApp>
+                    <CreateApp HandleCreated={this.props.HandleCreated} clusters={this.props.clusters}  dataSource={this.state.operationdata} createvisible={this.state.createvisible} handleCreate={this.handleCreate}></CreateApp>
 
                 </div>
                 )

@@ -4,7 +4,7 @@ import React from 'react'
 import {
     Modal,Form, Input, Icon, Button,InputNumber ,Collapse , Select ,Divider,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
 } from 'antd';
-
+import utils from './../../../utils/utils'
 const FormItem = Form.Item;
 const Option=Select.Option;
 const Panel = Collapse.Panel;
@@ -44,7 +44,7 @@ class CreateFedNamespace extends React.Component {
                 name:name
             }
             console.log('nmjson',JSON.stringify(newnm))
-              fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/namespace',{
+              fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/namespace',{
                method:'POST',
                mode: 'cors', 
                body:JSON.stringify(newnm)
@@ -95,7 +95,7 @@ class CreateFedNamespace extends React.Component {
 
     }
     request = () => {
-        fetch('url',{
+        fetch(utils.urlprefix+'url',{
         method:'GET'
         }).then((response) => {
             console.log('response:',response.ok)

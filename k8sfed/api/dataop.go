@@ -3,8 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"k8sfed/cluster"
-	"k8sfed/cluster/application"
+
 	css "k8sfed/cluster/clusters"
 	"k8sfed/cluster/configmap"
 	"k8sfed/cluster/deployment"
@@ -22,14 +21,24 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"k8sfed/cluster"
+	"k8sfed/cluster/application"
 )
 
 //get 获取数据列表
 func ListDeps(clustername string) ([]Deployment, error) {
 	deps := &deployment.Deployments{} //声明结构体
-	if err := deps.List(clustername + ":8080"); err != nil {
-		return nil, err
+	if clustername == "fed" || clustername == "All" {
+		if err := deps.ListFed(fedclustername + ":8001"); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := deps.List(clustername + ":8080"); err != nil {
+			return nil, err
+		}
 	}
+
 	//dataSource = append(dataSource, deps.Items...)
 	dataSource := []Deployment{}
 	for _, item := range deps.Items {
@@ -37,6 +46,7 @@ func ListDeps(clustername string) ([]Deployment, error) {
 		var envs = []Env{}
 		var labels = []Label{}
 		var ports = []Port{}
+		var volumes = []Volume{}
 
 		dep.Name = item.Meta.Name
 		dep.Namespace = item.Meta.Namespace
@@ -44,6 +54,29 @@ func ListDeps(clustername string) ([]Deployment, error) {
 		dep.Createtime = item.Meta.CreationTimeStamp
 		dep.Podsnum = append(dep.Podsnum, item.Status.ReadyReplicas)
 		dep.Podsnum = append(dep.Podsnum, item.Spe.Replicas)
+		/**修改的时候先把非 pvc 的卷读出来再修改*/
+		for _, v := range item.Spe.Template.Spe.Volumes {
+
+			if v.PersistentVolumeClaim != nil {
+				var newv = Volume{}
+				newv.Name = v.Name
+				newv.Pvcname = v.PersistentVolumeClaim.ClaimName
+				var volumemounts = []VolumeMount{}
+				for _, m := range item.Spe.Template.Spe.Containers[0].VolumeMounts {
+					if m.Name == newv.Name {
+						var newvm = VolumeMount{}
+						newvm.Name = m.Name
+						newvm.MountPath = m.MountPath
+						newvm.ReadOnly = m.ReadOnly
+						newvm.SubPath = m.SubPath
+						volumemounts = append(volumemounts, newvm)
+					}
+				}
+				newv.VolumeMounts = volumemounts
+				volumes = append(volumes, newv)
+			}
+		}
+		dep.Volumes = volumes
 
 		dep.Revision = item.Meta.Annotation[`deployment.kubernetes.io/revision`]
 		for _, env := range item.Spe.Template.Spe.Containers[0].Envs {
@@ -193,9 +226,17 @@ func ListDeps(clustername string) ([]Deployment, error) {
 
 func ListRS(clustername string) ([]ReplicaSet, error) {
 	rss := &replicaset.Replicasets{} //声明结构体
-	if err := rss.List(clustername + ":8080"); err != nil {
-		return nil, err
+	if clustername == "fed" || clustername == "All" {
+		if err := rss.List(fedclustername + ":8001"); err != nil {
+			return nil, err
+		}
+	} else {
+
+		if err := rss.List(clustername + ":8080"); err != nil {
+			return nil, err
+		}
 	}
+
 	//dataSource = append(dataSource, deps.Items...)
 	dataSource := []ReplicaSet{}
 	for _, item := range rss.Items {
@@ -236,6 +277,7 @@ func ListHistory(clustername, namespace, deployment string) ([]ReplicaSet, error
 		// handle error
 		return nil, err
 	}
+
 	var dataSource = []ReplicaSet{}
 	for _, item := range datas {
 		if item.Namespace == namespace && item.Deployment == deployment {
@@ -247,8 +289,14 @@ func ListHistory(clustername, namespace, deployment string) ([]ReplicaSet, error
 
 func ListSvc(clustername string) ([]Service, error) {
 	svcs := &service.Services{} //声明结构体
-	if err := svcs.List(clustername + ":8080"); err != nil {
-		return nil, err
+	if clustername == "fed" || clustername == "All" {
+		if err := svcs.List(fedclustername + ":8001"); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := svcs.List(clustername + ":8080"); err != nil {
+			return nil, err
+		}
 	}
 
 	//dataSource = append(dataSource, deps.Items...)
@@ -300,9 +348,16 @@ func ListSvc(clustername string) ([]Service, error) {
 		var workloads []string
 		//deps, _ := ListDeps(clustername)
 		deps := &deployment.Deployments{} //声明结构体
-		if err := deps.List(clustername + ":8080"); err != nil {
-			return nil, err
+		if clustername == "fed" || clustername == "All" {
+			if err := deps.ListFed(fedclustername + ":8001"); err != nil {
+				return nil, err
+			}
+		} else {
+			if err := deps.List(clustername + ":8080"); err != nil {
+				return nil, err
+			}
 		}
+
 		/*if svc.Target == nil {
 			fmt.Printf("%v", svc.Target)
 			fmt.Printf("\n %v", svc.Name)
@@ -322,7 +377,6 @@ func ListSvc(clustername string) ([]Service, error) {
 			}
 		}
 		svc.Workload = workloads
-
 		dataSource = append(dataSource, svc)
 
 	}
@@ -350,6 +404,9 @@ func ListPV(clustername string) ([]PV, error) {
 				return nil, err1i
 			}
 			m1f := float64(m1i) / 1000.0
+			/*
+				应该除以1024
+			*/
 			pv.Capacity = fmt.Sprintf("%fGi", m1f)
 		} else {
 			pv.Capacity = item.Spe.Capacity.Storage
@@ -585,7 +642,7 @@ func ListNode(clustername string) ([]Node, error) {
 }
 func ListNamespace(clustername string) ([]Namespace, error) {
 	nms := &namespace.Namespaces{} //声明结构体
-	if clustername == "fed" {
+	if clustername == "fed" || clustername == "All" {
 		if err := nms.List(fedclustername + ":8001"); err != nil {
 			return nil, err
 		}
@@ -630,7 +687,7 @@ func ListCluster(fedclustername string) ([]Cluster, error) {
 		cs.Createtime = item.Meta.CreationTimeStamp
 		cs.Serveraddress = item.Spe.ServerAddressByClientCIDRs[0].ServerAddress
 		if item.Status != nil && len(item.Status.Conditions) != 0 {
-			if item.Status.Conditions[0].Status == "True" {
+			if item.Status.Conditions[0].Status == "True" && item.Status.Conditions[0].Type == "Ready" {
 				cs.Status = "Ready"
 			} else {
 				cs.Status = "NotReady"
@@ -807,12 +864,11 @@ func ListConfigMap(clustername string) ([]ConfigMap, error) {
 
 func ListConfigMapbyNm(namespace, clustername string) ([]ConfigMap, error) {
 	cms := &configmap.ConfigMaps{} //声明结构体
-	/*if clustername == "fed" {
+	if clustername == "fed" || clustername == "All" {
 		if err := cms.List(fedclustername + ":8001"); err != nil {
 			return nil, err
 		}
-	} else */
-	{
+	} else {
 		if err := cms.ListOfNamespace(namespace, clustername+":8080"); err != nil {
 			return nil, err
 		}
@@ -935,11 +991,18 @@ func ListSC(clustername string) ([]StorageClass, error) {
 	return dataSource, nil
 }
 func ListIngress(clustername string) ([]Ingress, error) {
-
 	ings := &ingress.IngressList{} //声明结构体
-	if err := ings.List(clustername + ":8080"); err != nil {
-		return nil, err
+
+	if clustername == "fed" || clustername == "All" {
+		if err := ings.List(fedclustername + ":8001"); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := ings.List(clustername + ":8080"); err != nil {
+			return nil, err
+		}
 	}
+
 	//dataSource = append(dataSource, deps.Items...)
 	dataSource := []Ingress{}
 	for _, item := range ings.Items {
@@ -1074,20 +1137,34 @@ func ListRelease(swiftmastername string) ([]AppRelease, error) {
 /**delete 删除数据*/
 func DeleteDep(clustername, namespace, name string) ([]byte, error) {
 	var meta = &cluster.Metadata{
-		Name:      name,
-		Namespace: namespace,
+		Name:       name,
+		Namespace:  namespace,
+		Finalizers: nil,
 	}
 	var dep = deployment.Deployment{
 		Meta: meta,
 	}
 	/*data, _ := json.Marshal(dep)
 	fmt.Printf("%s",data)*/
-	body, _, err := cluster.ReadBody(dep.Delete(clustername + ":8080"))
-	if err != nil {
-		return body, err
-	}
+	if clustername == "fed" || clustername == "All" {
+		body, _, err := cluster.ReadBody(dep.DeleteFed(fedclustername + ":8001"))
+		if err != nil {
+			return body, err
+		}
+		var pathdata = `{"metadata":{"finalizers":null}}`
+		body2, _, err2 := cluster.ReadBody(dep.UpdateFed(fedclustername+":8001", []byte(pathdata)))
+		if err2 != nil {
+			return body2, err2
+		}
+		return body, nil
+	} else {
+		body, _, err := cluster.ReadBody(dep.Delete(clustername + ":8080"))
+		if err != nil {
+			return body, err
+		}
 
-	return body, nil
+		return body, nil
+	}
 }
 func DeleteSvc(clustername, namespace, name string) ([]byte, error) {
 	var meta = &cluster.Metadata{
@@ -1099,16 +1176,29 @@ func DeleteSvc(clustername, namespace, name string) ([]byte, error) {
 	}
 	/*data, _ := json.Marshal(dep)
 	fmt.Printf("%s",data)*/
-	body, _, err := cluster.ReadBody(svc.Delete(clustername + ":8080"))
-	if err != nil {
-		return body, err
+	if clustername == "All" || clustername == "fed" {
+		body, _, err := cluster.ReadBody(svc.Delete(fedclustername + ":8001"))
+		if err != nil {
+			return body, err
+		}
+		var pathdata = `{"metadata":{"finalizers":null}}`
+		body2, _, err2 := cluster.ReadBody(svc.Update(fedclustername+":8001", []byte(pathdata)))
+		if err2 != nil {
+			return body2, err2
+		}
+		return body, nil
+	} else {
+		body, _, err := cluster.ReadBody(svc.Delete(clustername + ":8080"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
 	}
-
-	return body, nil
 }
 func DeletePV(clustername, name string) ([]byte, error) {
 	var meta = &cluster.Metadata{
-		Name: name,
+		Name:       name,
+		Finalizers: nil,
 	}
 	var pv = pv.Pv{
 		Meta: meta,
@@ -1119,7 +1209,12 @@ func DeletePV(clustername, name string) ([]byte, error) {
 	if err != nil {
 		return body, err
 	}
+	var pathdata = `{"metadata":{"finalizers":null}}`
 
+	body2, _, err2 := cluster.ReadBody(pv.Patch(clustername+":8080", []byte(pathdata)))
+	if err2 != nil {
+		return body2, err2
+	}
 	return body, nil
 }
 func DeletePVC(clustername, namespace, name string) ([]byte, error) {
@@ -1135,6 +1230,12 @@ func DeletePVC(clustername, namespace, name string) ([]byte, error) {
 	body, _, err := cluster.ReadBody(pvc.Delete(clustername + ":8080"))
 	if err != nil {
 		return body, err
+	}
+	var pathdata = `{"metadata":{"finalizers":null}}`
+
+	body2, _, err2 := cluster.ReadBody(pvc.Patch(clustername+":8080", []byte(pathdata)))
+	if err2 != nil {
+		return body2, err2
 	}
 	return body, nil
 }
@@ -1164,11 +1265,25 @@ func DeleteNamespace(clustername, name string) ([]byte, error) {
 	}
 	/*data, _ := json.Marshal(dep)
 	fmt.Printf("%s",data)*/
-	body, _, err := cluster.ReadBody(nmdata.Delete(clustername + ":8080"))
-	if err != nil {
-		return body, err
+	if clustername == "fed" || clustername == "All" {
+		body, _, err := cluster.ReadBody(nmdata.Delete(fedclustername + ":8001"))
+		if err != nil {
+			return body, err
+		}
+		var pathdata = `{"metadata":{"finalizers":null}}`
+		body2, _, err2 := cluster.ReadBody(nmdata.Update(fedclustername+":8001", []byte(pathdata)))
+		if err2 != nil {
+			return body2, err2
+		}
+		return body, nil
+	} else {
+		body, _, err := cluster.ReadBody(nmdata.Delete(clustername + ":8080"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
 	}
-	return body, nil
+
 }
 func DeleteConfigMap(clustername, namespace, name string) ([]byte, error) {
 	var meta = &cluster.Metadata{
@@ -1229,12 +1344,25 @@ func DeleteIngress(clustername, namespace, name string) ([]byte, error) {
 	}
 	/*data, _ := json.Marshal(dep)
 	fmt.Printf("%s",data)*/
-	body, _, err := cluster.ReadBody(newing.Delete(clustername + ":8080"))
-	if err != nil {
-		return body, err
+	if clustername == "fed" || clustername == "All" {
+		body, _, err := cluster.ReadBody(newing.Delete(fedclustername + ":8001"))
+		if err != nil {
+			return body, err
+		}
+		var pathdata = `{"metadata":{"finalizers":null}}`
+		body2, _, err2 := cluster.ReadBody(newing.Update(fedclustername+":8001", []byte(pathdata)))
+		if err2 != nil {
+			return body2, err2
+		}
+		return body, nil
+	} else {
+		body, _, err := cluster.ReadBody(newing.Delete(clustername + ":8080"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
 	}
 
-	return body, nil
 }
 func DeleteSC(clustername, name string) ([]byte, error) {
 	var meta = &cluster.Metadata{
@@ -1364,13 +1492,28 @@ func CreateDep(dep Deployment, clustername string) ([]byte, error) {
 		Resources:       podrs,
 		ImagePullPolicy: "IfNotPresent", //默认镜像拉取规则为 存在则不拉取
 	}
+	//spe.template.container.volumemounts 数据卷添加
+	var vms []*pod.VolumeMount
+	for _, vitem := range dep.Volumes {
+		for _, vmitem := range vitem.VolumeMounts {
+			var newvm = &pod.VolumeMount{
+				Name:      vmitem.Name,
+				MountPath: vmitem.MountPath,
+				ReadOnly:  vmitem.ReadOnly,
+				SubPath:   vmitem.SubPath,
+			}
+			vms = append(vms, newvm)
+		}
+	}
+	container.VolumeMounts = vms
 	var containers []*pod.Container
 	containers = append(containers, container)
 	var temspe = &pod.Spec{
 		Containers: containers,
 	}
-
+	fmt.Printf("Schedule \n")
 	if dep.Schedule == "NODE" {
+		fmt.Printf("NODE")
 		temspe.NodeName = dep.Schnodename
 	}
 
@@ -1403,6 +1546,20 @@ func CreateDep(dep Deployment, clustername string) ([]byte, error) {
 		}
 		temspe.Affinity = affinity
 	}
+	//spe.template.spe.volumes 数据卷添加
+	var volumes []*pod.Volume
+	for _, vitem := range dep.Volumes {
+		var pvc = &pod.PVC{
+			ClaimName: vitem.Pvcname,
+		}
+		var newv = &pod.Volume{
+			Name:                  vitem.Name,
+			PersistentVolumeClaim: pvc,
+		}
+		volumes = append(volumes, newv)
+	}
+	temspe.Volumes = volumes
+
 	var tem = &pod.Pod{
 		Meta: podmeta,
 		Spe:  temspe,
@@ -1415,19 +1572,36 @@ func CreateDep(dep Deployment, clustername string) ([]byte, error) {
 		Template: tem,
 	}
 	/* end dep spe  */
-	var newdep = &deployment.Deployment{
-		Kind:       "Deployment",
-		ApiVersion: "apps/v1beta1", //对于联邦应该是 extensions/v1beta1
-		Meta:       depmeta,
-		Spe:        depspe,
+	if clustername == "fed" || clustername == "All" {
+		var newdep = &deployment.Deployment{
+			Kind:       "Deployment",
+			ApiVersion: "extensions/v1beta1", //对于联邦应该是 extensions/v1beta1
+			Meta:       depmeta,
+			Spe:        depspe,
+		}
+		//datas, _ := json.Marshal(newdep) //d
+		//fmt.Printf("%s", datas)          //d
+		body, _, err := cluster.ReadBody(newdep.CreateFed(fedclustername + ":8001"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
+	} else {
+		var newdep = &deployment.Deployment{
+			Kind:       "Deployment",
+			ApiVersion: "apps/v1beta1", //对于联邦应该是 extensions/v1beta1
+			Meta:       depmeta,
+			Spe:        depspe,
+		}
+		//datas, _ := json.Marshal(newdep) //d
+		//fmt.Printf("%s", datas)          //d
+		body, _, err := cluster.ReadBody(newdep.Create(clustername + ":8080"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
 	}
-	//datas, _ := json.Marshal(newdep) //d
-	//fmt.Printf("%s", datas)          //d
-	body, _, err := cluster.ReadBody(newdep.Create(clustername + ":8080"))
-	if err != nil {
-		return body, err
-	}
-	return body, nil
+
 }
 func CreateSvc(svc Service, clustername string) ([]byte, error) {
 	var labels = svc.Label
@@ -1476,11 +1650,20 @@ func CreateSvc(svc Service, clustername string) ([]byte, error) {
 	}
 	//datas, _ := json.Marshal(newsvc)
 	//fmt.Printf("%s", datas)
-	body, _, err := cluster.ReadBody(newsvc.Create(clustername + ":8080"))
-	if err != nil {
-		return body, err
+	if clustername == "fed" || clustername == "All" {
+		body, _, err := cluster.ReadBody(newsvc.Create(fedclustername + ":8001"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
+	} else {
+		body, _, err := cluster.ReadBody(newsvc.Create(clustername + ":8080"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
 	}
-	return body, nil
+
 }
 func CreatePV(p PV, clustername string) ([]byte, error) {
 
@@ -1548,6 +1731,7 @@ func CreatePVC(pc PVC, clustername string) ([]byte, error) {
 	}
 	//datas, _ := json.Marshal(newdep)
 	//fmt.Printf("%s", datas)
+
 	body, _, err := cluster.ReadBody(newpvc.Create(clustername + ":8080"))
 	if err != nil {
 		return body, err
@@ -1568,11 +1752,20 @@ func CreateNamespace(n Namespace, clustername string) ([]byte, error) {
 	}
 	//datas, _ := json.Marshal(newdep)
 	//fmt.Printf("%s", datas)
-	body, _, err := cluster.ReadBody(newnm.Create(clustername + ":8080"))
-	if err != nil {
-		return body, err
+	if clustername == "fed" || clustername == "All" {
+		body, _, err := cluster.ReadBody(newnm.Create(fedclustername + ":8001"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
+	} else {
+		body, _, err := cluster.ReadBody(newnm.Create(clustername + ":8080"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
 	}
-	return body, nil
+
 }
 func CreateConfigMap(cm ConfigMap, clustername string) ([]byte, error) {
 
@@ -1591,11 +1784,19 @@ func CreateConfigMap(cm ConfigMap, clustername string) ([]byte, error) {
 	}
 	//datas, _ := json.Marshal(newdep)
 	//fmt.Printf("%s", datas)
-	body, _, err := cluster.ReadBody(newcm.Create(clustername + ":8080"))
-	if err != nil {
-		return body, err
+	if clustername == "fed" || clustername == "All" {
+		body, _, err := cluster.ReadBody(newcm.Create(fedclustername + ":8001"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
+	} else {
+		body, _, err := cluster.ReadBody(newcm.Create(clustername + ":8080"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
 	}
-	return body, nil
 }
 
 func CreateTemDep(depdatas []byte, clustername string) ([]byte, error) {
@@ -1693,11 +1894,20 @@ func CreateIngress(ing Ingress, clustername string) ([]byte, error) {
 	}
 	//datas, _ := json.Marshal(newing)
 	//fmt.Printf("%s", datas)
-	body, _, err := cluster.ReadBody(newing.Create(clustername + ":8080"))
-	if err != nil {
-		return body, err
+	if clustername == "fed" || clustername == "All" {
+		body, _, err := cluster.ReadBody(newing.Create(fedclustername + ":8001"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
+	} else {
+		body, _, err := cluster.ReadBody(newing.Create(clustername + ":8080"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
 	}
-	return body, nil
+
 }
 func CreateSC(scd StorageClass, clustername string) ([]byte, error) {
 
@@ -1758,14 +1968,21 @@ func PauseDep(clustername, namespace, name string) ([]byte, error) {
 	if errj != nil {
 		return nil, errj
 	}
-
-	body, _, err := cluster.ReadBody(newdep.Update(clustername+":8080", datas))
-	if err != nil {
-		return body, err
+	if clustername == "fed" || clustername == "All" {
+		body, _, err := cluster.ReadBody(newdep.UpdateFed(fedclustername+":8001", datas))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
+	} else {
+		body, _, err := cluster.ReadBody(newdep.Update(clustername+":8080", datas))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
 	}
-	return body, nil
-
 }
+
 func ResumeDep(clustername, namespace, name string) ([]byte, error) {
 	var spe = &DepPause{}
 	spe.Spe.Paused = false
@@ -1782,12 +1999,19 @@ func ResumeDep(clustername, namespace, name string) ([]byte, error) {
 	if errj != nil {
 		return nil, errj
 	}
-
-	body, _, err := cluster.ReadBody(newdep.Update(clustername+":8080", datas))
-	if err != nil {
-		return body, err
+	if clustername == "fed" || clustername == "All" {
+		body, _, err := cluster.ReadBody(newdep.UpdateFed(fedclustername+":8001", datas))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
+	} else {
+		body, _, err := cluster.ReadBody(newdep.Update(clustername+":8080", datas))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
 	}
-	return body, nil
 
 }
 func ScaleDep(clustername, namespace, name string, replicanum int64) ([]byte, error) {
@@ -1799,18 +2023,31 @@ func ScaleDep(clustername, namespace, name string, replicanum int64) ([]byte, er
 		Replicas: replicanum,
 	}
 
-	var scale = &deployment.Scale{
-		Kind:       "Scale",
-		ApiVersion: "apps/v1beta1",
-		Meta:       meta,
-		Spe:        spec,
+	if clustername == "fed" || clustername == "All" {
+		var scale = &deployment.Scale{
+			Kind:       "Scale",
+			ApiVersion: "extensions/v1beta1",
+			Meta:       meta,
+			Spe:        spec,
+		}
+		body, _, err := cluster.ReadBody(scale.PutFed(name, namespace, fedclustername+":8001"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
+	} else {
+		var scale = &deployment.Scale{
+			Kind:       "Scale",
+			ApiVersion: "apps/v1beta1",
+			Meta:       meta,
+			Spe:        spec,
+		}
+		body, _, err := cluster.ReadBody(scale.Put(name, namespace, clustername+":8080"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
 	}
-
-	body, _, err := cluster.ReadBody(scale.Put(name, namespace, clustername+":8080"))
-	if err != nil {
-		return body, err
-	}
-	return body, nil
 
 	//body, err := PatchDeployment(cm, clustername)
 	//return body, err
@@ -1834,13 +2071,19 @@ func RollbackDep(clustername, namespace, name string, revision int64) ([]byte, e
 	if errj != nil {
 		return nil, errj
 	}
-
-	body, _, err := cluster.ReadBody(newdep.Update(clustername+":8080", datas))
-	if err != nil {
-		return body, err
+	if clustername == "fed" || clustername == "All" {
+		body, _, err := cluster.ReadBody(newdep.UpdateFed(fedclustername+":8001", datas))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
+	} else {
+		body, _, err := cluster.ReadBody(newdep.Update(clustername+":8080", datas))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
 	}
-	return body, nil
-
 }
 func PauseNode(clustername, nodename string) ([]byte, error) {
 	var ns = NodeSpec{
@@ -2032,9 +2275,12 @@ func PatchUpdateDep(dep Deployment, clustername string) ([]byte, error) {
 	}
 
 	/**pod.spec 中的亲和性 begin*/
+	fmt.Printf("Schedule \n")
 	if dep.Schedule == "NODE" {
+		fmt.Printf("NODE")
 		temspe.NodeName = dep.Schnodename
-	} else {
+	}
+	if dep.Schedule == "LABEL" {
 		var matchlabels []*pod.MatchExpression
 		for _, item := range dep.Nodematch {
 			var v []string
@@ -2100,9 +2346,16 @@ func UpdateDep(dep Deployment, clustername string) ([]byte, error) {
 	var newdep = &deployment.Deployment{
 		Meta: depmeta,
 	}
-	if err := newdep.Get(clustername + ":8080"); err != nil {
-		return nil, err
+	if clustername == "fed" || clustername == "All" {
+		if err := newdep.GetFed(fedclustername + ":8001"); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := newdep.Get(clustername + ":8080"); err != nil {
+			return nil, err
+		}
 	}
+
 	//datas, _ := json.Marshal(newdep)
 	//fmt.Printf("%s", datas)
 
@@ -2122,13 +2375,16 @@ func UpdateDep(dep Deployment, clustername string) ([]byte, error) {
 	// ! 注意更新Spec 先获取原来的Spec
 	var depspe = newdep.Spe
 	depspe.Replicas = dep.Podsnum[1]
+
 	/*var mpmls map[string]string = make(map[string]string)
 	mpmls["app"] = dep.Name
 
 	var selector = &cluster.Selector{
 		MatchLabels: mpmls,
 	}*/
-
+	//重新自动生成selector
+	//depspe.Select = nil
+	//禁止修改 app="asfaf"
 	/*更新 spe.template begin*/
 	//	先获取原来的 Template
 	var tem = newdep.Spe.Template
@@ -2220,6 +2476,29 @@ func UpdateDep(dep Deployment, clustername string) ([]byte, error) {
 	container.Resources = podrs
 	//container.Name=dep.Name
 
+	//更新数据卷挂载 spe.template.container.volumemounts
+	var newvms []*pod.VolumeMount
+	var oldvms = container.VolumeMounts
+	for _, vitem := range dep.Volumes {
+		for _, vmitem := range vitem.VolumeMounts {
+			var newvm = &pod.VolumeMount{
+				Name:      vitem.Name,
+				MountPath: vmitem.MountPath,
+				ReadOnly:  vmitem.ReadOnly,
+				SubPath:   vmitem.SubPath,
+			}
+			newvms = append(newvms, newvm)
+		}
+	}
+	var oldvolumes = temspe.Volumes
+	//添加原来就存在的数据卷挂载(非PVC)
+	for _, vmitem := range oldvms {
+		if !IsPVC(vmitem.Name, oldvolumes) {
+			newvms = append(newvms, vmitem)
+		}
+	}
+	container.VolumeMounts = newvms
+
 	//!更新 temspec 的container先获取Containers
 	var containers = temspe.Containers
 	if len(containers) > 0 {
@@ -2229,7 +2508,9 @@ func UpdateDep(dep Deployment, clustername string) ([]byte, error) {
 	}
 	temspe.Containers = containers
 
+	fmt.Printf("Schedule= %s \n", dep.Schedule)
 	if dep.Schedule == "NODE" {
+		fmt.Printf("NODE= %s \n", dep.Schnodename)
 		temspe.NodeName = dep.Schnodename
 	}
 
@@ -2262,6 +2543,28 @@ func UpdateDep(dep Deployment, clustername string) ([]byte, error) {
 		}
 		temspe.Affinity = affinity
 	}
+	//spe.template.spe.volumes 数据卷添加
+	var newvs []*pod.Volume
+	var oldvs = temspe.Volumes
+	for _, vitem := range dep.Volumes {
+		var pvc = &pod.PVC{
+			ClaimName: vitem.Pvcname,
+		}
+		var newv = &pod.Volume{
+			Name:                  vitem.Name,
+			PersistentVolumeClaim: pvc,
+		}
+		newvs = append(newvs, newv)
+	}
+	//判断这个是否为PVC数据卷，上面数据卷挂载也需要判断
+	for _, item := range oldvs {
+		if item.PersistentVolumeClaim == nil {
+			newvs = append(newvs, item)
+		}
+	}
+
+	temspe.Volumes = newvs
+
 	tem.Meta = podmeta
 	tem.Spe = temspe
 	/*var tem = &pod.Pod{
@@ -2284,11 +2587,20 @@ func UpdateDep(dep Deployment, clustername string) ([]byte, error) {
 	}*/
 	newdep.Meta = depmeta
 	newdep.Spe = depspe
-	body, _, err := cluster.ReadBody(newdep.Replace(clustername + ":8080"))
-	if err != nil {
-		return body, err
+	if clustername == "fed" || clustername == "All" {
+		body, _, err := cluster.ReadBody(newdep.ReplaceFed(fedclustername + ":8001"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
+	} else {
+		body, _, err := cluster.ReadBody(newdep.Replace(clustername + ":8080"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
 	}
-	return body, nil
+
 }
 
 func UpdateSvc(svc Service, clustername string) ([]byte, error) {
@@ -2300,9 +2612,14 @@ func UpdateSvc(svc Service, clustername string) ([]byte, error) {
 	var newsvc = &service.Service{
 		Meta: svcmeta,
 	}
-
-	if err := newsvc.Get(clustername + ":8080"); err != nil {
-		return nil, err
+	if clustername == "All" || clustername == "fed" {
+		if err := newsvc.Get(fedclustername + ":8001"); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := newsvc.Get(clustername + ":8080"); err != nil {
+			return nil, err
+		}
 	}
 
 	//update svc
@@ -2348,11 +2665,20 @@ func UpdateSvc(svc Service, clustername string) ([]byte, error) {
 	newsvc.Spe = svcspe
 	//datas, _ := json.Marshal(newdep)
 	//fmt.Printf("%s", datas)
-	body, _, err := cluster.ReadBody(newsvc.Replace(clustername + ":8080"))
-	if err != nil {
-		return body, err
+	if clustername == "All" || clustername == "fed" {
+		body, _, err := cluster.ReadBody(newsvc.Replace(fedclustername + ":8001"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
+	} else {
+		body, _, err := cluster.ReadBody(newsvc.Replace(clustername + ":8080"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
 	}
-	return body, nil
+
 }
 func UpdatePV(p PV, clustername string) ([]byte, error) {
 
@@ -2471,6 +2797,7 @@ func UpdateSC(scd StorageClass, clustername string) ([]byte, error) {
 		return body, err
 	}
 	return body, nil
+
 }
 func UpdateIngress(ing Ingress, clustername string) ([]byte, error) {
 	//get ingress
@@ -2481,9 +2808,14 @@ func UpdateIngress(ing Ingress, clustername string) ([]byte, error) {
 	var newing = &ingress.Ingress{
 		Meta: ingmeta,
 	}
-
-	if err := newing.Get(clustername + ":8080"); err != nil {
-		return nil, err
+	if clustername == "fed" || clustername == "All" {
+		if err := newing.Get(fedclustername + ":8001"); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := newing.Get(clustername + ":8080"); err != nil {
+			return nil, err
+		}
 	}
 
 	//更新 ingress
@@ -2533,11 +2865,19 @@ func UpdateIngress(ing Ingress, clustername string) ([]byte, error) {
 	newing.Spe = ingspe
 	//datas, _ := json.Marshal(newdep)
 	//fmt.Printf("%s", datas)
-	body, _, err := cluster.ReadBody(newing.Replace(clustername + ":8080"))
-	if err != nil {
-		return body, err
+	if clustername == "fed" || clustername == "All" {
+		body, _, err := cluster.ReadBody(newing.Replace(fedclustername + ":8001"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
+	} else {
+		body, _, err := cluster.ReadBody(newing.Replace(clustername + ":8080"))
+		if err != nil {
+			return body, err
+		}
+		return body, nil
 	}
-	return body, nil
 }
 func UpdateTemRes(resdatas []byte, clustername string) ([]byte, error) {
 	//get config中的 resource
@@ -2678,4 +3018,14 @@ func Decimal(value float64) float64 {
 
 	return value
 
+}
+
+// 判断该挂载卷是否为PVC卷
+func IsPVC(name string, volumes []*pod.Volume) bool {
+	for _, item := range volumes {
+		if item.Name == name && item.PersistentVolumeClaim != nil {
+			return true
+		}
+	}
+	return false
 }

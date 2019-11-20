@@ -5,6 +5,7 @@ import {
 } from 'antd';
 import { height } from 'window-size';
 import './../service.less' 
+import utils from './../../../utils/utils'
 let id = 0;
 const FormItem = Form.Item;
 const Option=Select.Option;
@@ -74,7 +75,7 @@ class CreateSvc extends React.Component {
            var svc=new Service(values)
            console.log('svc',svc)
             console.log(JSON.stringify(svc))
-           fetch('http://localhost:9090/api/cluster/'+this.props.currentcluster+'/service',{
+           fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/service',{
             method:'POST',
             mode: 'cors', 
             body:JSON.stringify(svc)

@@ -1,310 +1,629 @@
-import React from 'react'
-import { Card, Button, Table, Form, Input, Checkbox,Select,Radio, Icon, message, Modal, DatePicker } from 'antd'
-import axios from '../../axios/index'
-import Utils from '../../utils/utils'
-import ETable from '../../components/ETable/index'
-import Moment from 'moment'
-const FormItem = Form.Item;
-const Option = Select.Option;
-const RadioGroup = Radio.Group;
-export default class User extends React.Component{
-
-    state = {
-        list:[]
-    }
-
-    params = {
-        page:1
-    }
-
-    requestList = ()=>{
-        axios.ajax({
-            url:'/table/list1',
-            data:{
-                params:{
-                    page:this.params.page
-                }
-            }
-        }).then((res)=>{
-            let _this = this;
-            this.setState({
-                list:res.result.list.map((item,index)=>{
-                    item.key=index
-                    return item;
-                }),
-                pagination:Utils.pagination(res,(current)=>{
-                    _this.params.page = current;
-                    _this.requestList();
-                })
-            })
-        })
-    }
-
-    componentDidMount(){
-        this.requestList();
-    }
-
-    // 操作员工
-    handleOperator = (type)=>{
-        let item = this.state.selectedItem;
-        if(type =='create'){
-            this.setState({
-                title:'创建员工',
-                isVisible:true,
-                type
-            })
-        }else if(type=="edit" || type=='detail'){
-            if(!item){
-                Modal.info({
-                    title: '信息',
-                    content: '请选择一个用户'
-                })
-                return;
-            }
-            this.setState({
-                title:type=='edit'?'编辑用户':'查看详情',
-                isVisible:true,
-                userInfo:item,
-                type
-            })
-        }else if(type=="delete"){
-            if(!item){
-                Modal.info({
-                    title: '信息',
-                    content: '请选择一个用户'
-                })
-                return;
-            }
-            Utils.ui.confirm({
-                text:'确定要删除此用户吗？',
-                onOk:()=>{
-                    axios.ajax({
-                        url:'/user/delete',
-                        data:{
-                            params:{
-                                id:item.id
-                            }
-                        }
-                    }).then((res)=>{
-                        if(res.code ==0){
-                            this.setState({
-                                isVisible:false
-                            })
-                            this.requestList();
-                        }
-                    })
-                }
-            })
-        }
-    }
-
-    handleSubmit = ()=>{
-        let type = this.state.type;
-        let data = this.userForm.props.form.getFieldsValue();
-        axios.ajax({
-            url:type == 'create'?'/user/add':'/user/edit',
-            data:{
-                params:{
-                    ...data
-                }
-            }
-        }).then((res)=>{
-            if(res.code ==0){
-                this.setState({
-                    isVisible:false
-                })
-                this.requestList();
-            }
-        })
-    }
-
-    render(){
-        const columns = [{
-            title: 'id',
-            dataIndex: 'id'
-          }, {
-            title: '用户名',
-            dataIndex: 'username'
-          }, {
-            title: '性别',
-            dataIndex: 'sex',
-            render(sex){
-                return sex ==1 ?'男':'女'
-            }
-          }, {
-            title: '状态',
-            dataIndex: 'state',
-            render(state){
-                let config = {
-                    '1':'咸鱼一条',
-                    '2':'风华浪子',
-                    '3':'北大才子一枚',
-                    '4':'百度FE',
-                    '5':'创业者'
-                }
-                return config[state];
-            }
-          },{
-            title: '爱好',
-            dataIndex: 'interest',
-            render(interest){
-                let config = {
-                    '1':'游泳',
-                    '2':'打篮球',
-                    '3':'踢足球',
-                    '4':'跑步',
-                    '5':'爬山',
-                    '6':'骑行',
-                    '7':'桌球',
-                    '8':'麦霸'
-                }
-                return config[interest];
-            }
-          },{
-            title: '爱好',
-            dataIndex: 'isMarried',
-            render(isMarried){
-                return isMarried?'已婚':'未婚'
-            }
-          },{
-            title: '生日',
-            dataIndex: 'birthday'
-          },{
-            title: '联系地址',
-            dataIndex: 'address'
-          },{
-            title: '早起时间',
-            dataIndex: 'time'
-          }
-        ];
-        return (
-            <div>
-                <Card>
-                    <Form layout="inline">
-                        <FormItem>
-                            <Input placeholder="请输入用户名"/>
-                        </FormItem>
-                        <FormItem>
-                            <Input type="password" placeholder="请输入密码"/>
-                        </FormItem>
-                        <FormItem>
-                            <Button type="primary">登 录</Button>
-                        </FormItem>
-                    </Form>
-                </Card>
-                <Card style={{marginTop:10}}>
-                    <Button type="primary" icon="plus" onClick={()=>this.handleOperator('create')}>创建员工</Button>
-                    <Button icon="edit" onClick={()=>this.handleOperator('edit')}>编辑员工</Button>
-                    <Button onClick={()=>this.handleOperator('detail')}>员工详情</Button>
-                    <Button type="danger" icon="delete" onClick={()=>this.handleOperator('delete')}>删除员工</Button>
-                </Card>
-                <div className="content-wrap">
-                    <ETable
-                        columns={columns}
-                        updateSelectedItem={Utils.updateSelectedItem.bind(this)}
-                        selectedRowKeys={this.state.selectedRowKeys}
-                        dataSource={this.state.list}
-                        pagination={this.state.pagination}
-                    />
-                </div>
-                <Modal
-                    title={this.state.title}
-                    visible={this.state.isVisible}
-                    onOk={this.handleSubmit}
-                    width={800}
-                    onCancel={()=>{
-                        this.userForm.props.form.resetFields();
-                        this.setState({
-                            isVisible:false,
-                            userInfo:''
-                        })
-                    }}
-                >
-                    <UserForm userInfo={this.state.userInfo} type={this.state.type} wrappedComponentRef={(inst) => this.userForm = inst }/>
-                </Modal>
-            </div>
-        );
-    }
-}
-class UserForm extends React.Component{
-
-    getState = (state)=>{
-        return {
-            '1':'咸鱼一条',
-            '2':'风华浪子',
-            '3':'北大才子一枚',
-            '4':'百度FE',
-            '5':'创业者'
-        }[state]
-    }
-
-    render(){
-        const { getFieldDecorator } = this.props.form;
-        const formItemLayout = {
-            labelCol: {span: 5},
-            wrapperCol: {span: 16}
-        };
-        const userInfo = this.props.userInfo || {};
-        const type = this.props.type;
-        return (
-            <Form layout="horizontal">
-                <FormItem label="姓名" {...formItemLayout}>
-                    {
-                        userInfo && type=='detail'?userInfo.username:
-                        getFieldDecorator('user_name',{
-                            initialValue:userInfo.username
-                        })(
-                            <Input type="text" placeholder="请输入姓名"/>
-                        )
-                    }
-                </FormItem>
-                <FormItem label="性别" {...formItemLayout}>
-                    {
-                        userInfo && type=='detail'?userInfo.sex==1?'男':'女':
-                        getFieldDecorator('sex',{
-                            initialValue:userInfo.sex
-                        })(
-                        <RadioGroup>
-                            <Radio value={1}>男</Radio>
-                            <Radio value={2}>女</Radio>
-                        </RadioGroup>
-                    )}
-                </FormItem>
-                <FormItem label="状态" {...formItemLayout}>
-                    {
-                        userInfo && type=='detail'?this.getState(userInfo.state):
-                        getFieldDecorator('state',{
-                            initialValue:userInfo.state
-                        })(
-                        <Select>
-                            <Option value={1}>咸鱼一条</Option>
-                            <Option value={2}>风华浪子</Option>
-                            <Option value={3}>北大才子一枚</Option>
-                            <Option value={4}>百度FE</Option>
-                            <Option value={5}>创业者</Option>
-                        </Select>
-                    )}
-                </FormItem>
-                <FormItem label="生日" {...formItemLayout}>
-                    {
-                        userInfo && type=='detail'?userInfo.birthday:
-                        getFieldDecorator('birthday',{
-                            initialValue:Moment(userInfo.birthday)
-                        })(
-                        <DatePicker />
-                    )}
-                </FormItem>
-                <FormItem label="联系地址" {...formItemLayout}>
-                    {
-                        userInfo && type=='detail'?userInfo.address:
-                        getFieldDecorator('address',{
-                            initialValue:userInfo.address
-                        })(
-                        <Input.TextArea rows={3} placeholder="请输入联系地址"/>
-                    )}
-                </FormItem>
-            </Form>
-        );
-    }
-}
-UserForm = Form.create({})(UserForm);
+ // 用户管理
+ import React from 'react'
+ import {Modal,message,Radio,Card,Divider,Badge,InputNumber,Spin,Alert,Tag,Table, Select,Tabs,Checkbox, Button,Input, Row,Col,Icon,Dropdown,Menu,  
+ } from 'antd'; 
+ import { HashRouter, Route, Switch, Redirect,Link,NavLink} from 'react-router-dom'
+ import CreateUser from'./form/createuser'
+ import EditUser from'./form/edituser'
+ import RadioGroup from 'antd/lib/radio/group';
+ import './user.less'
+ export default class User extends React.Component {
+     state = {
+         selectedRowKeys:[],
+         selectedRows:null, 
+         searchname:'',
+         searchdata:[],
+         checked:'',
+         dataSource:[{
+              username:'user1',
+              status:'Active',
+              role:'Administrator',
+              createtime:'2019-08-085T07:27:57Z',
+              authtime:'2019-08-095T07:27:57Z',
+              /*auths:[ //管理员拥有所有权限
+                 'federation',
+                 'clustercheck:cluster1',
+                 'clustercheck:cluster2',
+                 'application'
+              ]*/
+              
+         },{
+             username:'user2',
+             status:'inActive',
+             role:'CommonUser',
+             createtime:'2019-08-085T07:27:57Z',
+             authtime:'2019-08-095T07:27:57Z',
+             auths:[ 
+                 'clustercheck:cluster3',
+                 'clustercheck:cluster2',
+                 'service',
+                 'store' 
+             ]
+         }
+         ],
+ 
+         //根据登录用户的身份来显示可以管理的内容 先从cookie中获取
+         loginUser:{  
+             username:'use',
+             role:'Administrator'
+         }
+          
+        
+     }
+     componentDidMount(){//请求数据
+         this.request();
+     }
+     componentWillReceiveProps(nextProps){
+         //接收参数后更新数据
+ 
+     }
+     request = () => {
+         fetch('url',{
+         method:'GET'
+         }).then((response) => {
+             console.log('response:',response.ok)
+             return response.json();
+         }).then((data) => {
+             console.log('data:',data)
+             return data;
+         }).catch(function (e) {
+             console.log(e);
+         })
+     }
+     //批量删除操作
+     handleMutiDelete = ()=>{
+         console.log("MutiDelete")
+         console.log("选中的行的keys ",this.state.selectedRowKeys)
+         console.log("选中的行的数据",this.state.selectedRows) 
+         //let id = record.id;
+         if(this.state.selectedRowKeys.length===0){
+             Modal.info({
+                 title:'删除用户',
+                 content:'请选择一行',
+             })
+         } else
+         Modal.confirm({
+             title:'删除用户',
+             content:'您确认要删除这些用户吗？'+this.state.selectedRows.map(item=>item.username) ,
+             onOk:()=>{
+                 this.setState({  //取消选中行
+                     selectedRowKeys: [ ],  
+                     selectedRows: null
+                 })
+                 message.success('删除成功');
+                 //发送删除请求
+                 this.request();
+             }
+         })
+     }
+     //点击暂停
+     handleMutiPause = ()=>{
+             console.log("Pause")
+             console.log("selectedRowKeys",this.state.selectedRowKeys)
+             console.log("selectedRows",this.state.selectedRows) 
+             //let id = record.id;
+             
+             if(this.state.selectedRowKeys.length===0){
+                 Modal.info({
+                     title:'停用用户',
+                     content:'请选择一行',
+                 })
+             }  else
+             Modal.confirm({
+                 title:'停用用户',
+                 content:'您确认要将这些用户停用吗？'+this.state.selectedRows.map(item=>item.username) ,
+                 onOk:()=>{
+                     this.setState({  //取消选中行
+                         selectedRowKeys: [ ],  
+                         selectedRows: null
+                     })
+                     message.success('停用成功');
+                     //发送暂停请求
+                     this.request();
+                 }
+             })
+     }
+     //点击恢复
+     handleMutiResume = ()=>{
+             console.log("Resume")
+             console.log("selectedRowKeys",this.state.selectedRowKeys)
+             console.log("selectedRows",this.state.selectedRows) 
+             //let id = record.id;
+             if(this.state.selectedRowKeys.length===0){
+                 Modal.info({
+                     title:'用户恢复',
+                     content:'请选择一行',
+                 })
+             } else
+             Modal.confirm({
+                 title:'用户恢复',
+                 content:'您确认要恢复这些用户吗？'+this.state.selectedRows.map(item=>item.username) ,
+                 onOk:()=>{
+                     this.setState({  //取消选中行
+                         selectedRowKeys: [ ],  
+                         selectedRows: null
+                     })
+                     message.success('恢复成功');
+                     //发送恢复请求
+                     this.request();
+                 }
+             })
+     }  
+ 
+ 
+     onClick = ( key,text,record ) => { //点击下拉菜单选则
+         //message.info(`Click on item ${key}`);
+         this.setState({ 
+             operationdata:record, // 传入要操作数据
+         })
+         //console.log( "key",key);
+         //console.log( "text",text);
+         //console.log( "item",record);
+         if(key==='1'){ //如果是编辑 
+             this.handleUpdate(true) //显示编辑对话框
+             
+         }
+         if(key==='2'){ //如果是暂停
+             this.handlePause(key, text, record)  
+         }
+         if(key==='3'){ // 如果是恢复
+             this.handleResume(key, text, record)
+             
+         }
+         if(key==='4'){ //如果是删除
+             this.handleDelete(key, text, record)
+         }
+         
+         
+     }; 
+ 
+     // 暂停操作
+     handlePause = (key, text, record)=>{
+         console.log("暂停！")  
+         console.log("key",key)
+         console.log("text",text)
+         console.log("record",record)
+         //let id = record.id;
+        
+          Modal.confirm({
+             title:'停用用户',
+             content:'您确认要停用这用户吗？'+record.username,
+             onOk:()=>{
+                 
+                 message.success('停用成功');
+                 //发送暂停请求
+                 this.request();
+                  
+             }
+         }) 
+ 
+     }
+ 
+     
+       // 编辑操作
+     handleUpdate = (visible)=>{
+         //console.log("编辑！") 
+         if(visible)   
+         this.setState({
+             editvisible:true
+         }) 
+         else
+         this.setState({
+             editvisible:false
+         }) 
+ 
+     }
+ 
+      // 恢复操作
+      handleResume = (key, text, record)=>{
+         console.log("恢复！")  
+         console.log("key",key)
+         console.log("text",text)
+         console.log("record",record)
+         //let id = record.id;
+         Modal.confirm({
+             title:'恢复用户',
+             content:'您确认要恢复此用户吗？'+record.username ,
+             onOk:()=>{ 
+                 message.success('恢复成功');
+                 //发送恢复请求
+                 this.request();
+                 
+                  
+             }
+         })
+     }
+     
+     // 删除操作
+     handleDelete = (key, text, record)=>{
+         console.log("删除！")  
+         console.log("key",key)
+         console.log("text",text)
+         console.log("record",record)
+         //let id = record.id;
+         Modal.confirm({
+             title:'删除用户',
+             content:'您确认要删除此用户吗？'+record.username ,
+             onOk:()=>{ 
+                 message.success('删除成功');
+                 //发送删除请求
+                 this.request();
+                 //有了后台后删除
+                 this.setState({
+                     dataSource:this.state.dataSource.filter(item => item.username!==record.username)
+                 })
+             }
+         })
+     }
+         //搜索输入框响应变化
+     searchChange = (e)=>{
+             //console.log('e.target.value',e.target.value)
+             let content=e.target.value
+             this.setState({
+                 searchname:content
+             })
+             if(content===''){
+                 this.setState({
+                     search:false
+                 })    
+             }
+         }
+         //点击搜索按钮
+     handleSearch = ()=>{
+             //console.log('this.state.searchname:',this.state.searchname)
+             /*var date = new Date('2019-10-24T10:01:30Z')
+             function formatDate(date) {
+               var year = date.getFullYear()
+               var month = format(date.getMonth() + 1)
+               var da = format(date.getDate())
+               var h = format(date.getHours())
+               var m = format(date.getMinutes())
+               var s = format(date.getSeconds())
+               return year + '-' + month + '-' + da + ' ' + h + ':' + m + ':' + s
+             }
+             function format(val) {
+               return Number(val) < 10 ? '0' + val : '' + val
+             }
+             console.log(formatDate(date))*/
+             var deletedata={
+                 items:[{
+                     name:'1x',
+                     namespace:"default"
+                 }]
+             }
+             console.log(JSON.stringify(deletedata))
+             var jsondata=`{"items":[
+                 {
+                     "name":"1x",
+                     "namespace":"default"		
+                 },{
+                     "name":"hello2",
+                     "namespace":"default"		
+                 }]}`
+                 fetch('http://localhost:9090/api/cluster/k8s-fed/template/resources?data='+JSON.stringify(deletedata),{
+                 method:'DELETE',
+                 mode: 'cors', 
+                 }).then((response) => {
+                     console.log('response:',response.ok)
+                     return response.json();
+                 }).then((data) => {
+                     console.log('data:',data)
+                    /* data.map(item=>{
+                         var datas=item.configdata
+                         console.log('depdata:',JSON.parse(datas["data"]))
+                        
+                     }) */
+                      return data;
+                 }).catch( (e)=> {  
+                     console.log(e);
+                 })  
+              if(this.state.searchname!==''){
+                 //console.log('this.state.searchname:',this.state.searchname)
+                 //console.log(this.state.dataSource.map(item=>item.name.indexOf(this.state.searchname)))
+                 this.setState({
+                     searchdata:this.state.dataSource.filter(item=>item.username.indexOf(this.state.searchname)!==-1),
+                     search:true
+                 })
+                  
+             }else{
+                 this.setState({ 
+                     search:false
+                 })
+                 
+             }
+         }
+ 
+     handleConfig = (e)=>{
+         console.log('select config',e.target.value)
+         this.setState({
+             checked:e.target.value
+         })
+     }   
+     testClick =()=>{ 
+          
+         fetch( 'http://k8s-fed:9090/api/charts',{
+             method:'GET',
+             mode: 'cors', 
+             }).then((response) => {
+                 console.log('response:',response.ok)
+                 return response.json();
+             }).then((data) => {
+                 console.log('data:',data)
+                /* data.map(item=>{
+                     var datas=item.configdata
+                     console.log('depdata:',JSON.parse(datas["data"]))
+                    
+                 }) */
+                  return data;
+             }).catch( (e)=> {  
+                 console.log(e);
+             })
+     }
+     /*testClick =()=>{
+         
+         var data=` {
+             "name": "hellox",
+             "status": "running",
+             "namespace": "default",
+             "image": "nginx",
+             "createtime": "2019-10-22T03:15:41Z",
+             "podsnum": [
+                 1,
+                 1
+             ],
+             "revision": "1",
+             "env": [
+                 {
+                     "name": "CATTLE_SERVER",
+                     "value": "https://10.103.240.133"
+                 },
+                 {
+                     "name": "CATTLE_CA_CHECKSUM",
+                     "value": "1e86d8e787eb0d6b3866f997b08373d5363151fe263b34884d0952d2032414da"
+                 },
+                 {
+                     "name": "CATTLE_CLUSTER",
+                     "value": "true"
+                 },
+                 {
+                     "name": "CATTLE_K8S_MANAGED",
+                     "value": "true"
+                 }
+             ],
+             "label": [
+                 {
+                     "name": "app",
+                     "value": "hellox"
+                 },
+                 {
+                     "name": "cluster",
+                     "value": "k8s-fed"
+                 }
+             ],
+             "ports": [
+                 {
+                     "name": "http",
+                     "containerPort": 80,
+                     "protocol": "TCP"
+                 }
+             ],
+             "schedule": "LABEL",
+             "nodematch": [
+                 {
+                     "label": "beta.kubernetes.io/os",
+                     "op": "NotIn",
+                     "value": "windows"
+                 }
+             ],
+             "request": {
+                 "cpurequest": 100,
+                 "memoryrequest": 128
+             },
+             "limit": {
+                 "cpulimit": 100,
+                 "memorylimit": 128
+             }
+         }`
+         var configmap= {
+             "name": "helloxx",
+             "namespace": "default",
+             "configdata": {
+                 "a":  data
+             },
+             "createtime": "2019-09-11T09:56:43Z"
+         }
+        // console.log("datajson:"+JSON.stringify(data))
+         fetch('http://localhost:9090/api/cluster/k8s-fed/configmap'
+         ,{
+             method:'POST',
+             mode: 'cors', 
+             body:JSON.stringify(configmap),
+             }).then((response) => {
+                 console.log('response:',response.ok)
+                 return response.json();
+             }).then((data) => {
+                 console.log('data:',data)
+                 //return data;
+             }).catch(function (e) {
+                 console.log(e);
+             })
+         
+     }*/
+    
+     render(){
+         const columns=[
+             {
+                 title:'用户名',
+                 key:'username',
+                 dataIndex: 'username',  
+                  
+             },
+             {   
+                 title:'状态',
+                 key:'status',
+                 dataIndex:'status',
+                 render(status){ //第一个是running中的pod 第二个是pod总数
+                     let config = {
+                         'Active': <Tag  color="#87d068" style={{cursor:'auto' }} >Active</Tag>,
+                         'inActive': <Tag  color="#ff7875" style={{cursor:'auto' }} >inActive</Tag> ,  
+ 
+                     }
+                     return config[status];
+                 },
+                 
+             },  
+             
+             {   
+                 title:'角色',
+                 key:'role',
+                 dataIndex:'role', 
+                 render(role){
+                     let userrole={
+                         'Administrator':'管理员',
+                         'CommonUser':'普通用户',
+                     }
+                     return userrole[role]
+                 }
+             }, 
+             {   
+                 title:'创建时间',
+                 key:'createtime',
+                 dataIndex:'createtime',  
+             }, 
+             {   
+                 title:'授权时间',
+                 key:'authtime',
+                 dataIndex:'authtime',  
+             },
+             {   
+                 title:'操作',
+                 key:'operation' ,
+                 render:(text,record)=>{
+                     var opration  
+                     var pause= <Menu.Item key="2">暂停</Menu.Item> 
+                     var resume=<Menu.Item key="3">恢复</Menu.Item>
+                     if(this.state.loginUser.role=='普通用户'){
+                          opration = ( <Dropdown overlay={  
+                             <Menu onClick={({key})=>this.onClick(key,text,record)}> 
+                             <Menu.Item key="1">编辑</Menu.Item>
+                           </Menu> 
+                          } trigger={['click']}>
+                              <img src={require('./../../resource/image/more.png')} alt="more" height='12' style={{cursor:'pointer' }}></img> 
+                         </Dropdown> )
+                     } else{
+                         opration = ( <Dropdown overlay={  
+                             <Menu onClick={({key})=>this.onClick(key,text,record)}>
+                             <Menu.Item key="1">编辑</Menu.Item> 
+                             {record.status=='Active'?pause:resume
+                             }  
+                             <Menu.Item key="4">删除</Menu.Item> 
+                           </Menu> 
+                          } trigger={['click']}>
+                              <img src={require('./../../resource/image/more.png')} alt="more" height='12' style={{cursor:'pointer' }}></img> 
+                         </Dropdown> )
+                     }
+                     return opration
+                 }
+             }
+         ]
+ 
+         
+         
+         const selectedRowKeys=this.state.selectedRowKeys;
+         const rowSelection={ 
+             type: 'checkbox',
+             selectedRowKeys,
+             onChange:(selectedRowKeys,selectedRows)=>{
+                 this.setState({
+                     selectedRowKeys,
+                     selectedRows
+                 })
+             }
+         }
+ 
+ 
+         return(
+             <HashRouter  > 
+             { this.state.loading?(  <Spin tip="Loading...">
+                 <Alert
+                 message="Loading"
+                 description="数据加载中"
+                 type="info"
+                 />
+             </Spin>
+             ): 
+         (  
+         <div style={{backgroundColor:'white', minHeight:'calc(60vh)'}} > 
+            <div className="Dropdown-wrap" > 
+                     <span style={{marginRight:10,fontSize:15}}>用户列表 </span>  
+                 </div> 
+          
+             <div style={{ padding:10 ,marginTop:-10  }}>
+                  <Divider style={{marginTop:-5}}></Divider>
+ 
+                 <Row className='Button-wrap' style={{ marginTop:-10}}> 
+                 <Col span='20'> 
+                     <Button onClick={this.handleMutiPause}>暂停<Icon type='pause'></Icon></Button>
+                     <Button onClick={this.handleMutiResume}>恢复<Icon type="caret-right" /></Button>
+                      {this.state.loginUser.role=='管理员'? 
+                      <Button onClick={this.handleMutiDelete}>删除<Icon type="delete" /></Button>:''
+                     }    
+                     <Input style={{display:'inline-block',width:150}} onChange={this.searchChange}></Input>
+                     <Button onClick={this.handleSearch}>搜索<Icon type="search"  /></Button> 
+                     
+                 </Col>
+                     <Col span='4' className='Button-right'> 
+                     <CreateUser/>
+                 </Col>
+                 </Row>
+                 <Table  
+                     style={{marginTop:16}}
+                     dataSource={this.state.search?this.state.searchdata:this.state.dataSource}
+                     rowSelection={rowSelection }
+                     columns={columns }  
+                     rowClassName={(record,index)=>index%2===0?'table1':'table2'}
+                 />
+                 <EditUser dataSource={this.state.operationdata} editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}></EditUser>
+                  {
+                      
+                 <Radio.Group className='config-wrap' onChange={this.handleConfig}>
+                         <Radio value={this.state.dataSource}>
+                         <Card  className={this.state.checked!=='1x'?'config-card-wrap':''}
+                           style={{
+                               background:this.state.checked=='1x'?'#5e7ce0':'#f2f5fc', 
+                             }}
+                          > 
+                          <div style={{ width:'60px',background:'#FFFFFF', textAlign:'center',margin:'0 auto' ,marginTop:'-2' }}>
+                          1x
+                          </div> 
+                          <div>
+                          config1x asdasfasfasf
+                          </div> 
+                         </Card>
+                         </Radio>
+ 
+                         <Radio value='2x'>
+                         <Card  className={this.state.checked!=='2x'?'config-card-wrap':''} 
+                         style={{  background:this.state.checked=='2x'?'#5e7ce0':'#f2f5fc'}}>
+                             <div style={{ }}>
+                             2x
+                             </div> 
+                             <div>
+                              config2x
+                             </div>
+                             </Card>
+                         </Radio>
+                 </Radio.Group>
+                      
+                  }
+                  <Button onClick={this.testClick}>test</Button>
+      
+                  
+                  
+             </div>  
+         </div>
+              )} 
+         </HashRouter>
+                 )
+         }
+     }
