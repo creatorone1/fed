@@ -134,7 +134,8 @@ export default class Node extends React.Component {
         alldatas:[] //所有集群下的node数据
         ,
         pauseop:false,
-        currentcluster:'fed'
+        currentcluster:'fed',
+        btnloading:false, 
     }
     componentDidMount(){//请求数据
         //按集群读取节点数据
@@ -203,7 +204,8 @@ export default class Node extends React.Component {
                                     selectedRowKeys:[],
                                     selectedRows:null,
                                     dataSource: nowdata,
-                                    alldatas:nodes
+                                    alldatas:nodes,
+                                    btnloading:false, 
                                 })
                             }else{ 
                             } 
@@ -225,7 +227,8 @@ export default class Node extends React.Component {
                                     selectedRowKeys:[],
                                     selectedRows:null,
                                     dataSource: nowdata,
-                                    alldatas:nodes
+                                    alldatas:nodes, 
+                                    btnloading:false, 
                                 })
                             }else{ 
                             }
@@ -234,6 +237,9 @@ export default class Node extends React.Component {
                         })
                     return data;
                 }).catch(function (e) {
+                    this.setState({  
+                        btnloading:false, 
+                    })
                     console.log(e);
                 })
 
@@ -313,7 +319,7 @@ export default class Node extends React.Component {
                         }
                         datas.items=datas.items.concat(depitem)
                     })
-                    
+                    console.log('datas',JSON.stringify(datas))
                     fetch(utils.urlprefix+'/api/cluster/'+this.state.selectedRows[0].cluster+'/pause/nodes?data='+JSON.stringify(datas),{
                         method:'GET',
                         mode: 'cors', 
@@ -371,10 +377,11 @@ export default class Node extends React.Component {
                     this.state.selectedRows.map(item=>{
                         var depitem={
                             name:item.name, 
+                            clustername:item.cluster,
                         }
                         datas.items=datas.items.concat(depitem)
                     })
-                    
+                    console.log('datas',JSON.stringify(datas))
                     fetch(utils.urlprefix+'/api/cluster/'+this.state.selectedRows[0].cluster+'/resume/nodes?data='+JSON.stringify(datas),{
                         method:'GET',
                         mode: 'cors', 
@@ -431,9 +438,11 @@ export default class Node extends React.Component {
                     this.state.selectedRows.map(item=>{
                         var depitem={
                             name:item.name, 
+                            clustername:item.cluster,
                         }
                         datas.items=datas.items.concat(depitem)
                     })
+                    console.log('datas',datas)
                     
                     fetch(utils.urlprefix+'/api/cluster/'+this.state.selectedRows[0].cluster+'/drain/nodes?data='+JSON.stringify(datas),{
                         method:'GET',
@@ -510,9 +519,11 @@ export default class Node extends React.Component {
                 }   
                 var depitem={
                     name:record.name,
+                    clustername:record.cluster
                 }
+
                 datas.items=datas.items.concat(depitem) 
-                
+                 console.log('datas',datas)
                 fetch(utils.urlprefix+'/api/cluster/'+record.cluster+'/pause/nodes?data='+JSON.stringify(datas),{
                     method:'GET',
                     mode: 'cors', 
@@ -625,9 +636,11 @@ export default class Node extends React.Component {
                 
                  var depitem={
                      name:record.name,
-                 }
-                 datas.items=datas.items.concat(depitem)
+                     clustername:record.cluster
+                } 
+                datas.items=datas.items.concat(depitem) 
                 
+                 console.log('datas',datas)
                 fetch(utils.urlprefix+'/api/cluster/'+record.cluster+'/resume/nodes?data='+JSON.stringify(datas),{
                     method:'GET',
                     mode: 'cors', 
@@ -674,11 +687,14 @@ export default class Node extends React.Component {
                 }  
                 var ditem={
                         name:record.name,  
-                 }
-                datas.items=datas.items.concat(ditem)
-               
+                        clustername:record.cluster
+                    } 
+                datas.items=datas.items.concat(ditem) 
+                    
+                console.log('datas',JSON.stringify(datas))
+
                // console.log(JSON.stringify(datas))
-                //下面URL的 集群 名称 以后需要替换掉
+                //下面URL的 集群 名称 以后需要替换掉 ok
                 fetch(utils.urlprefix+'/api/cluster/'+record.cluster+'/nodes?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
@@ -759,6 +775,17 @@ export default class Node extends React.Component {
     statechange=()=>{ //创建服务之后回调
         console.log('refresh!')
         this.request()
+    } 
+    handleRefresh =() =>{
+        console.log('refresh !')
+        this.setState({ 
+            btnloading:true
+        })
+        //this.request()
+        setTimeout(()=> {//模拟数据加载结束则取消加载框 
+            this.request()
+        }
+        ,1000) 
     } 
     render(){ 
         const columns=[
@@ -915,15 +942,26 @@ export default class Node extends React.Component {
                         <Button onClick={this.handleMutiPause}>暂停<Icon type='pause'></Icon></Button>
                         <Button onClick={this.handleMutiResume}>恢复<Icon type="caret-right" /></Button>
                         <Button onClick={this.handleMutiDrain}>驱逐<Icon type="export" /></Button>
-                       
+                         
                          
                         
                     </Col>
                         <Col span='8' className='Button-right'> 
+                        <Button onClick={this.handleRefresh} loading={this.state.btnloading}>刷新 </Button>
+                
                         <Input style={{display:'inline-block',width:150}} onChange={this.searchChange}></Input>
                         <Button onClick={this.handleSearch}>搜索<Icon type="search"  /></Button> 
                     </Col>
                     </Row>
+                    
+                    <Spin tip="Loading..." spinning={this.state.btnloading}>
+                    {this.state.btnloading?(      
+                            <Alert
+                                message="Loading"
+                                description="数据加载中"
+                                type="info"
+                            />
+                    ):
                     <Table  
                         style={{marginTop:16}}
                         dataSource={this.state.search?this.state.searchdata:this.state.dataSource}
@@ -931,7 +969,8 @@ export default class Node extends React.Component {
                         rowSelection={rowSelection }
                         columns={columns }  
                         rowClassName={(record,index)=>index%2===0?'table1':'table2'}
-                    />
+                        /> }
+                    </Spin>
                      
                 </div>  
                 <EditNode statechange={this.statechange} currentcluster={this.state.currentcluster} dataSource={this.state.operationdata}  editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}></EditNode>

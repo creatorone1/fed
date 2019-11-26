@@ -740,8 +740,9 @@ function Service(values) {
     
   var exips=[] 
   exipkeys.map(key=>{
-    exips=exips.concat[exip[key]]
+    exips=exips.concat(exip[key])
   })
+  console.log(exips)
   svc.externalip=exips 
    
   return svc

@@ -6,6 +6,7 @@ import {
     Modal,Form, Input, Icon, Button,InputNumber ,Collapse , Select,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
 } from 'antd';
 import { height } from 'window-size';
+import utils from '../../../utils/utils';
  
 
 let id = 0;
@@ -15,6 +16,8 @@ const Panel = Collapse.Panel;
 class EditCluster extends React.Component {
     state = { 
         visible: false,  
+         
+        deletelabels:[] 
     }
     componentDidMount(){//初始化数据，只调用一次
           //...
@@ -36,8 +39,10 @@ class EditCluster extends React.Component {
           //console.log('object:',JSON.parse(data)) 
           this.setState({  
           //这儿 必须是深拷贝，不然会影响传入的值,并且只能初始化这个参数一次，以后的form的set操作不能影响该值
-          dataSource:JSON.parse(data) //
+          dataSource:JSON.parse(data) ,//
+          deletelabels:[]
           }) 
+          console.log(' dataSource',JSON.parse(data)) 
         }
         //console.log('nextProps:',  nextProps) 
         //console.log('nextProps.dataSource:', nextProps.dataSource) 
@@ -74,9 +79,49 @@ class EditCluster extends React.Component {
           //portkeys表示portnum与porttype的key
           const { name,cluster,labelkeys,env_label,value 
             } = values;   //从values中读取数据
-            console.log('env_label name :', labelkeys.map(key => env_label[key]));
+          // console.log('env_label name :', labelkeys.map(key => env_label[key]));
         
-          //成功了则关闭弹窗且初始化
+          var cluster = new Cluster(values,this.state.deletelabels)
+          /*var metadata={
+            name:cluster.name
+          }
+          var labels={} 
+          cluster.labels.map(item=>{
+             labels[item.name]=item.value
+          })
+          metadata.labels=labels
+          var datas={
+            metadata:metadata
+          }
+          console.log('cluster:',JSON.stringify(datas)) */
+
+          console.log('cluster:',JSON.stringify(cluster))
+          fetch(utils.urlprefix+'/api/cluster/'+name,{
+            method:'PUT',
+            mode: 'cors', 
+            body:JSON.stringify(cluster)
+            }).then((response) => {
+                console.log('response:',response.ok)
+                return response.json();
+            }).then((data) => {
+                console.log('data:',data)
+                //成功了则关闭弹窗且初始化
+                const { form } = this.props; 
+                form.resetFields();  //重置表单
+                this.props.handleUpdate(false)
+               this.props.statechange()//更新成功刷新数据
+                return data;
+            }).catch( (e)=>{ 
+                  //成功了则关闭弹窗且初始化
+                  const { form } = this.props; 
+                  form.resetFields();  //重置表单
+                  this.props.handleUpdate(false)
+                 //通知父节点关闭弹窗 
+                console.log(e);
+            })   
+
+         
+            //成功了则关闭弹窗且初始化
           const { form } = this.props; 
           form.resetFields();  //重置表单
           id=0;
@@ -127,15 +172,19 @@ class EditCluster extends React.Component {
         }
       }
       if(keytype=='labelkeys') { //如果是默认label则记得删除默认端口label
-      form.setFieldsValue({
-        labelkeys: keys.filter(key => key !== k),
-      });
-      if(k.indexOf('default')!==-1){ //如果是默认label则记得删除默认label
-         let data=this.state.dataSource   
-         //state中的dataSource也发生了变化，符合要求，不用在setState来改变
-         data.labels=data.labels.filter(item=>item.name!==env_label[k]) 
-         //console.log('data in remove:',data)  
-       }
+          form.setFieldsValue({
+            labelkeys: keys.filter(key => key !== k),
+          });
+          if(k.indexOf('default')!==-1){ //如果是默认label则记得删除默认label
+            let data=this.state.dataSource   
+            
+            this.setState({
+              deletelabels:this.state.deletelabels.concat(data.labels.filter(item=>item.name==env_label[k])[0])
+            }) 
+            //state中的dataSource也发生了变化，符合要求，不用在setState来改变
+            data.labels=data.labels.filter(item=>item.name!==env_label[k]) 
+            //console.log('data in remove:',data)  
+          }
        
       }
     }
@@ -318,4 +367,32 @@ class EditCluster extends React.Component {
   export default Form.create()(EditCluster); 
 
 
+  function Cluster(values,deletelabels){
+    var cluster=new Object(); 
+      const { name,
+               labelkeys,
+               env_label,
+               value, 
+              } = values;
+        cluster.name=name
+      var labels=[] 
+      deletelabels.map(item=>{
+        var l={
+          name:item.name,
+          value:"delete=nil",
+        }
+        labels=labels.concat(l)
+      })
+      labelkeys.map(key=>{
+        var l={
+          name:env_label[key],
+          value:value[key],
+        }
+        labels=labels.concat(l)
+      })
+       
+      cluster.labels=labels
+  
+      return cluster
+  }
 

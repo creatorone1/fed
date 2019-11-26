@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"k8sfed/cluster/user"
 	"net/http"
 
 	"github.com/julienschmidt/httprouter"
-	"k8sfed11.18/cluster/user"
 )
 
 func getUsers(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {

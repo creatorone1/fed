@@ -27,11 +27,14 @@ export default class FedNamespaceList extends React.Component {
 
         }
         ]
-        ,crvisible:false,
+        ,
+        crvisible:false,
+          
+        btnloading:false,
     }
     componentDidMount(){//请求数据
        
-       console.log('namespace type:',this.props.type) //如果不是集群的
+       //console.log('namespace type:',this.props.type) //如果不是集群的
        console.log('namspaces currentcluster:',this.props.currentcluster) 
        if(this.props.type!==undefined){
            console.log('change')
@@ -40,13 +43,13 @@ export default class FedNamespaceList extends React.Component {
                   dataSource:this.props.data //
                })  
        }else{  //如果是联邦的则访问联邦命名空间数据
-          this.request('fed')
+          this.request(this.props.currentcluster)
        }
      }
 
     componentWillReceiveProps(nextProps){
        // console.log('componentWillReceiveProps')
-        console.log('namspaces currentcluster:',nextProps.currentcluster) 
+        console.log('nextProps currentcluster:',nextProps.currentcluster) 
         /*if(nextProps.type!==undefined){
             console.log('change')
             this.setState({  
@@ -55,7 +58,7 @@ export default class FedNamespaceList extends React.Component {
                 }) 
             console.log(nextProps.data)
         }*/
-       
+        //this.request(nextProps.currentcluster);
     } 
 
     // 动态获取mock数据
@@ -71,10 +74,14 @@ export default class FedNamespaceList extends React.Component {
             this.setState({ //表格选中状态清空
                 selectedRowKeys:[],
                 selectedRows:null,
-                dataSource:data
+                dataSource:data,
+                btnloading:false,
             }) 
             return data;
         }).catch( (e)=> {  
+            this.setState({  
+                btnloading:false,
+            }) 
             console.log(e);
         })
     } 
@@ -246,6 +253,18 @@ export default class FedNamespaceList extends React.Component {
                 console.log('refresh!')
                 this.request(this.props.currentcluster)
     } 
+
+    handleRefresh =() =>{
+        console.log('refresh !')
+        this.setState({ 
+            btnloading:true
+        })
+        //this.request()
+        setTimeout(()=> {//模拟数据加载结束则取消加载框 
+            this.request(this.props.currentcluster)
+        }
+        ,1000) 
+    } 
     render(){ 
         const columns=[
             {
@@ -326,12 +345,22 @@ export default class FedNamespaceList extends React.Component {
                         <Button onClick={this.handleMutiDelete}>删除<Icon type='delete'></Icon></Button>
                         <Input style={{display:'inline-block',width:150}} onChange={this.searchChange}></Input>
                         <Button onClick={this.handleSearch}>搜索<Icon type="search"  /></Button> 
-                        
+                        <Button onClick={this.handleRefresh} loading={this.state.btnloading}>刷新 </Button>
+                
                     </Col>
                         <Col span='4' className='Button-right'> 
                         <CreateFedNamespace statechange={this.statechange} currentcluster={this.props.currentcluster}/>
                     </Col>
                     </Row>
+
+                    <Spin tip="Loading..." spinning={this.state.btnloading}>
+                    {this.state.btnloading?(      
+                            <Alert
+                                message="Loading"
+                                description="数据加载中"
+                                type="info"
+                            />
+                    ):
                     <Table  
                         style={{marginTop:16}}
                         dataSource={this.state.search?this.state.searchdata:this.state.dataSource}
@@ -339,7 +368,8 @@ export default class FedNamespaceList extends React.Component {
                         rowSelection={rowSelection }
                         columns={columns }  
                         rowClassName={(record,index)=>index%2===0?'table1':'table2'}
-                    />
+                    />}
+                    </Spin>
                       
                 </div>
               

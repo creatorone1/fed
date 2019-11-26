@@ -12,6 +12,11 @@ type PatchNode struct {
 	ApiVersion string         `json:"apiVersion,omitempty"`
 	Meta       *PatchMetadata `json:"metadata,omitempty"`
 }
+type PatchCluster struct {
+	Kind       string         `json:"kind,omitempty"`
+	ApiVersion string         `json:"apiVersion,omitempty"`
+	Meta       *PatchMetadata `json:"metadata,omitempty"`
+}
 type PatchMetadata struct {
 	Name                       string             `json:"name,omitempty"`
 	GenerateName               string             `json:"generateName,omitempty"`
@@ -33,6 +38,9 @@ type PatchMetadata struct {
 func (node *PatchNode) Update(master string, data []byte) (io.ReadCloser, int, error) {
 	return cluster.PatchCall("PATCH", "/api/v1/nodes/"+node.Meta.Name, master, data)
 	//return cluster.Call("PATCH", "/api/v1/nodes/"+node.Meta.Name, master, node)
+}
+func (cs *PatchCluster) Update(master string, data []byte) (io.ReadCloser, int, error) {
+	return cluster.PatchCall("PATCH", "/apis/federation/v1beta1/clusters/"+cs.Meta.Name, master, data)
 }
 
 type PatchDeployment struct {

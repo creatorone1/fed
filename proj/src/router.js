@@ -33,6 +33,7 @@ import DetaiNode from './pages/node/detailpage'
 import DetaiCluster from './pages/cluster/detailpage'
 import cookie from 'react-cookies' 
 import Monitor from './pages/monitor'
+import ImagePage from './pages/image'
 import Auth from './pages/auth'
 
 export default class ERouter extends React.Component{
@@ -60,6 +61,13 @@ export default class ERouter extends React.Component{
                                     <Route exact path="/application" render={() => (
                                         cookie.load("appauth") ? (
                                             <Redirect to="/applicationauth"/>
+                                            ) : (
+                                            <Redirect to="/auth"/>
+                                            )
+                                        )}/>
+                                     <Route exact path="/image" render={() => (
+                                        cookie.load("appauth") ? (
+                                            <Redirect to="/imageauth"/>
                                             ) : (
                                             <Redirect to="/auth"/>
                                             )
@@ -94,6 +102,7 @@ export default class ERouter extends React.Component{
                                         )}/>
 
                                     <Route path="/applicationauth" component={Application} onEnter={this.authRequired} />
+                                    <Route path="/imageauth" component={ImagePage} />
                                     <Route path="/serviceauth" component={Service} />
                                     <Route path="/auth" component={Auth} />
                                     <Route path="/storeauth" component={Store} /> 

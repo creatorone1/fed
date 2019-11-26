@@ -12,6 +12,11 @@ const menuList = [
           
     },
     {
+        title:'镜像管理',
+        key:'/image',
+          
+    },
+    {
         title:'服务管理',
         key:'/service',
           

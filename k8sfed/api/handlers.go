@@ -18,12 +18,19 @@ var clustername map[string]string
 var fedclustername string
 var chartrepo string
 var tillermastername string
+var harborusername string
+var harborpassword string
+var harbormaster string
 
 func init() {
+	//fmt.Printf("new api")
 	clusters = []string{"controller", "k8s-fed"}
 	fedclustername = "k8s-fed"
 	chartrepo = "k8s-fed"
 	tillermastername = "k8s-fed"
+	harborusername = "admin"
+	harborpassword = "Harbor12345"
+	harbormaster = "core.harbor.domain"
 }
 
 type middleWareHandler struct {
@@ -74,6 +81,7 @@ func createRouter(r *httprouter.Router) {
 			"/api/users/:username/module/:modulename":   getUserModulePermission,
 			"/api/users/:username/fed":                  getUserFedPermission,
 			"/api/users/:username/cluster/:clustername": getUserClusterPermission,
+			"/api/images":                               getImages,
 		},
 		"POST": { //创建
 			"/api/app":                                  postApp,
@@ -114,6 +122,8 @@ func createRouter(r *httprouter.Router) {
 			"/api/users":                                                        deleteUsers,
 			"/api/cluster/:cluster/configmaps":                                  deleteConfigMaps,
 			"/api/cluster/:cluster/pods":                                        deletePods,
+			"/api/imagerepos":                                                   deleteImageRepos,
+			"/api/imagetags":                                                    deleteImageTags,
 		},
 		"PUT": { //更新  包括扩容,      回滚
 			"/api/cluster/:cluster/app":                                                  updateApp,
@@ -891,7 +901,23 @@ func getSCs(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 	w.Write(scsdata)
 	return nil
 }
+func getImages(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 
+	fmt.Println("getImages被访问！")
+
+	dataSource, errd := ListImages(harbormaster, harborusername, harborpassword)
+	if errd != nil {
+		// handle error
+		return errd
+	}
+	igsdata, err := json.Marshal(dataSource)
+	if err != nil {
+		// handle error
+		return err
+	}
+	w.Write(igsdata)
+	return nil
+}
 func pauseNodes(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 
 	fmt.Println("pauseNodes被访问！")
@@ -1548,8 +1574,26 @@ func deleteNodes(w http.ResponseWriter, r *http.Request, p httprouter.Params) er
 
 	fmt.Println("deleteNodes被访问！")
 
-	io.WriteString(w, "deleteNodes")
-	//w.Write(body) 返回json数据byte数据类型
+	var jsondata = r.FormValue("data")
+	//fmt.Print(jsondata)
+	var datas = &MetaDatas{}
+	errj := json.Unmarshal([]byte(jsondata), datas)
+	if errj != nil {
+		sendErrorResponse(w, ErrorDelete)
+		return errj
+	}
+	//var flag = false
+	for _, item := range datas.Items {
+		_, err := DeleteNode(item.Clustername, item.Name)
+		if err != nil {
+			//io.WriteString(w, "wrong")
+			sendErrorResponse(w, ErrorDelete)
+			return err
+		}
+		//w.Write(body)
+	}
+
+	sendNormalResponse(w, NormalOp)
 	return nil
 }
 
@@ -1661,7 +1705,59 @@ func deletePods(w http.ResponseWriter, r *http.Request, p httprouter.Params) err
 	//w.Write(body) 返回json数据byte数据类型
 	return nil
 }
+func deleteImageRepos(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 
+	fmt.Println("deleteImageRepos被访问！")
+	var jsondata = r.FormValue("data")
+	//fmt.Print(jsondata)
+	var datas = &MetaDatas{}
+	errj := json.Unmarshal([]byte(jsondata), datas)
+	if errj != nil {
+		sendErrorResponse(w, ErrorDelete)
+		return errj
+	}
+	//var flag = false
+	for _, item := range datas.Items {
+		_, err := DeleteImageRepo(harbormaster, item.Name, harborusername, harborpassword)
+		if err != nil {
+			//io.WriteString(w, "wrong")
+			sendErrorResponse(w, ErrorDelete)
+			return err
+		}
+		//w.Write(body)
+	}
+	sendNormalResponse(w, NormalOp)
+	//w.Write("success")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+func deleteImageTags(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("deleteImageTags被访问！")
+	var jsondata = r.FormValue("data")
+	var reponame = r.FormValue("reponame")
+	//fmt.Print(jsondata)
+	var datas = &MetaDatas{}
+	errj := json.Unmarshal([]byte(jsondata), datas)
+	if errj != nil {
+		sendErrorResponse(w, ErrorDelete)
+		return errj
+	}
+	//var flag = false
+	for _, item := range datas.Items {
+		_, err := DeleteImageTag(harbormaster, item.Name, reponame, harborusername, harborpassword)
+		if err != nil {
+			//io.WriteString(w, "wrong")
+			sendErrorResponse(w, ErrorDelete)
+			return err
+		}
+		//w.Write(body)
+	}
+	sendNormalResponse(w, NormalOp)
+	//w.Write("success")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
 func updateApp(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 
 	fmt.Println("updateRelease被访问！")
@@ -1953,13 +2049,37 @@ func updateNode(w http.ResponseWriter, r *http.Request, p httprouter.Params) err
 
 func updateCluster(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 	fmt.Println("updateCluster被访问！")
+	//var clustername = p.ByName("cluster")
 
-	var clustername = p.ByName("cluster")
 	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	var cs = &Cluster{}
+	if err := json.Unmarshal(data, cs); err != nil {
+		return err
+	}
+	/*datas, errj := json.Marshal(dep)
+	if errj != nil {
+		return errj
+	}
+	w.Write(datas)*/
+
+	body, erru := UpdateCluster(*cs)
+
+	if erru != nil {
+		sendErrorResponse(w, ErrorUpdate)
+		return erru
+	}
+	w.Write(body)
+	//sendNormalResponse(w, NormalOp)
+	return nil
+
+	/*data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		sendErrorResponse(w, ErrorUpdate)
 		return err
-	}
+	}*/
 	//fmt.Println(clustername)
 	//fmt.Println(data)
 
@@ -1974,7 +2094,7 @@ func updateCluster(w http.ResponseWriter, r *http.Request, p httprouter.Params) 
 	}
 	w.Write(datas)*/
 
-	body, erru := UpdateCluster(clustername, data)
+	/*body, erru := UpdateCluster(clustername, data)
 
 	if erru != nil {
 		sendErrorResponse(w, ErrorUpdate)
@@ -1982,5 +2102,5 @@ func updateCluster(w http.ResponseWriter, r *http.Request, p httprouter.Params) 
 	}
 	w.Write(body)
 	//sendNormalResponse(w, NormalOp)
-	return nil
+	return nil*/
 }

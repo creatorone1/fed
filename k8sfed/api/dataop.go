@@ -7,6 +7,7 @@ import (
 	css "k8sfed/cluster/clusters"
 	"k8sfed/cluster/configmap"
 	"k8sfed/cluster/deployment"
+	"k8sfed/cluster/image"
 	"k8sfed/cluster/ingress"
 	"k8sfed/cluster/namespace"
 	nm "k8sfed/cluster/namespace"
@@ -1054,6 +1055,34 @@ func ListIngress(clustername string) ([]Ingress, error) {
 	}
 	return dataSource, nil
 }
+func ListImages(master, username, password string) (*image.Repos, error) {
+
+	var repos *image.Repos = new(image.Repos) //声明结构体
+	if err := repos.ListRepos(master, username, password); err != nil {
+		return nil, err
+	}
+
+	for _, repo := range *repos {
+		for _, image := range repo.Images {
+			var size = image.Size
+			sizef := float64(size) / 1024.0 / 1024.0
+			image.Size = Decimal(sizef)
+		}
+	}
+	/*if clustername == "fed" || clustername == "All" {
+		if err := ings.List(fedclustername + ":8001"); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := ings.List(clustername + ":8080"); err != nil {
+			return nil, err
+		}
+	}*/
+
+	//dataSource = append(dataSource, deps.Items...)
+
+	return repos, nil
+}
 
 /*
 chartmuseum的mastername 从配置文件中读取
@@ -1387,6 +1416,32 @@ func DeleteRelease(swiftclustername, name string) ([]byte, error) {
 	/*data, _ := json.Marshal(dep)
 	fmt.Printf("%s",data)*/
 	body, _, err := cluster.ReadBody(newre.Delete(swiftclustername + ":31589"))
+	if err != nil {
+		return body, err
+	}
+	return body, nil
+}
+func DeleteImageRepo(harbormaster, name, uname, pwd string) ([]byte, error) {
+
+	var newrepo = &image.Repository{
+		Name: name,
+	}
+	/*data, _ := json.Marshal(dep)
+	fmt.Printf("%s",data)*/
+	body, _, err := cluster.ReadBody(newrepo.DeleteRepo(harbormaster, uname, pwd))
+	if err != nil {
+		return body, err
+	}
+	return body, nil
+}
+func DeleteImageTag(harbormaster, tagname, reponame, uname, pwd string) ([]byte, error) {
+
+	var newtag = &image.Image{
+		Name: tagname,
+	}
+	/*data, _ := json.Marshal(dep)
+	fmt.Printf("%s",data)*/
+	body, _, err := cluster.ReadBody(newtag.DeleteImageTag(harbormaster, reponame, uname, pwd))
 	if err != nil {
 		return body, err
 	}
@@ -2978,7 +3033,40 @@ func UpdateNode(nd Node, clustername string) ([]byte, error) {
 }
 
 //更新集群标签
-func UpdateCluster(clustername string, datas []byte) ([]byte, error) {
+func UpdateCluster(cs Cluster) ([]byte, error) {
+	var labels = cs.Labels
+	var mplabels map[string]*string = make(map[string]*string)
+
+	for _, label := range labels {
+		var v = label.Value
+		if v == "delete=nil" {
+			mplabels[label.Name] = nil
+		} else {
+			mplabels[label.Name] = &v
+		}
+	}
+
+	var csmeta = &PatchMetadata{
+		Name:   cs.Name,
+		Labels: mplabels,
+	}
+
+	var newcs = &PatchCluster{
+		Meta: csmeta,
+	}
+
+	datas, _ := json.Marshal(newcs)
+	//fmt.Printf("%s", datas)
+	//return datas, nil
+
+	body, _, err := cluster.ReadBody(newcs.Update(fedclustername+":8001", datas))
+	if err != nil {
+		return body, err
+	}
+	return body, nil
+}
+
+func UpdateClusterOld(clustername string, datas []byte) ([]byte, error) {
 	/*var labels = cs.Labels
 	var mplabels map[string]string = make(map[string]string)
 

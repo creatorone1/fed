@@ -47,7 +47,9 @@ export default class ClusterList extends React.Component {
             } ],
             version:'v1.10.0'
         }
-        ]
+        ],
+          
+        btnloading:false,
        
     }
     componentDidMount(){//请求数据
@@ -68,11 +70,15 @@ export default class ClusterList extends React.Component {
             this.setState({ //表格选中状态清空
                 selectedRowKeys:[],
                 selectedRows:null,
-                dataSource:data
+                dataSource:data, 
+                btnloading:false, 
             })
              
             return data;
         }).catch( (e)=> {  
+            this.setState({   
+                btnloading:false, 
+            })
             console.log(e);
         })
     } 
@@ -101,13 +107,42 @@ export default class ClusterList extends React.Component {
                 title:'删除集群',
                 content:'您确认要删除这些集群吗？'+this.state.selectedRows.map(item=>item.name),
                 onOk:()=>{
-                    this.setState({  //取消选中行
-                        selectedRowKeys: [ ],  
-                        selectedRows: null
+                    var datas={
+                        items:[]
+                    }  
+                    this.state.selectedRows.map(item=>{
+                        var depitem={
+                            name:item.name,  
+                        }
+                        datas.items=datas.items.concat(depitem)
                     })
-                    message.success('删除成功');
-                    //发送恢复请求
-                    this.request();
+                    console.log('datas',JSON.stringify(datas))
+                    fetch(utils.urlprefix+'/api/clusters?data='+JSON.stringify(datas),{
+                        method:'DELETE',
+                        mode: 'cors', 
+                        }).then((response) => {
+                            console.log('response:',response.ok)
+                            return response.json();
+                        }).then((data) => {
+                            this.setState({  //取消选中行
+                                selectedRowKeys: [],  
+                                selectedRows: null
+                            })
+                            message.success('删除成功');
+                            //刷新数据
+                            //this.requestnode(this.state.selectedRows[0].cluster);
+                            this.request();
+                            return data;
+                        }).catch( (e)=> {  
+                            this.setState({  //取消选中行
+                                selectedRowKeys: [],  
+                                selectedRows: null
+                            })
+                            message.success('删除失败');
+                            //this.requestnode(this.state.selectedRows[0].cluster);
+                            this.request();
+                            console.log(e);
+                        }) 
                 }
             }) 
     }  
@@ -150,13 +185,44 @@ export default class ClusterList extends React.Component {
                 title:'删除集群',
                 content:'您确认要删除此集群吗？'+record.name ,
                 onOk:()=>{ 
-                    message.success('删除成功');
-                    //发送删除请求
-                    this.request();
-                    //有了后台后删除
-                    this.setState({
-                        dataSource:this.state.dataSource.filter(item => item.name!==record.name)
-                    })
+                    var datas={
+                        items:[]
+                    }  
+                    var ditem={
+                            name:record.name,  
+                        } 
+                    datas.items=datas.items.concat(ditem) 
+                        
+                    console.log('datas',JSON.stringify(datas))
+    
+                   // console.log(JSON.stringify(datas))
+                    //下面URL的 集群 名称 以后需要替换掉 ok
+                    fetch(utils.urlprefix+'/api/clusters?data='+JSON.stringify(datas),{
+                        method:'DELETE',
+                        mode: 'cors', 
+                        }).then((response) => {
+                            console.log('response:',response.ok)
+                            return response.json();
+                        }).then((data) => {
+                            this.setState({  //取消选中行
+                                selectedRowKeys: [ ],  
+                                selectedRows: null
+                            })
+                            message.success('删除成功');
+                            //发送删除请求
+                            this.request();
+                            return data;
+                        }).catch( (e)=> {  
+                            this.setState({  //取消选中行
+                                selectedRowKeys: [ ],  
+                                selectedRows: null
+                            })
+                            message.success('删除成功');
+                            //发送删除请求
+                            this.request();
+                            console.log(e);
+                        }) 
+                    
                 }
             })
         }
@@ -210,7 +276,19 @@ export default class ClusterList extends React.Component {
         }
         statechange=()=>{ //创建服务之后回调
             console.log('refresh!')
-            this.request(this.props.currentcluster)
+            this.request()
+        } 
+
+        handleRefresh =() =>{
+            console.log('refresh !')
+            this.setState({ 
+                btnloading:true
+            })
+            //this.request()
+            setTimeout(()=> {//模拟数据加载结束则取消加载框 
+                this.request()
+            }
+            ,1000) 
         } 
     render(){ 
         const columns=[
@@ -331,12 +409,22 @@ export default class ClusterList extends React.Component {
                         <Button onClick={this.handleMutiDelete}>删除<Icon type='delete'></Icon></Button>
                         <Input style={{display:'inline-block',width:150}} onChange={this.searchChange}></Input>
                         <Button onClick={this.handleSearch}>搜索<Icon type="search"  /></Button> 
-                        
+                        <Button onClick={this.handleRefresh} loading={this.state.btnloading}>刷新 </Button>
+                
                     </Col>
                         <Col span='4' className='Button-right'> 
                         <CreateCluster   />
                     </Col>
                     </Row>
+                    
+                    <Spin tip="Loading..." spinning={this.state.btnloading}>
+                    {this.state.btnloading?(      
+                            <Alert
+                                message="Loading"
+                                description="数据加载中"
+                                type="info"
+                            />
+                    ):
                     <Table  
                         style={{marginTop:16}}
                         dataSource={this.state.search?this.state.searchdata:this.state.dataSource}
@@ -344,8 +432,9 @@ export default class ClusterList extends React.Component {
                         rowSelection={rowSelection }
                         columns={columns }  
                         rowClassName={(record,index)=>index%2===0?'table1':'table2'}
-                    />
-                     <EditCluster dataSource={this.state.operationdata}  editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}></EditCluster>
+                    />}
+                    </Spin>
+                     <EditCluster statechange={this.statechange} dataSource={this.state.operationdata}  editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}></EditCluster>
             
                 </div>  
             </div>

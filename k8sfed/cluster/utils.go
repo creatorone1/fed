@@ -129,7 +129,8 @@ func ReadBody(stream io.ReadCloser, statusCode int, err error) ([]byte, int, err
 	if err != nil {
 		return nil, statusCode, err
 	}
-
+	//fmt.Printf("close body")
+	defer stream.Close()
 	return body, statusCode, nil
 
 }

@@ -3,11 +3,12 @@ import React from 'react'
 //import {Modal,message,Badge,Table, Checkbox, Button,Input, Row,Col,Icon,Dropdown,Menu, }from 'antd'
  
 import {
-    Modal,Card,Form, Radio,Input, Icon, Button,InputNumber ,Collapse , Select,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
+    Modal,Card,Form, Divider,AutoComplete,Radio,Input, Icon, Button,InputNumber ,Collapse , Select,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
 } from 'antd';
 import { height } from 'window-size';
 import './../service.less' 
 import utils from './../../../utils/utils'
+import { POINT_CONVERSION_COMPRESSED } from 'constants';
 let id = 0;
 const FormItem = Form.Item;
 const Option=Select.Option;
@@ -17,7 +18,11 @@ class CreateWL extends React.Component {
         visible: false, 
         advanced:false,
         schedule:'',
-        nodedata:[]
+        images:[],
+        imagesearch:[],
+        nodedata:[],
+        pvcs:[],
+        pvcdatas:[],
     }
     componentWillUnmount(){
       //console.log('CreateWL destroy')
@@ -44,12 +49,56 @@ class CreateWL extends React.Component {
       }).catch( (e)=> {  
           console.log(e);
       })
+
+      fetch(utils.urlprefix+'/api/images',{
+        method:'GET',
+        mode: 'cors', 
+        }).then((response) => {
+            console.log('response:',response.ok)
+            return response.json();
+        }).then((data) => {
+            console.log('data:',data)
+            var images=[]
+            data.map(repo=>{ 
+              repo.images.map(image=>{
+                images=images.concat(image.pullname) 
+              })  
+            }) 
+            this.setState({ //表格选中状态清空 
+              images:images,
+              imagesearch:images
+            })
+             
+            return data;
+        }).catch( (e)=> {  
+            console.log(e);
+        })
+
+        fetch(utils.urlprefix+'/api/cluster/'+clustername+'/pvcs',{
+          method:'GET',
+          mode: 'cors', 
+          }).then((response) => {
+              console.log('response:',response.ok)
+              return response.json();
+          }).then((data) => {
+              console.log('data:',data)  
+
+              this.setState({ //表格选中状态清空 
+                  pvcs:data,
+                  pvcdatas:data,
+              })
+               
+              return data;
+          }).catch( (e)=> {  
+              console.log(e);
+          })
      } 
     
     showModal = () => {
       this.request(this.props.currentcluster)
       const { form } = this.props;
       form.resetFields(); 
+      form.resetFields('mountkeys')
       id=0;
       this.setState({
         visible: true, 
@@ -217,7 +266,30 @@ class CreateWL extends React.Component {
         }
       });
     }
+    removevolume= (keytype,k,rulekey) => { //移除
+      const { form } = this.props;
+      // can use data-binding to get 
+      if(keytype=='mountkeys'){
+          console.log('delete mountkeys'+rulekey) 
+          let  mountkeys=form.getFieldValue(`mountkeys[${rulekey}]`) //backendkeys是一个map对象map对象每个值是数组
+          console.log('mountkeys',mountkeys)
+          console.log('delete key',k) 
+          mountkeys=mountkeys.filter(key=>key !==k )
+          form.setFieldsValue({
+              [`mountkeys[${rulekey}]`]:mountkeys, 
+          }) 
+        } 
+        else 
+        { 
+            const keys = form.getFieldValue(keytype); 
+            // 移除keys数组的一个值  
+            if(keytype=='volumekeys')  
+            form.setFieldsValue({
+              volumekeys: keys.filter(key => key !== k),
+            });
+        }
 
+    }
     remove = (keytype,k) => { //移除
       const { form } = this.props;
       // can use data-binding to get
@@ -246,12 +318,41 @@ class CreateWL extends React.Component {
         nodematchkeys: keys.filter(key => key !== k),
       });
     }
-    
+    addvolume =(keytype,k)=>{
+      const { form } = this.props;  
+
+        if(keytype==='mountkeys'){
+
+          let  mountkeys=form.getFieldValue(`mountkeys[${k}]`) //backendkeys是一个map对象map对象每个值是数组
+          //console.log('backendkeys',backendkeys)
+          mountkeys=mountkeys.concat(keytype+id++)
+          //通过getFieldDecorator初始化来给表单属性赋值，但是它不会更新界面
+          //form.getFieldDecorator(`backendkeys[${k}]`, { initialValue: backendkeys })  
+          form.setFieldsValue({
+              [`mountkeys[${k}]`]:mountkeys, 
+          })
+          //console.log('backendkeysk',form.getFieldValue(`backendkeys[${k}]`)) 
+          
+        }
+        else{
+          const keys = form.getFieldValue(keytype);
+          
+          //给keys数组添加一个值
+          const nextKeys = keys.concat(keytype+id++);   
+          if(keytype==='volumekeys'){
+              form.setFieldsValue({
+                volumekeys: nextKeys,
+                  }); 
+          }  
+         
+      }
+    }
     add = (keytype) => {   //点击添加按钮执行的方法
       const { form } = this.props; 
       const keys = form.getFieldValue(keytype);
       //给keys数组添加一个值
       const nextKeys = keys.concat(keytype+id++);
+      
       if(keytype=='keys')  
       form.setFieldsValue({
         keys: nextKeys,
@@ -273,7 +374,26 @@ class CreateWL extends React.Component {
         nodematchkeys: nextKeys,
       });
     }
-  
+    handleSlectn=(value)=>{ //选择当前命名空间下的服务
+      console.log('select namespaces: 配置当前命名空间下的pvc'+value)
+      //选取当前命名空间下的服务 给后端backend中 的 option 选项
+      if(this.state.pvcdatas){
+          this.setState({
+              pvcdatas:this.state.pvcs.filter(item=>item.namespace==value)
+              //selectsvcdata:this.state.svcdata.filter(item=>item.namespace===value)
+              
+          })
+      }
+        else{
+          this.setState({
+            pvcdatas:[]
+              //selectsvcdata:this.state.svcdata.filter(item=>item.namespace===value)
+          })
+      }  
+      this.props.form.resetFields(`pvcname`) 
+      
+    } 
+
     // handleSubmit = (e) => { //点击提交按钮执行的方法
 
     //   e.preventDefault();
@@ -471,6 +591,7 @@ class CreateWL extends React.Component {
       return formItems;
     }
 
+ 
     handleScheduleChange =(e)=>{
         this.setState({
           schedule:e.target.value
@@ -482,6 +603,232 @@ class CreateWL extends React.Component {
         this.props.form.resetFields('clustermatchkeys')
         this.props.form.resetFields('nodematchkeys')
       }
+    }
+    
+
+ 
+     //初始化mount数组
+     initMountKeysItem =(keytype,keys,volumekey)=>{
+      const { getFieldDecorator,getFieldValue } = this.props.form;
+      //console.log('BackendKeysItemkeys '+rulekey,keys)
+      const formItems = keys.map((k, index) => { //根据后端key的数量显示当前rule下后端的条数
+      //if(!getFieldValue(`ports[${k}]`))  //为空才创建
+     // getFieldDecorator(`ports[${k}]`, { initialValue: [] })
+      return( 
+      <Row key={k} gutter={16}
+      style={{margin:'auto'}}
+      > 
+      <Col span='10'  > 
+      <FormItem 
+          label={index === 0 ? '容器路径' : ''} 
+      >
+          {getFieldDecorator(`mountpath[${k}]`, {
+          initialValue:'' ,
+          rules:[
+            {
+            required:true,
+            message:'容器路径不能为空'
+            },
+            ]  
+          })( 
+          <Input placeholder="" style={{width:'80%',marginRight:'8%' }}  />   
+          )}
+          
+      </FormItem>
+      </Col>
+
+      <Col span='10'  > 
+      <FormItem 
+          label={index === 0 ? '子路径' : ''} 
+      >
+          {getFieldDecorator(`subpath[${k}]`, {
+         // initialValue:'' , 
+          })( 
+            <Input placeholder="" style={{width:'80%',marginRight:'8%' }}  />   
+          )}
+          
+      </FormItem>
+      </Col>
+
+      <Col span='4'  > 
+      <FormItem
+          label={index === 0 ? '只读' : ''} 
+      >
+          <div> 
+          {getFieldDecorator(`readonly[${k}]`, {
+          initialValue:false,
+           
+          })(  
+              <Checkbox>  </Checkbox>   
+          )}
+          { keys.length > 0 ? (
+          <Icon
+              className="dynamic-delete-button"
+              type="minus-circle-o"
+              onClick={() => this.removevolume(keytype,k,volumekey)}
+          />
+          ) : null }
+          </div> 
+      </FormItem>
+      </Col> 
+      </Row>
+      )
+      });
+      return formItems;
+      }
+    //初始化数据卷表单数组
+      initVolumeKeysItem =(keytype,keys)=>{
+      const { getFieldDecorator,getFieldValue } = this.props.form;
+      
+      const formItems = keys.map((k, index) => {
+      //if(!getFieldValue(`backendkeys[${k}]`))
+      getFieldDecorator(`mountkeys[${k}]`, { initialValue: [] });//定义backendkeys的key  
+      const mountkeys = getFieldValue(`mountkeys[${k}]`); //获取backendkeys的key 
+      const MountItems = this.initMountKeysItem('mountkeys',mountkeys,k) //根据key数量设定backendkeys表单item
+              
+      const  pvcs= this.state.pvcdatas.map(item=>
+        <Option key={item.name} value={item.name}>{item.name}</Option>
+      )  
+      const  pvcops= this.state.pvcdatas.map(item=>
+        <AutoComplete.Option key={item.name} value={item.name}>{item.name}</AutoComplete.Option>
+      )  
+      return( //根据key的数量显示form内容行数 
+      <div key={index}> 
+        <Row>
+        <Col span='4'>
+          <FormItem >数据卷{index+1}</FormItem> 
+        </Col> 
+        <Col span='20'   > 
+          <FormItem 
+            style={{           //靠右显示高级按钮
+              textAlign:"right"
+            }}
+            > 
+              <div> 
+              <Button type='primary' onClick={()=>this.addvolume('mountkeys',k)}    >
+                  <Icon type="plus" />添加映射
+              </Button>
+              { keys.length > 0 ? (
+              <span
+              onClick={() => this.removevolume(keytype,k)}
+              style={{marginLeft:16,fontSize:16,cursor:'pointer',lineHeight:'100%'}}
+              
+              > <Icon
+                  className="dynamic-delete-button"
+                  type="minus-circle-o"
+                  style={{marginRight:6,fontSize:16 ,verticalAlign:'text-top'}}
+                  
+                  />
+                  移除此卷
+              
+              </span>
+              ) : null }
+              </div> 
+          </FormItem > 
+        </Col>  
+     
+        </Row>
+      <Row>  
+        <Col span='10' 
+        > 
+          <FormItem 
+              label=  '卷名'  
+              labelCol= {{
+                  xs: { span: 24 },
+                  sm: { span: 6 , offset: -40},
+                }}
+              wrapperCol={{
+                  xs: { span: 24 },
+                  sm: { span: 18 },
+              }} 
+          >
+              {getFieldDecorator(`volumename[${k}]`, {
+              initialValue:'' , 
+                rules:[
+                  {
+                  required:true,
+                  message:'卷名不能为空'
+                  },
+                  ]
+              })( 
+              <Input placeholder="" style={{width:'80%',marginRight:'8%' }}  />  
+              )}
+              
+          </FormItem>
+        </Col> 
+        <Col span='12'> 
+          <FormItem 
+              label=  '数据卷名称'  
+              labelCol= {{
+                  xs: { span: 24 },
+                  sm: { span: 8 , offset: -40},
+                }}
+              wrapperCol={{
+                  xs: { span: 24 },
+                  sm: { span: 16 },
+              }}
+          >
+              {getFieldDecorator(`pvcname[${k}]`, {
+              initialValue:'' , 
+              rules:[
+                {
+                required:true,
+                message:'数据卷不能为空'
+                },
+                ]
+              })( 
+                <AutoComplete 
+                  style={{ width: "80%" }}
+                  onSelect={this.onSelectvo} 
+                  onChange={this.onChangevo}
+                  filterOption={(inputValue, option)=>
+                     option.props.children.indexOf(inputValue) !== -1
+                    }
+                placeholder="PVC"
+
+                >
+                  {pvcops}
+                </AutoComplete>
+
+                //<Select  style={{width:'80%',marginRight:'8%' }}>
+                 // {pvcs}
+                //</Select> 
+              )}
+              
+          </FormItem>
+        </Col>
+         </Row>
+         <div  >   
+        {MountItems}
+        </div  >       
+          <Divider />
+          </div>
+        )
+        });
+        return  formItems; 
+      } 
+
+    onSearch = searchText => {
+      if(searchText==''){
+        this.setState({
+          imagesearch:  this.state.images 
+        });
+      }else{
+        this.setState({
+          imagesearch: this.state.images.filter(item=>item.indexOf(searchText)!==-1)
+        });
+      } 
+    };
+  
+    onChange = imagevalue => {
+      //console.log('onChange', imagevalue);
+      //this.setState({ imagevalue });
+    };
+    onSelect =(value)=>{
+      console.log('onSelect', value);
+    }
+    onSelectvo=(value)=>{
+      console.log('onSelect', value);
     }
     render() {
       const { getFieldDecorator, getFieldValue } = this.props.form;
@@ -515,6 +862,12 @@ class CreateWL extends React.Component {
       getFieldDecorator('nodematchkeys', { initialValue: [] });//定义nodematch的key 
       const nodematchkeys = getFieldValue('nodematchkeys'); //获取match的key
       const nodematchformItems = this.initMatchKeysItem('nodematchkeys',nodematchkeys) //根据key数量设定label表单item
+
+      getFieldDecorator('volumekeys', { initialValue: [] });//定义nodematch的key 
+      const volumekeys = getFieldValue('volumekeys'); //获取match的key
+      const volumeformItems = this.initVolumeKeysItem('volumekeys',volumekeys) //根据key数量设定label表单item
+
+       
 
        
       const currentcluster=this.props.currentcluster
@@ -553,7 +906,7 @@ class CreateWL extends React.Component {
           onCancel={this.hideModal}
           maskClosable={false}
           destroyOnClose={true}
-          
+          width={720}
           afterClose={()=>{
            // console.log('close!') 
           }}
@@ -629,8 +982,18 @@ class CreateWL extends React.Component {
                  },   
                 ] 
                }) (
-                 <span><Input style={{ width: wwidth }}/> </span>
-                 
+                <AutoComplete
+                  dataSource={this.state.imagesearch}
+                  style={{ width: wwidth }}
+                  onSelect={this.onSelect} 
+                  onChange={this.onChange}
+                  filterOption={(inputValue, option)=>
+                    option.props.children.indexOf(inputValue) !== -1
+                  }
+                  placeholder="输入镜像"
+                />
+                   //  <span><Input style={{ width: wwidth }}/> </span>
+ 
                   )
              } 
            </FormItem>
@@ -648,7 +1011,7 @@ class CreateWL extends React.Component {
                  },   
                 ] 
                }) (
-                 <Select style={{ width: wwidth }}> 
+                 <Select style={{ width: wwidth }} onChange={this.handleSlectn}> 
                      { namespacesdata
                      }
                  </Select> 
@@ -798,8 +1161,18 @@ class CreateWL extends React.Component {
                       </Row> 
 
                   </Panel>
+                  <Panel header="添加数据卷" key="5">
+                    { //标签数组
+                      volumeformItems
+                    } 
+                    <FormItem  >
+                    <Button type='primary' onClick={()=>this.addvolume('volumekeys')}    >
+                    <Icon type="plus" />添加数据卷
+                    </Button>
+                    </FormItem> 
+                  </Panel>    
 
-                  <Panel header="主机调度" key="5" >
+                  <Panel header="主机调度" key="6" >
                   <FormItem label='调度策略'
                           {...formItemLayout} >
                                 {
@@ -884,7 +1257,7 @@ class CreateWL extends React.Component {
   export default Form.create()(CreateWL); 
 
   function Deployment(values) {
-    var node=new Object(); 
+    var dep=new Object(); 
     const { name,podsnum,image,namespace,
             keys,
             labelkeys, 
@@ -902,13 +1275,20 @@ class CreateWL extends React.Component {
             matchop,
             matchvalue,
              
+            volumekeys,
+            volumename,
+            pvcname,
+            mountkeys,
+            mountpath,
+            subpath,
+            readonly,
             } = values;
-    node.name=name;
-    node.namespace=namespace
-    node.image=image
-    node.podsnum=[]
-    node.podsnum[0]=0
-    node.podsnum[1]=podsnum
+    dep.name=name;
+    dep.namespace=namespace
+    dep.image=image
+    dep.podsnum=[]
+    dep.podsnum[0]=0
+    dep.podsnum[1]=podsnum
 
     var env=[]
     keys.map(key =>{
@@ -918,7 +1298,7 @@ class CreateWL extends React.Component {
       }
       env=env.concat(e)
     })       
-    node.env= env  
+    dep.env= env  
 
     var label=[]
     labelkeys.map(key =>{
@@ -928,9 +1308,9 @@ class CreateWL extends React.Component {
       }
       label=label.concat(l)
     })       
-    node.label= label
+    dep.label= label
 
-    node.schedule=  schedule     
+    dep.schedule=  schedule     
     if(schedule=="LABEL"){
         var nodematch=[]
         nodematchkeys.map(key =>{
@@ -941,10 +1321,10 @@ class CreateWL extends React.Component {
           }
           nodematch=nodematch.concat(nm)
         })       
-        node.nodematch= nodematch
+        dep.nodematch= nodematch
     }
     if(schedule=="NODE"){
-      node.schnodename= nodename
+      dep.schnodename= nodename
     }
 
     var ports=[]
@@ -955,20 +1335,41 @@ class CreateWL extends React.Component {
       }
       ports=ports.concat(p)
     })       
-    node.ports= ports
+    dep.ports= ports
+
+    var volumes=[]
+    volumekeys.map(volumekey=>{
+      var mounts=[]
+      mountkeys[volumekey].map(mountkey=>{
+        var m={
+          name:volumename[volumekey],
+          mountpath: mountpath[mountkey],
+          readonly: readonly[mountkey],
+          subpath: subpath[mountkey],
+        }
+        mounts=mounts.concat(m)
+      })
+      var v={
+        name:volumename[volumekey],
+        pvcname:pvcname[volumekey],
+        volumemounts:mounts,
+      }
+      volumes=volumes.concat(v)
+    })
+    dep.volumes=volumes
 
     var request={
       cpurequest:cpurequest,
       memoryrequest:memoryrequest,
       gpurequest:gpurequest
     }
-    node.request= request
+    dep.request= request
 
     var limit={
       cpulimit:cpulimit,
       memorylimit:memorylimit 
     }
-    node.limit= limit
-    return node
+    dep.limit= limit
+    return dep
 }
 

@@ -2,7 +2,7 @@
 
 import React from 'react'
 import './store.less'
-import {Modal,message,Badge,InputNumber,Tag,Table, Checkbox, Button,Input, Row,Col,Icon,Dropdown,Menu,  
+import {Modal,message,Badge,InputNumber,Spin,Alert,Tag,Table, Checkbox, Button,Input, Row,Col,Icon,Dropdown,Menu,  
 } from 'antd'; 
 import CreateSc from './form/create_sc'
 import EditSc from './form/edit_sc'
@@ -38,7 +38,8 @@ export default class StorageClass extends React.Component {
                 reclaimPolicy:'Retain',
                 key:'3',
             }
-        ] 
+        ],
+        btnloading:false, 
     }
     componentDidMount(){//请求数据
         //this.request();
@@ -59,10 +60,15 @@ export default class StorageClass extends React.Component {
             this.setState({ //表格选中状态清空
                 selectedRowKeys:[],
                 selectedRows:null,
-                dataSource:data
+                dataSource:data,
+                
+                btnloading:false,
             }) 
             return data;
         }).catch((e)=>{
+            this.setState({  
+                btnloading:false,
+            })
             console.log(e);
         })
     }
@@ -241,6 +247,17 @@ export default class StorageClass extends React.Component {
         console.log('refresh!')
         this.request(this.props.currentcluster)
     } 
+    handleRefresh =() =>{
+        console.log('refresh !')
+        this.setState({ 
+            btnloading:true
+        })
+        //this.request()
+        setTimeout(()=> {//模拟数据加载结束则取消加载框 
+            this.request(this.props.currentcluster)
+        }
+        ,1000) 
+    } 
     render(){
         /**考虑加上集群列，表示数据属于哪个集群 */
         
@@ -311,19 +328,29 @@ export default class StorageClass extends React.Component {
                         <Button onClick={this.handleMutiDelete}>删除<Icon type='delete'></Icon></Button>
                         <Input style={{display:'inline-block',width:150}} onChange={this.searchChange}></Input>
                         <Button onClick={this.handleSearch}>搜索<Icon type="search"  /></Button> 
-                        
+                        <Button onClick={this.handleRefresh} loading={this.state.btnloading}>刷新 </Button>
+                
                     </Col>
                         <Col span='4' className='Button-right'> 
                         <CreateSc  statechange={this.statechange} currentcluster={this.props.currentcluster}   namespaces={this.props.namespaces} > </CreateSc>
                     </Col>
                     </Row>
+                    <Spin tip="Loading..." spinning={this.state.btnloading}>
+                    {this.state.btnloading?(      
+                            <Alert
+                                message="Loading"
+                                description="数据加载中"
+                                type="info"
+                            />
+                    ):
                     <Table  
                         dataSource={this.state.search?this.state.searchdata:this.state.dataSource}
                         rowKey={record => record.name}
                         rowSelection={rowSelection }
                         columns={columns }  
                         rowClassName={(record,index)=>index%2===0?'table1':'table2'}
-                    />
+                    />}
+                    </Spin>
                       <EditSc statechange={this.statechange} currentcluster={this.props.currentcluster} dataSource={this.state.operationdata} namespaces={this.props.namespaces} editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}></EditSc>
                 </div>
                 )

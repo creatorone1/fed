@@ -46,7 +46,8 @@ export default class AppRelease   extends React.Component {
             cluster:'cluster2',
             createtime:'2019-5-23',
             key:'2',
-        } ]
+        } ],
+        btnloading:false
     }
     componentDidMount(){//请求数据
         this.request(this.props.currentcluster);
@@ -76,12 +77,16 @@ export default class AppRelease   extends React.Component {
                 item.createtime=Util.formateDate(item.createtime)
             })
             this.setState({
-                dataSource:data
+                selectedRowKeys:[],
+                selectedRows:null,
+                dataSource:data,
+                btnloading:false
             })
             return data;
         }).catch((e)=>{
             this.setState({
-                dataSource:[]
+                dataSource:[],
+                btnloading:false
             })
             console.log(e);
         })
@@ -375,6 +380,18 @@ export default class AppRelease   extends React.Component {
         console.log('refresh!')
         this.request(this.props.currentcluster)
     }  
+
+    handleRefresh =() =>{
+        console.log('refresh !')
+        this.setState({ 
+            btnloading:true
+        })
+        //this.request()
+        setTimeout(()=> {//模拟数据加载结束则取消加载框 
+            this.request(this.props.currentcluster);
+          }
+        ,1000) 
+    }
     render(){
         const columns=[
             {
@@ -461,16 +478,27 @@ export default class AppRelease   extends React.Component {
                         <Button onClick={this.handleMutiDelete}>删除<Icon type='delete'></Icon></Button>
                         <Input style={{display:'inline-block',width:150}} onChange={this.searchChange}></Input>
                         <Button onClick={this.handleSearch}>搜索<Icon type="search"  /></Button> 
-                        
+                         <Button onClick={this.handleRefresh} loading={this.state.btnloading}>刷新 </Button>
+                    
                     </Col>  
                     </Row>
+
+                    <Spin tip="Loading..." spinning={this.state.btnloading}>
+                    {this.state.btnloading?(      
+                            <Alert
+                                message="Loading"
+                                description="数据加载中"
+                                type="info"
+                            />
+                    ):
                     <Table  
                         dataSource={this.state.search?this.state.searchdata:this.state.dataSource}
                         rowKey={record => record.name.name+record.namespace} 
                         rowSelection={rowSelection }
                         columns={columns }  
                         rowClassName={(record,index)=>index%2===0?'table1':'table2'}
-                    /> 
+                    />}
+                    </Spin>
                     <EditApp  statechange={this.statechange} currentcluster={this.props.currentcluster} clusters={this.props.clusters} dataSource={this.state.operationdata}   editvisible={this.state.editvisible} handleUpdate={this.handleUpdate}/>
                  
                  <Modal

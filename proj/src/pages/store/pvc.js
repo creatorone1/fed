@@ -2,7 +2,7 @@
 
 import React from 'react'
 import './store.less'
-import {Modal,message,Badge,InputNumber,Tag,Table, Checkbox, Button,Input, Row,Col,Icon,Dropdown,Menu,  
+import {Modal,message,Badge,Spin,InputNumber,Tag,Table, Checkbox, Button,Input, Row,Col,Icon,Dropdown,Menu, Alert,  
 } from 'antd'; 
 import CreatePVC from './form/create_pvc'
 import utils from './../../utils/utils'
@@ -41,8 +41,10 @@ export default class PVC extends React.Component {
             storageclass:'',
             createtime:'2019-5-11',
             key:'3',
-        },
-       ] 
+        }, 
+       ] ,
+       
+       btnloading:false,
 
          
     }
@@ -72,11 +74,15 @@ export default class PVC extends React.Component {
             this.setState({ //表格选中状态清空
                 selectedRowKeys:[],
                 selectedRows:null,
-                dataSource:datas
+                dataSource:datas,
+                btnloading:false,
             })
              
             return data;
         }).catch( (e)=> {  
+            this.setState({ 
+                btnloading:false,
+            })
             console.log(e);
         })
     } 
@@ -241,6 +247,17 @@ export default class PVC extends React.Component {
         console.log('refresh!')
         this.request(this.props.currentcluster,this.props.currentnamespace)
     } 
+    handleRefresh =() =>{
+        console.log('refresh !')
+        this.setState({ 
+            btnloading:true
+        })
+        //this.request()
+        setTimeout(()=> {//模拟数据加载结束则取消加载框 
+            this.request(this.props.currentcluster,this.props.currentnamespace);
+          }
+        ,1000) 
+    }
     render(){
         
         const columns=[
@@ -334,19 +351,29 @@ export default class PVC extends React.Component {
                         <Button onClick={this.handleMutiDelete}>删除<Icon type='delete'></Icon></Button>
                         <Input style={{display:'inline-block',width:150}} onChange={this.searchChange}></Input>
                         <Button onClick={this.handleSearch}>搜索<Icon type="search"  /></Button> 
-                     
+                        <Button onClick={this.handleRefresh} loading={this.state.btnloading}>刷新 </Button>
+                
                     </Col>
                      <Col span='4' className='Button-right'> 
                         <CreatePVC statechange={this.statechange} currentcluster={this.props.currentcluster} namespaces={this.props.namespaces} ></CreatePVC>
                     </Col>
                 </Row>
+                <Spin tip="Loading..." spinning={this.state.btnloading}>
+                  {this.state.btnloading?(      
+                        <Alert
+                            message="Loading"
+                            description="数据加载中"
+                            type="info"
+                        />
+                  ):
                 <Table  
                     dataSource={this.state.search?this.state.searchdata:this.state.dataSource}
                     rowKey={record => record.name+record.namespace}
                     rowSelection={rowSelection }
                     columns={columns }  
                     rowClassName={(record,index)=>index%2===0?'table1':'table2'}
-                />
+                />}
+                </Spin>
                 
                 </div>
                 )

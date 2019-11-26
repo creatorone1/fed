@@ -92,15 +92,15 @@ type Deployment struct {
 	Volumes      []Volume     `json:"volumes,omitempty"`
 }
 type Volume struct {
-	Name         string      `json:"name,omitempty"`
-	Pvcname      string      `json:"pvcname,omitempty"`
+	Name         string        `json:"name,omitempty"`
+	Pvcname      string        `json:"pvcname,omitempty"`
 	VolumeMounts []VolumeMount `json:"volumemounts,omitempty"`
 }
 type VolumeMount struct {
-	Name     string `json:"name,omitempty"`
-	MountPath     string `json:"mountpath,omitempty"`
-	ReadOnly bool   `json:"readonly,omitempty"`
-	SubPath  string `json:"subpath,omitempty"`
+	Name      string `json:"name,omitempty"`
+	MountPath string `json:"mountpath,omitempty"`
+	ReadOnly  bool   `json:"readonly,omitempty"`
+	SubPath   string `json:"subpath,omitempty"`
 }
 type TemRes struct {
 	Name string    `json:"name,omitempty"`

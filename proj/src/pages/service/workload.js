@@ -1,6 +1,6 @@
 //工作负载deployment管理
 import React from 'react'
-import {Modal,message,Badge,InputNumber,Table, Select,Checkbox, Button,Input, Row,Col,Icon,Dropdown,Menu, }from 'antd'
+import {Modal,message,Tag,Spin,Alert,Badge,AutoComplete,InputNumber,Table, Select,Checkbox, Button,Input, Row,Col,Icon,Dropdown,Menu, }from 'antd'
 import './service.less'
 import ButtonGroup from 'antd/lib/button/button-group';
 //import CreateWl from './form/create_wl'
@@ -21,6 +21,7 @@ export default class Workload extends React.Component {
         searchname:'',
         searchdata:[],
         search:false,
+        images:[],
         dataSource:[{
             name:'nginx1',
             status:'running',
@@ -187,7 +188,8 @@ export default class Workload extends React.Component {
         rbvisible:false, //控制回滚弹窗是否显示
         rollbackdata:[],     //回滚数据 
         scvisible:false,
-        editvisible:false
+        editvisible:false,
+        btnloading:false
 
     }
     componentDidMount(){//请求数据
@@ -233,11 +235,15 @@ export default class Workload extends React.Component {
             this.setState({ //表格选中状态清空
                 selectedRowKeys:[],
                 selectedRows:null,
-                dataSource:datas
+                dataSource:datas,
+                btnloading:false
             })
              
             return data;
         }).catch( (e)=> {  
+            this.setState({  
+                btnloading:false,
+            })
             console.log(e);
         })
     } 
@@ -534,9 +540,7 @@ export default class Workload extends React.Component {
             })
             
         }
-    }
-
-    
+    } 
 
     //选择回滚版本
     handleSelectRb=(value)=>{
@@ -551,6 +555,18 @@ export default class Workload extends React.Component {
             scalenum : value
         })
 
+    }
+
+    handleRefresh =() =>{
+        console.log('refresh !')
+        this.setState({ 
+            btnloading:true
+        })
+        //this.request()
+        setTimeout(()=> {//模拟数据加载结束则取消加载框 
+            this.request(this.props.currentcluster,this.props.currentnamespace);
+          }
+        ,1000) 
     }
     render(){
         //console.log('workload:'+this.state.currentcluster+' '+this.state.currentnamespace)
@@ -567,11 +583,15 @@ export default class Workload extends React.Component {
                 key:'status',
                 dataIndex: 'status',
                 render(abc) {
+                    /*let config = {
+                        'Bound': <Tag  color="#87d068" style={{cursor:'auto' }} >Bound</Tag>,
+                        'Pending': <Tag color="#faad14" style={{cursor:'auto' }} >Pending</Tag> , 
+                    }*/
                     let config = {
-                        'running': <Badge status="success" text="running"/>,
-                        'pause': <Badge status="warning" text="pause"/> ,
-                        'dead': <Badge status="error" text="dead"/> ,
-                        'waiting': <Badge status="processing" text="waiting"/> , 
+                        'running': <Tag  color="#87d068" style={{cursor:'auto' }} >Running</Tag> ,
+                        'pause': <Tag  color="#faad14" style={{cursor:'auto' }} >Pause</Tag>   ,
+                        'dead': <Tag  color="#f50" style={{cursor:'auto' }} >Dead</Tag> ,
+                        'waiting': <Tag  color="#2db7f5" style={{cursor:'auto' }} >Waiting</Tag> , 
                     }
                     return config[abc];
                 }
@@ -650,7 +670,8 @@ export default class Workload extends React.Component {
                     <Button onClick={this.handleResume}>恢复<Icon type="caret-right" /></Button>
                     <Input style={{display:'inline-block',width:150}} onChange={this.searchChange}></Input>
                     <Button onClick={this.handleSearch}>搜索<Icon type="search"  /></Button> 
-                    
+                     <Button onClick={this.handleRefresh} loading={this.state.btnloading}>刷新 </Button>
+                        
                 </Col>
                 <Col span='5' className='Button-right'> 
                     <CreateWl statechange={this.statechange} namespaces={this.props.namespaces} currentcluster={this.props.currentcluster}></CreateWl>
@@ -662,15 +683,22 @@ export default class Workload extends React.Component {
                 </Col>
                 
                 </Row>
-
+                <Spin tip="Loading..." spinning={this.state.btnloading}>
+                  {this.state.btnloading?(      
+                        <Alert
+                            message="Loading"
+                            description="数据加载中"
+                            type="info"
+                        />
+                  ):
                 <Table  
                     dataSource={this.state.search?this.state.searchdata:this.state.dataSource}
                     rowKey={record => record.name+record.namespace}
                     rowSelection={rowSelection}
                     columns={columns} 
                     rowClassName={(record,index)=>index%2===0?'table1':'table2'}
-                />
-               
+                />}
+               </Spin>
                 <Modal
                     width='560px'
                     title={ this.state.operationdata===undefined ? '回滚':'回滚: '+this.state.operationdata.name}
