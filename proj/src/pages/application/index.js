@@ -64,6 +64,9 @@ export default class Application extends React.Component {
                     }) 
                 return data;
             }).catch((e)=>{
+                this.setState({
+                     requested:false, 
+                })
                 console.log(e);
             })
     }    

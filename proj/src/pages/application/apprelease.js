@@ -278,7 +278,7 @@ export default class AppRelease   extends React.Component {
                 })
            
         }
-    })
+        })
         /*fetch('url'+record.name,{  //查找该工作负载的副本集,修改 this.state.rollback 数据
                 method:'GET'
             }).then((response) => {

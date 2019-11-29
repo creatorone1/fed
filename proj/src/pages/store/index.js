@@ -6,6 +6,7 @@ import Pv from './pv'
 import PvC from './pvc'
 import StorageClass from './storageclass'
 import utils from './../../utils/utils'
+import { len } from 'zrender/lib/core/vector';
 const Option = Select.Option;
 const TabPane = Tabs.TabPane;
 export default class Store extends React.Component {
@@ -35,14 +36,25 @@ export default class Store extends React.Component {
                 return response.json();
             }).then((data) => {
                 console.log('data:',data)
+                var nms=[]
+                if(data.length>0){
+                   // console.log('data>0' )
+                    data[0].namespaces.map(nm=>{
+                        nms=nms.concat(nm.name)
+                    }) 
+                 }
+                   
 
+                     
                 this.setState({
                     cluster:data.filter(item=>item.status!="NotReady")
                     ,requested:false,
+                    namespaces:nms,
                     currentcluster:data.filter(item=>item.status!="NotReady")[0].name,
                 })
                 console.log('data[0].name',data.filter(item=>item.status!="NotReady")[0].name)
-                fetch(utils.urlprefix+'/api/cluster/fed/namespaces',{
+               
+                /*fetch(utils.urlprefix+'/api/cluster/fed/namespaces',{
                     method:'GET'
                     }).then((response) => {
                         console.log('response:',response.ok)
@@ -61,9 +73,12 @@ export default class Store extends React.Component {
                         return data;
                     }).catch((e)=>{
                         console.log(e);
-                    }) 
+                    }) */
                 return data;
             }).catch((e)=>{
+                this.setState({
+                    requested:false, 
+               })
                 console.log(e);
             })
     }
@@ -106,6 +121,7 @@ export default class Store extends React.Component {
             <Option value={item.name} key={item.name}>{item.name}</Option>
          )
         )
+        console.log('namespaces',this.state.namespaces)
         const namespacesdata=this.state.namespaces.map( (item)=>(
             <Option value={item} key={item} >{item}</Option>
          )

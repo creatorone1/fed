@@ -1,7 +1,7 @@
 // 应用管理
 import React from 'react'
 import './application.less'
-import {  Row,Col,Spin, Alert,Card, Input,Tabs,Table, Modal, Button, message, Badge ,Menu,Dropdown,Icon,Select} from 'antd';
+import {  Row,Col,Spin, Alert ,Card, Input,Tabs,Table, Modal, Button, message, Badge ,Menu,Dropdown,Icon,Select} from 'antd';
 import { height } from 'window-size';
 import { Z_BLOCK } from 'zlib';
 import { color } from 'echarts/lib/export';
@@ -74,7 +74,7 @@ export default class AppRepo   extends React.Component {
         search:false
     }
     componentDidMount(){//请求数据
-        this.request();
+        this.request(); 
     }
     componentWillReceiveProps(nextProps){
         //接收参数后更新数据
@@ -102,6 +102,10 @@ export default class AppRepo   extends React.Component {
             })
             return data;
         }).catch((e)=>{
+            this.setState({ 
+                dataSource:[],
+                loading:false,   
+            })
             console.log(e);
         })
        
@@ -175,6 +179,52 @@ export default class AppRepo   extends React.Component {
         }) 
 
     }
+    handleRepoAdd=(e)=>{
+        let content=e.target.value
+        this.setState({
+            chartrepoadd:content
+        })
+    }
+    handleChangeRepo=()=>{
+        Modal.confirm({
+            title:'更新应用仓库地址',
+            content:(
+                    <Row  style={{marginTop:20,height:32}}>
+                        <Col span='6' style={{display:'flex',height:'100%',alignItems:'center'  }}> 
+                        {'  仓库地址:  ' } 
+                        </Col>
+                        <Col span='18'> 
+                        <Input onChange={this.handleRepoAdd} placeholder='例如：10.103.240.130:8089' style={{display:'inline-block',width:'90%'}}/>
+                        </Col>
+                    </Row> 
+                    ),
+            onOk:()=>{ 
+                var add=this.state.chartrepoadd  
+                //下面URL的 集群 名称 以后需要替换掉
+                fetch(utils.urlprefix+'/api/chartrepo',{
+                    method:'PUT',
+                    mode: 'cors', 
+                    body:add,
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        
+                        message.success('更新成功');
+                        //发送删除请求
+                        this.request(); 
+                        return data;
+                    }).catch( (e)=> {  
+                         
+                        message.success('网络错误');
+                        //发送删除请求
+                        this.request(); 
+                        console.log(e);
+                    })
+               
+            }
+            })
+    }
     render(){
         //console.log(this.state.search) 
         const data=this.state.search?this.state.searchdata:this.state.dataSource
@@ -195,18 +245,22 @@ export default class AppRepo   extends React.Component {
         ))
 
         return(
-                <div  style={{ padding:10  }} > 
+                <div  style={{ padding:10  ,minHeight:'calc(60vh)'}} > 
                     <Row className='Button-wrap'> 
-                     <Col span='23' style={{ textAlign:'right'}}>  
+                    <Col span='10' >  
+                        <Button type={"primary"} onClick={this.handleChangeRepo}  >更换仓库地址<Icon type="setting" /></Button>
+                    </Col>
+
+                     <Col span='14' style={{ textAlign:'right'}}>  
                         <Button onClick={this.handleRefresh} loading={this.state.loading}>刷新 </Button>
                         <Input style={{display:'inline-block',width:150}} onChange={this.searchChange}></Input>
                         <Button onClick={this.handleSearch}>搜索<Icon type="search"  /></Button> 
-                     
+
                     </Col>
                      
                     </Row>
                     <Row   >
-                    {card   } 
+                     {card   } 
                     </Row>  
                     <CreateApp HandleCreated={this.props.HandleCreated} clusters={this.props.clusters}  dataSource={this.state.operationdata} createvisible={this.state.createvisible} handleCreate={this.handleCreate}></CreateApp>
 
