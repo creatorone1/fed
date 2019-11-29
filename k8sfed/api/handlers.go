@@ -6,9 +6,12 @@ import (
 	"io"
 	"io/ioutil"
 	"k8sfed/cluster/deployment"
+	"os"
+	"path"
+	"strconv"
+	"strings"
 
 	"net/http"
-	"strconv"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -22,6 +25,7 @@ var harborusername string
 var harborpassword string
 var harbormaster string
 
+/*
 func init() {
 	//fmt.Printf("new api")
 	clusters = []string{"controller", "k8s-fed"}
@@ -31,6 +35,75 @@ func init() {
 	harborusername = "admin"
 	harborpassword = "Harbor12345"
 	harbormaster = "core.harbor.domain"
+}*/
+func ConfigLoad() error {
+
+	fileName := path.Join("./", "k8s.conf")
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		fmt.Errorf("k8s.conf is not exists!")
+		return err
+	}
+
+	contents := make(map[string]string)
+	text, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return err
+	}
+	//fmt.Println("text", string(text))
+	for _, line := range strings.Split(string(text), "\n") {
+		//fmt.Println("line", strings.Split(string(text), "\n"))
+		//fmt.Println("linelen", len(strings.Split(string(text), "\n")))
+		//fmt.Println("index", index, "line", strings.HasPrefix(line, "#"))
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, "#") || len(line) == 0 || len(line) == 1 {
+			continue
+		}
+
+		/*if strings.Contains(line, "#") {
+			line = strings.SplitN(line, "#", 2)[0]
+		}*/
+
+		parts := strings.SplitN(line, "=", 2)
+		//fmt.Printf("1 %d %q\n", len(parts[0]), parts[0])
+		parts[0] = strings.TrimSpace(parts[0])
+		//fmt.Printf("2 %d %q\n", len(parts[0]), parts[0])
+		parts[1] = strings.TrimSpace(parts[1])
+
+		contents[parts[0]] = parts[1]
+	}
+
+	if _, ok := contents["fedclustername"]; !ok {
+		return fmt.Errorf("fedclustername cann't null")
+	}
+	if _, ok := contents["chartrepo"]; !ok {
+		return fmt.Errorf("chartrepo cann't null")
+	}
+	if _, ok := contents["tillermastername"]; !ok {
+		return fmt.Errorf("tillermastername cann't null")
+	}
+	if _, ok := contents["harbormaster"]; !ok {
+		return fmt.Errorf("harbormaster cann't null")
+	}
+	if _, ok := contents["harborusername"]; !ok {
+		return fmt.Errorf("harborusername cann't null")
+	}
+	if _, ok := contents["harborpassword"]; !ok {
+		return fmt.Errorf("harborpassword cann't null")
+	}
+
+	fedclustername = contents["fedclustername"]
+	chartrepo = contents["chartrepo"]
+	tillermastername = contents["tillermastername"]
+	harborusername = contents["harborusername"]
+	harborpassword = contents["harborpassword"]
+	harbormaster = contents["harbormaster"]
+	//conf.ProtoAddr = contents["protoAddr"]
+	//conf.Repository = contents["repository"]
+	//conf.NfsServer = contents["ipAddr"]
+	//conf.Heapster = contents["heapster"]
+	//conf.NfsRoot = contents["path"]
+
+	return nil
 }
 
 type middleWareHandler struct {
@@ -126,8 +199,9 @@ func createRouter(r *httprouter.Router) {
 			"/api/imagetags":                                                    deleteImageTags,
 		},
 		"PUT": { //更新  包括扩容,      回滚
-			"/api/cluster/:cluster/app":                                                  updateApp,
-			"/api/cluster/:cluster/app/:app/rollback":                                    rollbackApp,
+			"/api/chartrepo":                          putChartRepo,
+			"/api/cluster/:cluster/app":               updateApp,
+			"/api/cluster/:cluster/app/:app/rollback": rollbackApp,
 			"/api/cluster/:cluster/namespace/:namespace/deployment/:deployment":          updateDep,
 			"/api/cluster/:cluster/namespace/:namespace/deployment/:deployment/scale":    scaleDep,
 			"/api/cluster/:cluster/namespace/:namespace/deployment/:deployment/rollback": rollbackDep,
@@ -328,7 +402,7 @@ func getClusters(w http.ResponseWriter, r *http.Request, p httprouter.Params) er
 	//w.Header().Set("Content-Type", "application/json")
 	fmt.Println("getClusters被访问！")
 	//var clustername = p.ByName("cluster")
-	var fedclustername = "k8s-fed" //以后从文件读取联邦集群的名字
+	//var fedclustername = "k8s-fed" //以后从文件读取联邦集群的名字
 	//dataSource = append(dataSource, deps.Items...)
 	dataSource, errc := ListCluster(fedclustername)
 	if errc != nil {
@@ -1756,6 +1830,26 @@ func deleteImageTags(w http.ResponseWriter, r *http.Request, p httprouter.Params
 	sendNormalResponse(w, NormalOp)
 	//w.Write("success")
 	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+
+func putChartRepo(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+	fmt.Println("putChartRepo被访问！")
+	data, err := ioutil.ReadAll(r.Body)
+	chartrepo = string(data[:])
+	/*datas, errj := json.Marshal(dep)
+	if errj != nil {
+		return errj
+	}
+	w.Write(datas)*/
+
+	if err != nil {
+		sendErrorResponse(w, ErrorUpdate)
+		return err
+	}
+	//w.Write(body)
+	fmt.Println("new chartRepoAdd:", chartrepo)
+	sendNormalResponse(w, NormalOp)
 	return nil
 }
 func updateApp(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {

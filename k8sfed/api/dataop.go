@@ -18,7 +18,6 @@ import (
 	"k8sfed/cluster/replicaset"
 	"k8sfed/cluster/sc"
 	"k8sfed/cluster/service"
-	"net"
 	"strconv"
 	"strings"
 	"time"
@@ -31,7 +30,7 @@ import (
 func ListDeps(clustername string) ([]Deployment, error) {
 	deps := &deployment.Deployments{} //声明结构体
 	if clustername == "fed" || clustername == "All" {
-		if err := deps.ListFed(fedclustername + ":8001"); err != nil {
+		if err := deps.ListFed(fedclustername + ":31667"); err != nil {
 			return nil, err
 		}
 	} else {
@@ -228,7 +227,7 @@ func ListDeps(clustername string) ([]Deployment, error) {
 func ListRS(clustername string) ([]ReplicaSet, error) {
 	rss := &replicaset.Replicasets{} //声明结构体
 	if clustername == "fed" || clustername == "All" {
-		if err := rss.List(fedclustername + ":8001"); err != nil {
+		if err := rss.List(fedclustername + ":31667"); err != nil {
 			return nil, err
 		}
 	} else {
@@ -291,7 +290,7 @@ func ListHistory(clustername, namespace, deployment string) ([]ReplicaSet, error
 func ListSvc(clustername string) ([]Service, error) {
 	svcs := &service.Services{} //声明结构体
 	if clustername == "fed" || clustername == "All" {
-		if err := svcs.List(fedclustername + ":8001"); err != nil {
+		if err := svcs.List(fedclustername + ":31667"); err != nil {
 			return nil, err
 		}
 	} else {
@@ -350,7 +349,7 @@ func ListSvc(clustername string) ([]Service, error) {
 		//deps, _ := ListDeps(clustername)
 		deps := &deployment.Deployments{} //声明结构体
 		if clustername == "fed" || clustername == "All" {
-			if err := deps.ListFed(fedclustername + ":8001"); err != nil {
+			if err := deps.ListFed(fedclustername + ":31667"); err != nil {
 				return nil, err
 			}
 		} else {
@@ -644,7 +643,7 @@ func ListNode(clustername string) ([]Node, error) {
 func ListNamespace(clustername string) ([]Namespace, error) {
 	nms := &namespace.Namespaces{} //声明结构体
 	if clustername == "fed" || clustername == "All" {
-		if err := nms.List(fedclustername + ":8001"); err != nil {
+		if err := nms.List(fedclustername + ":31667"); err != nil {
 			return nil, err
 		}
 	} else {
@@ -670,7 +669,7 @@ func ListNamespace(clustername string) ([]Namespace, error) {
 
 func ListCluster(fedclustername string) ([]Cluster, error) {
 	clusters := &css.Clusters{} //声明结构体
-	if err := clusters.List(fedclustername + ":8001"); err != nil {
+	if err := clusters.List(fedclustername + ":31667"); err != nil {
 		return nil, err
 	}
 
@@ -826,7 +825,7 @@ func ListCluster(fedclustername string) ([]Cluster, error) {
 func ListConfigMap(clustername string) ([]ConfigMap, error) {
 	cms := &configmap.ConfigMaps{} //声明结构体
 	/*if clustername == "fed" {
-		if err := cms.List(fedclustername + ":8001"); err != nil {
+		if err := cms.List(fedclustername + ":31667"); err != nil {
 			return nil, err
 		}
 	} else */
@@ -866,7 +865,7 @@ func ListConfigMap(clustername string) ([]ConfigMap, error) {
 func ListConfigMapbyNm(namespace, clustername string) ([]ConfigMap, error) {
 	cms := &configmap.ConfigMaps{} //声明结构体
 	if clustername == "fed" || clustername == "All" {
-		if err := cms.List(fedclustername + ":8001"); err != nil {
+		if err := cms.List(fedclustername + ":31667"); err != nil {
 			return nil, err
 		}
 	} else {
@@ -995,7 +994,7 @@ func ListIngress(clustername string) ([]Ingress, error) {
 	ings := &ingress.IngressList{} //声明结构体
 
 	if clustername == "fed" || clustername == "All" {
-		if err := ings.List(fedclustername + ":8001"); err != nil {
+		if err := ings.List(fedclustername + ":31667"); err != nil {
 			return nil, err
 		}
 	} else {
@@ -1070,7 +1069,7 @@ func ListImages(master, username, password string) (*image.Repos, error) {
 		}
 	}
 	/*if clustername == "fed" || clustername == "All" {
-		if err := ings.List(fedclustername + ":8001"); err != nil {
+		if err := ings.List(fedclustername + ":31667"); err != nil {
 			return nil, err
 		}
 	} else {
@@ -1090,7 +1089,10 @@ chartmuseum的mastername 从配置文件中读取
 func ListChart(chartmastername string) ([]Chart, error) {
 
 	var chartlist = &application.ChartList{}
-	if err := chartlist.GetAllCharts(chartmastername + ":8089"); err != nil {
+
+	//if err := chartlist.GetAllCharts(chartmastername + ":8089"); err != nil {
+	if err := chartlist.GetAllCharts(chartmastername); err != nil {
+
 		return nil, err
 	}
 	//dataSource = append(dataSource, deps.Items...)
@@ -1109,12 +1111,19 @@ func ListChart(chartmastername string) ([]Chart, error) {
 			if len(citem.Urls) > 0 {
 				// dns地址解析ip地址
 				// dns地址解析ip地址
-				addr, errip := net.ResolveIPAddr("ip", chartmastername)
-				if errip != nil {
-					return nil, errip
-				}
+				/*
+					addr, errip := net.ResolveIPAddr("ip", chartmastername)
+
+					if errip != nil {
+						return nil, errip
+					}
+					fmt.Println("addr:", addr)
+					version.Version = citem.Version
+					version.Url = "http://" + addr.String() + ":8089/" + citem.Urls[0]
+				*/
 				version.Version = citem.Version
-				version.Url = "http://" + addr.String() + ":8089/" + citem.Urls[0]
+				version.Url = "http://" + chartmastername + "/" + citem.Urls[0]
+
 			}
 			versions = append(versions, version)
 		}
@@ -1176,12 +1185,12 @@ func DeleteDep(clustername, namespace, name string) ([]byte, error) {
 	/*data, _ := json.Marshal(dep)
 	fmt.Printf("%s",data)*/
 	if clustername == "fed" || clustername == "All" {
-		body, _, err := cluster.ReadBody(dep.DeleteFed(fedclustername + ":8001"))
+		body, _, err := cluster.ReadBody(dep.DeleteFed(fedclustername + ":31667"))
 		if err != nil {
 			return body, err
 		}
 		var pathdata = `{"metadata":{"finalizers":null}}`
-		body2, _, err2 := cluster.ReadBody(dep.UpdateFed(fedclustername+":8001", []byte(pathdata)))
+		body2, _, err2 := cluster.ReadBody(dep.UpdateFed(fedclustername+":31667", []byte(pathdata)))
 		if err2 != nil {
 			return body2, err2
 		}
@@ -1206,12 +1215,12 @@ func DeleteSvc(clustername, namespace, name string) ([]byte, error) {
 	/*data, _ := json.Marshal(dep)
 	fmt.Printf("%s",data)*/
 	if clustername == "All" || clustername == "fed" {
-		body, _, err := cluster.ReadBody(svc.Delete(fedclustername + ":8001"))
+		body, _, err := cluster.ReadBody(svc.Delete(fedclustername + ":31667"))
 		if err != nil {
 			return body, err
 		}
 		var pathdata = `{"metadata":{"finalizers":null}}`
-		body2, _, err2 := cluster.ReadBody(svc.Update(fedclustername+":8001", []byte(pathdata)))
+		body2, _, err2 := cluster.ReadBody(svc.Update(fedclustername+":31667", []byte(pathdata)))
 		if err2 != nil {
 			return body2, err2
 		}
@@ -1295,12 +1304,12 @@ func DeleteNamespace(clustername, name string) ([]byte, error) {
 	/*data, _ := json.Marshal(dep)
 	fmt.Printf("%s",data)*/
 	if clustername == "fed" || clustername == "All" {
-		body, _, err := cluster.ReadBody(nmdata.Delete(fedclustername + ":8001"))
+		body, _, err := cluster.ReadBody(nmdata.Delete(fedclustername + ":31667"))
 		if err != nil {
 			return body, err
 		}
 		var pathdata = `{"metadata":{"finalizers":null}}`
-		body2, _, err2 := cluster.ReadBody(nmdata.Update(fedclustername+":8001", []byte(pathdata)))
+		body2, _, err2 := cluster.ReadBody(nmdata.Update(fedclustername+":31667", []byte(pathdata)))
 		if err2 != nil {
 			return body2, err2
 		}
@@ -1337,7 +1346,7 @@ func DeleteCluster(name string) ([]byte, error) {
 	var cs = css.Cluster{
 		Meta: meta,
 	}
-	body, _, err := cluster.ReadBody(cs.Delete(fedclustername + ":8001"))
+	body, _, err := cluster.ReadBody(cs.Delete(fedclustername + ":31667"))
 	if err != nil {
 		return body, err
 	}
@@ -1374,12 +1383,12 @@ func DeleteIngress(clustername, namespace, name string) ([]byte, error) {
 	/*data, _ := json.Marshal(dep)
 	fmt.Printf("%s",data)*/
 	if clustername == "fed" || clustername == "All" {
-		body, _, err := cluster.ReadBody(newing.Delete(fedclustername + ":8001"))
+		body, _, err := cluster.ReadBody(newing.Delete(fedclustername + ":31667"))
 		if err != nil {
 			return body, err
 		}
 		var pathdata = `{"metadata":{"finalizers":null}}`
-		body2, _, err2 := cluster.ReadBody(newing.Update(fedclustername+":8001", []byte(pathdata)))
+		body2, _, err2 := cluster.ReadBody(newing.Update(fedclustername+":31667", []byte(pathdata)))
 		if err2 != nil {
 			return body2, err2
 		}
@@ -1636,7 +1645,7 @@ func CreateDep(dep Deployment, clustername string) ([]byte, error) {
 		}
 		//datas, _ := json.Marshal(newdep) //d
 		//fmt.Printf("%s", datas)          //d
-		body, _, err := cluster.ReadBody(newdep.CreateFed(fedclustername + ":8001"))
+		body, _, err := cluster.ReadBody(newdep.CreateFed(fedclustername + ":31667"))
 		if err != nil {
 			return body, err
 		}
@@ -1706,7 +1715,7 @@ func CreateSvc(svc Service, clustername string) ([]byte, error) {
 	//datas, _ := json.Marshal(newsvc)
 	//fmt.Printf("%s", datas)
 	if clustername == "fed" || clustername == "All" {
-		body, _, err := cluster.ReadBody(newsvc.Create(fedclustername + ":8001"))
+		body, _, err := cluster.ReadBody(newsvc.Create(fedclustername + ":31667"))
 		if err != nil {
 			return body, err
 		}
@@ -1808,7 +1817,7 @@ func CreateNamespace(n Namespace, clustername string) ([]byte, error) {
 	//datas, _ := json.Marshal(newdep)
 	//fmt.Printf("%s", datas)
 	if clustername == "fed" || clustername == "All" {
-		body, _, err := cluster.ReadBody(newnm.Create(fedclustername + ":8001"))
+		body, _, err := cluster.ReadBody(newnm.Create(fedclustername + ":31667"))
 		if err != nil {
 			return body, err
 		}
@@ -1840,7 +1849,7 @@ func CreateConfigMap(cm ConfigMap, clustername string) ([]byte, error) {
 	//datas, _ := json.Marshal(newdep)
 	//fmt.Printf("%s", datas)
 	if clustername == "fed" || clustername == "All" {
-		body, _, err := cluster.ReadBody(newcm.Create(fedclustername + ":8001"))
+		body, _, err := cluster.ReadBody(newcm.Create(fedclustername + ":31667"))
 		if err != nil {
 			return body, err
 		}
@@ -1950,7 +1959,7 @@ func CreateIngress(ing Ingress, clustername string) ([]byte, error) {
 	//datas, _ := json.Marshal(newing)
 	//fmt.Printf("%s", datas)
 	if clustername == "fed" || clustername == "All" {
-		body, _, err := cluster.ReadBody(newing.Create(fedclustername + ":8001"))
+		body, _, err := cluster.ReadBody(newing.Create(fedclustername + ":31667"))
 		if err != nil {
 			return body, err
 		}
@@ -2024,7 +2033,7 @@ func PauseDep(clustername, namespace, name string) ([]byte, error) {
 		return nil, errj
 	}
 	if clustername == "fed" || clustername == "All" {
-		body, _, err := cluster.ReadBody(newdep.UpdateFed(fedclustername+":8001", datas))
+		body, _, err := cluster.ReadBody(newdep.UpdateFed(fedclustername+":31667", datas))
 		if err != nil {
 			return body, err
 		}
@@ -2055,7 +2064,7 @@ func ResumeDep(clustername, namespace, name string) ([]byte, error) {
 		return nil, errj
 	}
 	if clustername == "fed" || clustername == "All" {
-		body, _, err := cluster.ReadBody(newdep.UpdateFed(fedclustername+":8001", datas))
+		body, _, err := cluster.ReadBody(newdep.UpdateFed(fedclustername+":31667", datas))
 		if err != nil {
 			return body, err
 		}
@@ -2085,7 +2094,7 @@ func ScaleDep(clustername, namespace, name string, replicanum int64) ([]byte, er
 			Meta:       meta,
 			Spe:        spec,
 		}
-		body, _, err := cluster.ReadBody(scale.PutFed(name, namespace, fedclustername+":8001"))
+		body, _, err := cluster.ReadBody(scale.PutFed(name, namespace, fedclustername+":31667"))
 		if err != nil {
 			return body, err
 		}
@@ -2127,7 +2136,7 @@ func RollbackDep(clustername, namespace, name string, revision int64) ([]byte, e
 		return nil, errj
 	}
 	if clustername == "fed" || clustername == "All" {
-		body, _, err := cluster.ReadBody(newdep.UpdateFed(fedclustername+":8001", datas))
+		body, _, err := cluster.ReadBody(newdep.UpdateFed(fedclustername+":31667", datas))
 		if err != nil {
 			return body, err
 		}
@@ -2402,7 +2411,7 @@ func UpdateDep(dep Deployment, clustername string) ([]byte, error) {
 		Meta: depmeta,
 	}
 	if clustername == "fed" || clustername == "All" {
-		if err := newdep.GetFed(fedclustername + ":8001"); err != nil {
+		if err := newdep.GetFed(fedclustername + ":31667"); err != nil {
 			return nil, err
 		}
 	} else {
@@ -2643,7 +2652,7 @@ func UpdateDep(dep Deployment, clustername string) ([]byte, error) {
 	newdep.Meta = depmeta
 	newdep.Spe = depspe
 	if clustername == "fed" || clustername == "All" {
-		body, _, err := cluster.ReadBody(newdep.ReplaceFed(fedclustername + ":8001"))
+		body, _, err := cluster.ReadBody(newdep.ReplaceFed(fedclustername + ":31667"))
 		if err != nil {
 			return body, err
 		}
@@ -2668,7 +2677,7 @@ func UpdateSvc(svc Service, clustername string) ([]byte, error) {
 		Meta: svcmeta,
 	}
 	if clustername == "All" || clustername == "fed" {
-		if err := newsvc.Get(fedclustername + ":8001"); err != nil {
+		if err := newsvc.Get(fedclustername + ":31667"); err != nil {
 			return nil, err
 		}
 	} else {
@@ -2721,7 +2730,7 @@ func UpdateSvc(svc Service, clustername string) ([]byte, error) {
 	//datas, _ := json.Marshal(newdep)
 	//fmt.Printf("%s", datas)
 	if clustername == "All" || clustername == "fed" {
-		body, _, err := cluster.ReadBody(newsvc.Replace(fedclustername + ":8001"))
+		body, _, err := cluster.ReadBody(newsvc.Replace(fedclustername + ":31667"))
 		if err != nil {
 			return body, err
 		}
@@ -2864,7 +2873,7 @@ func UpdateIngress(ing Ingress, clustername string) ([]byte, error) {
 		Meta: ingmeta,
 	}
 	if clustername == "fed" || clustername == "All" {
-		if err := newing.Get(fedclustername + ":8001"); err != nil {
+		if err := newing.Get(fedclustername + ":31667"); err != nil {
 			return nil, err
 		}
 	} else {
@@ -2921,7 +2930,7 @@ func UpdateIngress(ing Ingress, clustername string) ([]byte, error) {
 	//datas, _ := json.Marshal(newdep)
 	//fmt.Printf("%s", datas)
 	if clustername == "fed" || clustername == "All" {
-		body, _, err := cluster.ReadBody(newing.Replace(fedclustername + ":8001"))
+		body, _, err := cluster.ReadBody(newing.Replace(fedclustername + ":31667"))
 		if err != nil {
 			return body, err
 		}
@@ -3059,7 +3068,7 @@ func UpdateCluster(cs Cluster) ([]byte, error) {
 	//fmt.Printf("%s", datas)
 	//return datas, nil
 
-	body, _, err := cluster.ReadBody(newcs.Update(fedclustername+":8001", datas))
+	body, _, err := cluster.ReadBody(newcs.Update(fedclustername+":31667", datas))
 	if err != nil {
 		return body, err
 	}
@@ -3092,7 +3101,7 @@ func UpdateClusterOld(clustername string, datas []byte) ([]byte, error) {
 	fmt.Printf("%s", datas)
 	return datas, nil*/
 
-	body, _, err := cluster.ReadBody(newcs.Update(fedclustername+":8001", datas))
+	body, _, err := cluster.ReadBody(newcs.Update(fedclustername+":31667", datas))
 	if err != nil {
 		return body, err
 	}

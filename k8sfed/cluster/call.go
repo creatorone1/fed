@@ -63,30 +63,40 @@ func HTTPClient() *http.Client {
 }
 
 const (
-	MaxIdleConns        int = 100
-	MaxIdleConnsPerHost int = 100
-	IdleConnTimeout     int = 90
+	MaxIdleConns        int = 1000
+	MaxIdleConnsPerHost int = 1000
+	IdleConnTimeout     int = 30
 )
 
 // createHTTPClient for connection re-use
 
 func createHTTPClient() *http.Client {
-
+	fmt.Println("create httpclient!")
+	//client := http.DefaultClient{
 	client := &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
-			DialContext: (&net.Dialer{
+			/*DialContext: (&net.Dialer{
 				Timeout:   30 * time.Second,
 				KeepAlive: 30 * time.Second,
-			}).DialContext,
-			//DisableKeepAlives:   true,
+			}).DialContext,*/
+			DisableKeepAlives: true,
+			Dial: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).Dial,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ResponseHeaderTimeout: 10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+
 			TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
 			MaxIdleConns:        MaxIdleConns,
 			MaxIdleConnsPerHost: MaxIdleConnsPerHost,
 			IdleConnTimeout:     time.Duration(IdleConnTimeout) * time.Second,
 		},
-		Timeout: 20 * time.Second,
+		//Timeout: 20 * time.Second,
 	}
+	//client.Timeout = 10 * time.Second
 	return client
 }
 
@@ -151,7 +161,7 @@ func Call(method, path, master string, data interface{}) (io.ReadCloser, int, er
 }*/
 
 func Call(method, path, master string, data interface{}) (io.ReadCloser, int, error) {
-
+	//return nil, 0, fmt.Errorf("new error")
 	params := bytes.NewBuffer(nil)
 
 	if data != nil {
@@ -166,7 +176,17 @@ func Call(method, path, master string, data interface{}) (io.ReadCloser, int, er
 		}
 	}
 	var url = "http://" + master + path
+
+	//timeout := time.Duration(10 * time.Second) //几秒后关闭
+	//ctx, cancel = context.WithTimeout(context.Background(), timeout)
+
 	req, err := http.NewRequest(method, url, params)
+
+	//req = req.WithContext(ctx)
+	/*time.AfterFunc(5*time.Second, func() {
+		fmt.Print("cancel!")
+		cancel()
+	})*/
 
 	if err != nil {
 		return nil, -1, err
@@ -174,24 +194,29 @@ func Call(method, path, master string, data interface{}) (io.ReadCloser, int, er
 	req.Close = true
 	//req.URL.Host = master
 	//req.URL.Scheme = "http"
+
 	req.Header.Add("Connection", "close")
+
 	//fmt.Print(req)
 	if data != nil {
 		if method == "PATCH" {
-			req.Header.Set("Content-Type", "application/strategic-merge-patch+json")
+			req.Header.Add("Content-Type", "application/strategic-merge-patch+json")
 		} else {
-			req.Header.Set("Content-Type", "application/json")
+			req.Header.Add("Content-Type", "application/json")
 		}
 
 	} else if method == "POST" {
-		req.Header.Set("Content-Type", "application/text")
+		req.Header.Add("Content-Type", "application/text")
 	}
+	HTTPClient().Timeout = 10 * time.Second
+
 	resp, err := HTTPClient().Do(req)
 
 	//fmt.Print(resp)
 	if err != nil {
 		return nil, -1, err
 	}
+
 	resp.Header.Add("Connection", "close")
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
