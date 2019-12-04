@@ -241,7 +241,7 @@ export default class StorageClass extends React.Component {
         this.setState({
             editvisible:false
         }) 
-
+        //var fd =new FormData()
     }
     statechange=()=>{ //创建服务之后回调
         console.log('refresh!')
@@ -258,6 +258,9 @@ export default class StorageClass extends React.Component {
         }
         ,1000) 
     } 
+    handleUpload =(e)=>{
+        console.log(e.target.files)
+    }
     render(){
         /**考虑加上集群列，表示数据属于哪个集群 */
         
@@ -283,12 +286,16 @@ export default class StorageClass extends React.Component {
                 key:'provisioner',
                 dataIndex: 'provisioner',
             }, 
-            
+            {
+                title:'回收规则',
+                key:'reclaimPolicy',
+                dataIndex: 'reclaimPolicy',
+            }, 
             {
                 title:'创建时间',
                 key:'createtime',
                 dataIndex: 'createtime',
-            },
+            }, 
             {
                 title:'操作',
                 key:'operation',
@@ -325,6 +332,9 @@ export default class StorageClass extends React.Component {
                 <div style={{ padding:10 ,minHeight:'calc(60vh)'}}>
                     <Row className='Button-wrap'> 
                     <Col span='20'> 
+                    {
+                        //<input type="file" onChange={this.handleUpload}/>    
+                    } 
                         <Button onClick={this.handleMutiDelete}>删除<Icon type='delete'></Icon></Button>
                         <Input style={{display:'inline-block',width:150}} onChange={this.searchChange}></Input>
                         <Button onClick={this.handleSearch}>搜索<Icon type="search"  /></Button> 

@@ -2,6 +2,7 @@ package application
 
 import (
 	"encoding/json"
+	"io"
 	"k8sfed/cluster"
 )
 
@@ -24,5 +25,12 @@ func (chartlist *ChartList) GetAllCharts(master string) error {
 	chartlist.Charts = charts
 	//return charts, nil
 	return nil
+	//return cluster.Call("GET", "/api/charts/", master, nil)
+}
+
+func UploadCharts(master string, file io.Reader) (io.ReadCloser, int, error) {
+
+	return cluster.ChartCall("POST", "/api/charts", master, file)
+
 	//return cluster.Call("GET", "/api/charts/", master, nil)
 }

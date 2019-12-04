@@ -1,7 +1,7 @@
 // 应用管理
 import React from 'react'
 import './application.less'
-import {  Row,Col,Spin, Alert ,Card, Input,Tabs,Table, Modal, Button, message, Badge ,Menu,Dropdown,Icon,Select} from 'antd';
+import {  Row,Col,Spin,Upload,Message, Alert ,Card, Input,Tabs,Table, Modal, Button, message, Badge ,Menu,Dropdown,Icon,Select} from 'antd';
 import { height } from 'window-size';
 import { Z_BLOCK } from 'zlib';
 import { color } from 'echarts/lib/export';
@@ -151,6 +151,9 @@ export default class AppRepo   extends React.Component {
             })
             
         }
+
+
+
     }
     handleRefresh =() =>{
         console.log('refresh !')
@@ -243,6 +246,50 @@ export default class AppRepo   extends React.Component {
             </Card>
             </div> 
         ))
+        var _this =this;
+        const props = {  
+             
+            onChange(info) {
+           //console.log(info)
+              if (info.file.status !== 'uploading') {
+                console.log(info.file, info.fileList);
+              }
+              if (info.file.status === 'done') {
+                message.success(`${info.file.name} file uploaded successfully`);
+              } else if (info.file.status === 'error') {
+                message.error(`${info.file.name} file upload failed.`);
+              }
+            },
+            showUploadList:false,
+            customRequest({ action,
+                data,
+                file,
+                filename,
+                headers,
+                onError,
+                onProgress,
+                onSuccess,
+                withCredentials,}){
+
+                console.log('post info',file)
+                console.log('filename',filename)
+                var formData = new FormData();
+                formData.append("file", file);  //后台读取的变量名为 "file"
+
+                fetch(utils.urlprefix+'/api/charts',{
+                    method:'POST',
+                    body:formData, 
+                    }).then((response) => {
+                        //console.log('response:',response)
+                        return response.json();
+                    }).then((data) => {
+                        console.log('data:',data)
+                        onSuccess(data, file); 
+                        _this.request()
+                        return data;
+                    }).catch(onError)
+            }
+          };
 
         return(
                 <div  style={{ padding:10  ,minHeight:'calc(60vh)'}} > 
@@ -251,7 +298,16 @@ export default class AppRepo   extends React.Component {
                         <Button type={"primary"} onClick={this.handleChangeRepo}  >更换仓库地址<Icon type="setting" /></Button>
                     </Col>
 
-                     <Col span='14' style={{ textAlign:'right'}}>  
+                     <Col span='14' style={{ textAlign:'right'}}>
+
+                         <div style={{display:'inline-block'}}> 
+                        <Upload  {...props} >
+                        <Button>
+                        <Icon type="upload" /> Click to Upload
+                        </Button>
+                        </Upload>  
+                        </div>
+
                         <Button onClick={this.handleRefresh} loading={this.state.loading}>刷新 </Button>
                         <Input style={{display:'inline-block',width:150}} onChange={this.searchChange}></Input>
                         <Button onClick={this.handleSearch}>搜索<Icon type="search"  /></Button> 

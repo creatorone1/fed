@@ -60,6 +60,29 @@ func (cs *Clusters) List(master string) error {
 	return nil
 }
 
+func GetFedHealth(fedmaster string) (string, error) {
+	//return cluster.Call("GET", "/api/v1/nodes", master, nil)
+	body, _, err := cluster.ReadBody(cluster.Call("GET", "/healthz", fedmaster, nil))
+
+	if err != nil {
+		return "", err
+	}
+
+	//正常应该返回 ok
+	return string(body), nil
+}
+func GetHealth(master string) (string, error) {
+	//return cluster.Call("GET", "/api/v1/nodes", master, nil)
+	body, _, err := cluster.ReadBody(cluster.Call("GET", "/healthz", master, nil))
+
+	if err != nil {
+		return "", err
+	}
+
+	//正常应该返回 ok
+	return string(body), nil
+}
+
 func (cs *Cluster) Delete(master string) (io.ReadCloser, int, error) {
 	b := cluster.NewBody(0, false)
 	return cluster.Call("DELETE", "/apis/federation/v1beta1/clusters/"+cs.Meta.Name, master, b)

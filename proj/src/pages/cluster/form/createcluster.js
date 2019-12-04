@@ -99,7 +99,7 @@ class CreateCluster extends React.Component {
         const wwidth='80%' //定义表单中空间宽度
        
         return(
-            <div>
+            <div style={{display:'inline-block'}}>
             <Button type='primary' onClick={this.showModal}><Icon type='plus'/>添加集群</Button>  
                         
             <Modal

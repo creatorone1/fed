@@ -10,8 +10,15 @@ import EPanel from'./../echarts/panel/panelv2'
 import Bar from'./../echarts/bar/index'
 import FedNamespaceList from './fednamespace'
 import utils from '../../utils/utils';
+import PropTypes from 'prop-types'
+import {setClusterDetail} from './../../redux/action/index' 
+import {getclusterdetaildata} from './../../redux/reducer/index'
+import { bindActionCreators } from "redux";
+import { connect } from "react-redux";
+
+
 const Panel = Collapse.Panel;
-export default class DetaiCluster extends React.Component {
+  class DetaiCluster extends React.Component {
     state = {
         clustername:undefined, 
         dataSource:{   //有后台此数据需要到后台获取 
@@ -56,10 +63,11 @@ export default class DetaiCluster extends React.Component {
         /***有了后台下面两行删除 */
         var data=this.state.dataSource
         data.name=sessionStorage.getItem('clustername') 
-        //console.log('cluster',utils.clusterdetail)
+        console.log('store.clusterdetaildata',this.props.clusterdetaildata)
         this.setState({
             clustername:sessionStorage.getItem('clustername'),
-            dataSource:utils.clusterdetail
+            //dataSource:utils.clusterdetail
+            dataSource:this.props.clusterdetaildata
         })
         
         //根据nodename和nodecluster来请求数据
@@ -67,6 +75,12 @@ export default class DetaiCluster extends React.Component {
     }
     componentWillReceiveProps(nextProps){
         //接收参数后更新数据
+        console.log('nextProps.clusterdetaildata',this.props.clusterdetaildata)
+        this.setState({
+            clustername:sessionStorage.getItem('clustername'),
+            //dataSource:utils.clusterdetail
+            dataSource:this.props.clusterdetaildata
+        })
 
     }
     request = () => {
@@ -75,7 +89,7 @@ export default class DetaiCluster extends React.Component {
             getdata:true
         })
 
-        fetch(utils.urlprefix+'url',{
+       /* fetch(utils.urlprefix+'url',{
         method:'GET'
         }).then((response) => {
             console.log('response:',response.ok)
@@ -89,7 +103,7 @@ export default class DetaiCluster extends React.Component {
             return data;
         }).catch((e)=>{
             console.log(e);
-        })
+        })*/
     }
 
  
@@ -240,3 +254,19 @@ export default class DetaiCluster extends React.Component {
          
         )}  
     }
+
+    const mapStateToProps = (state, props) => {
+        return {
+            clusterdetaildata:getclusterdetaildata(state)
+        };
+      }
+      
+      const mapDispatchToProps = (dispatch) => {
+        return {
+             onRedirect:function(data){
+                 dispatch(setClusterDetail(data))
+             }
+        };
+      }
+      
+export default connect(mapStateToProps, mapDispatchToProps)(DetaiCluster);

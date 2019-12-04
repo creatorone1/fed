@@ -58,6 +58,10 @@ func NewChartinfo(name,version,namespace,url string, values *Values) *Chartinfo 
 	}
 }*/
 
+func (Chart *Chart) Delete(master string) (io.ReadCloser, int, error) {
+	return cluster.Call("DELETE", "/api/charts/"+Chart.Name+"/"+Chart.Version, master, nil)
+}
+
 func (chartinfo *Chartinfo) GetChartVersion(master string) (io.ReadCloser, int, error) {
 	return cluster.Call("GET", "/api/charts/"+chartinfo.Name, master, nil)
 }

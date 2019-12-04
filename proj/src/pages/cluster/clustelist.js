@@ -4,11 +4,17 @@ import React from 'react';
 import { HashRouter, Route, Switch, Redirect,Link,NavLink} from 'react-router-dom'
 import EditCluster from './form/clusteredit'
 import CreateCluster from './form/createcluster'
-import utils from './../../utils/utils'
+import FindClusters from './form/findcluster'
+import utils from './../../utils/utils' 
+import PropTypes from 'prop-types'
+import {setClusterDetail} from './../../redux/action/index' 
+import {getclusterdetaildata} from './../../redux/reducer/index'
+import { bindActionCreators } from "redux";
+import { connect } from "react-redux";
 
 const Option = Select.Option;
 const TabPane = Tabs.TabPane;
-export default class ClusterList extends React.Component {
+class ClusterList extends React.Component {
       
     state = {
        
@@ -54,7 +60,7 @@ export default class ClusterList extends React.Component {
     }
     componentDidMount(){//请求数据
         this.request()
-
+      //  console.log('store',this.props) 
      }
     // 动态获取mock数据
     request = () => { //初始化数据请求
@@ -269,6 +275,11 @@ export default class ClusterList extends React.Component {
     
         handleRedirect=(clusterdetail)=>{
             console.log('跳转！')
+            
+            //var store =this.context.store
+            console.log('store',this.props) 
+
+            this.props.onRedirect(clusterdetail)
             sessionStorage.setItem('clustername',clusterdetail.name)
             utils.clusterdetail=clusterdetail
             //console.log('utils.clusterdetail',utils.clusterdetail)
@@ -405,15 +416,16 @@ export default class ClusterList extends React.Component {
             <div style={{padding:10 ,minHeight:'calc(60vh)' }}> 
                 <div >
                     <Row className='Button-wrap'> 
-                    <Col span='20'> 
+                    <Col span='16'> 
                         <Button onClick={this.handleMutiDelete}>删除<Icon type='delete'></Icon></Button>
                         <Input style={{display:'inline-block',width:150}} onChange={this.searchChange}></Input>
                         <Button onClick={this.handleSearch}>搜索<Icon type="search"  /></Button> 
                         <Button onClick={this.handleRefresh} loading={this.state.btnloading}>刷新 </Button>
                 
                     </Col>
-                        <Col span='4' className='Button-right'> 
-                        <CreateCluster   />
+                        <Col span='8' className='Button-right'>
+                        <FindClusters style={{display:'inline-block'}}/>     
+                        <CreateCluster  style={{display:'inline-block'}} />
                     </Col>
                     </Row>
                     
@@ -444,3 +456,19 @@ export default class ClusterList extends React.Component {
         )
     }
 }
+
+const mapStateToProps = (state, props) => {
+    return {
+        clusterdetaildata:getclusterdetaildata(state)
+    };
+  }
+  
+  const mapDispatchToProps = (dispatch) => {
+    return {
+         onRedirect:function(data){
+             dispatch(setClusterDetail(data))
+         }
+    };
+  }
+  
+  export default connect(mapStateToProps, mapDispatchToProps)(ClusterList);

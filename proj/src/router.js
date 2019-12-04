@@ -58,13 +58,18 @@ export default class ERouter extends React.Component{
                             <Admin>
                                 <Switch>
                                     <Route path='/home' component={Home} />
-                                    <Route exact path="/application" render={() => (
-                                        cookie.load("appauth") ? (
-                                            <Redirect to="/applicationauth"/>
-                                            ) : (
-                                            <Redirect to="/auth"/>
-                                            )
-                                        )}/>
+                                    <Route exact path="/application" render={(props) =>   
+                                            ( 
+                                                cookie.load("appauth") ? (
+                                                <Redirect to="/applicationauth"
+                                                > 
+                                                </Redirect>
+                                                ) : (
+                                                <Redirect to="/auth"/>
+                                                )
+                                            ) 
+                                        
+                                         }/>
                                      <Route exact path="/image" render={() => (
                                         cookie.load("appauth") ? (
                                             <Redirect to="/imageauth"/>

@@ -100,13 +100,12 @@ class LoginForm extends React.Component {
         console.log('test:')
         //fetch(`http://192.168.119.129:9090/api/users/`+cookie.load(username)+`/module/application`,{   //Fetch方法
         //fetch(`http://192.168.119.129:9090/api/users/oijdasd/fed/`,{   //Fetch方法
-        fetch(utils.urlprefix+'/api/users/'+cookie.load("username")+`/fed/`,{   //Fetch方法
+        fetch(utils.urlprefix+'/api/users/'+cookie.load("username")+`/fed`,{   //Fetch方法
         method: 'GET',
         mode:'cors',
         headers: {'Content-Type': 'application/json; charset=utf-8'},
     }).then((response) => {
-            console.log('response:',response.ok)
-            
+            console.log('response:',response.ok)           
             if(response.ok) {
                 cookie.save("clusterauth",true)
             }

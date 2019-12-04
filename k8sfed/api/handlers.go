@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	css "k8sfed/cluster/clusters"
 	"k8sfed/cluster/deployment"
+	"log"
+	"net/http"
 	"os"
 	"path"
 	"strconv"
 	"strings"
-
-	"net/http"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -45,6 +46,7 @@ func ConfigLoad() error {
 	}
 
 	contents := make(map[string]string)
+	clusters = []string{}
 	text, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return err
@@ -62,14 +64,25 @@ func ConfigLoad() error {
 		/*if strings.Contains(line, "#") {
 			line = strings.SplitN(line, "#", 2)[0]
 		}*/
+		if strings.HasPrefix(line, "$") {
+			parts := strings.SplitN(line, "=", 2)
+			//fmt.Printf("1 %d %q\n", len(parts[0]), parts[0])
+			parts[0] = strings.TrimSpace(parts[0])
+			parts[0] = strings.Trim(parts[0], "$")
+			//fmt.Printf("2 %d %q\n", len(parts[0]), parts[0])
+			parts[1] = strings.TrimSpace(parts[1])
+			clusters = append(clusters, parts[1])
 
-		parts := strings.SplitN(line, "=", 2)
-		//fmt.Printf("1 %d %q\n", len(parts[0]), parts[0])
-		parts[0] = strings.TrimSpace(parts[0])
-		//fmt.Printf("2 %d %q\n", len(parts[0]), parts[0])
-		parts[1] = strings.TrimSpace(parts[1])
+		} else {
+			parts := strings.SplitN(line, "=", 2)
+			//fmt.Printf("1 %d %q\n", len(parts[0]), parts[0])
+			parts[0] = strings.TrimSpace(parts[0])
+			//fmt.Printf("2 %d %q\n", len(parts[0]), parts[0])
+			parts[1] = strings.TrimSpace(parts[1])
 
-		contents[parts[0]] = parts[1]
+			contents[parts[0]] = parts[1]
+		}
+
 	}
 
 	if _, ok := contents["fedclustername"]; !ok {
@@ -97,6 +110,7 @@ func ConfigLoad() error {
 	harborusername = contents["harborusername"]
 	harborpassword = contents["harborpassword"]
 	harbormaster = contents["harbormaster"]
+	//fmt.Printf("clusters", clusters)
 	//conf.ProtoAddr = contents["protoAddr"]
 	//conf.Repository = contents["repository"]
 	//conf.NfsServer = contents["ipAddr"]
@@ -177,13 +191,15 @@ func createRouter(r *httprouter.Router) {
 			"/api/pause/users":                          pauseUsers,
 			"/api/resume/user":                          resumeUser,
 			"/api/resume/users":                         resumeUsers,
+			"/api/charts":                               postChart,
 		},
 		"DELETE": { //删除
 			"/api/cluster/:cluster/app/:app":                                    deleteApp, //不分命名空间
 			"/api/cluster/:cluster/namespace/:namespace/deployment/:deployment": deleteDep,
 			"/api/cluster/:cluster/releases":                                    deleteReleases, //批量删除url传json数据{items:[{name,namespace},{}]}
-			"/api/cluster/:cluster/deployments":                                 deleteDeps,     //批量删除url传json数据{items:[{name,namespace},{}]}
-			"/api/cluster/:cluster/template/resources":                          deleteTemRes,   //批量删除url传json数据{items:[{name,namespace},{}]}
+			"/api/charts":                                                       deleteCharts,
+			"/api/cluster/:cluster/deployments":                                 deleteDeps,   //批量删除url传json数据{items:[{name,namespace},{}]}
+			"/api/cluster/:cluster/template/resources":                          deleteTemRes, //批量删除url传json数据{items:[{name,namespace},{}]}
 			"/api/cluster/:cluster/ingresses":                                   deleteIngs,
 			"/api/cluster/:cluster/services":                                    deleteSvcs,
 			"/api/cluster/:cluster/pvcs":                                        deletePVCs,
@@ -404,18 +420,39 @@ func getClusters(w http.ResponseWriter, r *http.Request, p httprouter.Params) er
 	//var clustername = p.ByName("cluster")
 	//var fedclustername = "k8s-fed" //以后从文件读取联邦集群的名字
 	//dataSource = append(dataSource, deps.Items...)
-	dataSource, errc := ListCluster(fedclustername)
-	if errc != nil {
-		// handle error
-		return errc
+	health, errh := css.GetFedHealth(fedclustername + ":31667")
+
+	if errh == nil && health == "ok" { //如果联邦正常工作
+		fmt.Println("fed is active")
+		dataSource, errc := ListCluster(fedclustername)
+		if errc != nil {
+			// handle error
+			return errc
+		}
+
+		depsdata, err := json.Marshal(dataSource)
+		if err != nil {
+			// handle error
+			return err
+		}
+		w.Write(depsdata)
+	} else {
+		fmt.Println("fed is inactive")
+		//fmt.Printf("clusters", clusters)
+		dataSource, errc := ListCluster2(clusters)
+		if errc != nil {
+			// handle error
+			return errc
+		}
+
+		depsdata, err := json.Marshal(dataSource)
+		if err != nil {
+			// handle error
+			return err
+		}
+		w.Write(depsdata)
 	}
 
-	depsdata, err := json.Marshal(dataSource)
-	if err != nil {
-		// handle error
-		return err
-	}
-	w.Write(depsdata)
 	//fmt.Printf("%v", utils.A)
 	/*resp2, _, err1 := utils.Call("GET", "/apis/federation/v1beta1/clusters", "10.103.240.130:8001", nil)
 	if err1 != nil {
@@ -441,6 +478,7 @@ func getCluster(w http.ResponseWriter, r *http.Request, p httprouter.Params) err
 	fmt.Println("getCluster被访问！")
 	var clustername = p.ByName("cluster")
 	//dataSource = append(dataSource, deps.Items...)
+
 	dataSource, errc := ListCluster(clustername)
 	if errc != nil {
 		// handle error
@@ -1392,6 +1430,52 @@ func postNamespace(w http.ResponseWriter, r *http.Request, p httprouter.Params) 
 	sendNormalResponse(w, NormalOp)
 	return nil
 }
+func postChart(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("postChart被访问")
+	//var clustername = p.ByName("cluster")
+	// 根据字段名获取表单文件
+	formFile, _, err := r.FormFile("file")
+	//formFiles, _ := json.Marshal(formFile)
+	//fmt.Print("formFile", string(formFiles))
+	//headers, _ := json.Marshal(header)
+	//fmt.Print("\n header", string(headers))
+	//fmt.Print("\n err %s", err)
+
+	if err != nil {
+		log.Printf("Get form file failed: %s\n", err)
+		return err
+	}
+	defer formFile.Close()
+	// 创建保存文件
+	/*destFile, err := os.Create("./" + "test.txt")
+	if err != nil {
+		log.Printf("Create failed: %s\n", err)
+		return err
+	}
+	defer destFile.Close()
+
+	// 读取表单文件，写入保存文件
+	_, err = io.Copy(destFile, formFile)
+	if err != nil {
+		log.Printf("Write file failed: %s\n", err)
+		return err
+	}*/
+
+	body, erru := uploadChart(chartrepo, formFile)
+
+	if erru != nil {
+		//sendErrorResponse(w, ErrorCreate)
+		return erru
+	}
+	fmt.Print(string(body))
+	io.WriteString(w, `{
+		"name": "file",
+		"status": "done"
+	}`)
+
+	return nil
+}
 
 func deleteApp(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 
@@ -1435,6 +1519,33 @@ func deleteReleases(w http.ResponseWriter, r *http.Request, p httprouter.Params)
 	//var flag = false
 	for _, item := range datas.Items {
 		_, err := DeleteRelease(clustername, item.Name)
+		if err != nil {
+			//io.WriteString(w, "wrong")
+			fmt.Print(err)
+			//sendErrorResponse(w, ErrorDelete)
+			//return err
+		}
+		//w.Write(body)
+	}
+	sendNormalResponse(w, NormalOp)
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+}
+func deleteCharts(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("deleteCharts被访问！")
+
+	var jsondata = r.FormValue("data")
+	//fmt.Print(jsondata)
+	var datas = &MetaDatas{}
+	errj := json.Unmarshal([]byte(jsondata), datas)
+	if errj != nil {
+		sendErrorResponse(w, ErrorDelete)
+		return errj
+	}
+	//var flag = false
+	for _, item := range datas.Items {
+		_, err := DeleteChart(chartrepo, item.Name, item.Version)
 		if err != nil {
 			//io.WriteString(w, "wrong")
 			fmt.Print(err)

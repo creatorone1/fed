@@ -259,6 +259,7 @@ type MetaData struct {
 	Name        string `json:"name,omitempty"`
 	Namespace   string `json:"namespace,omitempty"`
 	Clustername string `json:"clustername,omitempty"`
+	Version     string `json:"version,omitempty"`
 }
 type MetaDatas struct {
 	Items []MetaData `json:"items,omitempty"`

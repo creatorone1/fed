@@ -3,6 +3,8 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"net"
 
 	css "k8sfed/cluster/clusters"
 	"k8sfed/cluster/configmap"
@@ -544,8 +546,9 @@ func ListNode(clustername string) ([]Node, error) {
 			var l Label
 			l.Name = k
 			l.Value = v
-			annos = append(labels, l)
+			annos = append(annos, l)
 		}
+
 		node.Annotations = annos
 		node.Ip = item.Meta.Annotation["flannel.alpha.coreos.com/public-ip"]
 		node.Kubeletver = item.Stat.NodeInfo.KubeletVersion
@@ -696,14 +699,25 @@ func ListCluster(fedclustername string) ([]Cluster, error) {
 		} else {
 			cs.Status = "NotReady"
 		}
+		addr, errip := net.ResolveIPAddr("ip", item.Meta.Name)
+		if errip != nil {
+			fmt.Print(errip)
+			if fedclustername == item.Meta.Name || cs.Serveraddress == fedclustername {
+				cs.Role = "Controller"
+			} else {
+				cs.Role = "SubCluster"
+			}
 
-		if fedclustername == item.Meta.Name {
-			cs.Role = "Controller"
 		} else {
-			cs.Role = "SubCluster"
+			//fmt.Printf(addr.String())
+			if fedclustername == item.Meta.Name || cs.Serveraddress == fedclustername || addr.String() == fedclustername {
+				cs.Role = "Controller"
+			} else {
+				cs.Role = "SubCluster"
+			}
 		}
 
-		/**待完善,
+		/**待完善,m
 		如果该集群未准备好，不读取其内容
 		*/
 		if cs.Status != "NotReady" {
@@ -802,6 +816,155 @@ func ListCluster(fedclustername string) ([]Cluster, error) {
 			cs.Memory = memory
 
 			deps, errd := ListDeps(item.Meta.Name)
+			if errd != nil {
+				return nil, errd
+			}
+			var d1, d2 int
+			d2 = len(deps)
+			for _, citem := range deps {
+				if citem.Status == "running" {
+					d1++
+				}
+			}
+			cs.Deployments = append(cs.Deployments, d1)
+			cs.Deployments = append(cs.Deployments, d2)
+		}
+		//fmt.Print(nm)
+		dataSource = append(dataSource, cs)
+	}
+	//fmt.Print(dataSource)
+	return dataSource, nil
+}
+
+func ListCluster2(clusters []string) ([]Cluster, error) {
+
+	dataSource := []Cluster{}
+	for _, clustername := range clusters {
+		var cs = Cluster{}
+		//var labels = []Label{}
+		//var nms = []Namespace{}
+		var pods []string
+		var cpu []string
+		var memory []float64
+
+		cs.Name = clustername
+		cs.Createtime = ""
+		addr, errip := net.ResolveIPAddr("ip", clustername)
+		if errip != nil {
+			cs.Serveraddress = ""
+		} else {
+			cs.Serveraddress = addr.String()
+		}
+
+		health, errh := css.GetHealth(clustername + ":8080")
+
+		if errh == nil && health == "ok" {
+			cs.Status = "Ready"
+		} else {
+			cs.Status = "NotReady"
+		}
+
+		cs.Role = "SubCluster"
+
+		/**待完善,
+		如果该集群未准备好，不读取其内容
+		*/
+		if cs.Status != "NotReady" {
+			/*for k, v := range item.Meta.Labels {
+				var l Label
+				l.Name = k
+				l.Value = v
+				labels = append(labels, l)
+			}
+			cs.Labels = labels*/
+
+			versionmp, errv := css.GetVersion(clustername + ":8080")
+			if errv != nil {
+				return nil, errv
+			}
+			//fmt.Print(versionmp)
+			cs.Version = versionmp["gitVersion"]
+
+			var cts = &css.Comstatuses{}
+			var comstatus = Comstatuses{}
+			cts.GetComstatuses(clustername + ":8080")
+			for _, citem := range cts.Items {
+				if citem.Meta.Name == "controller-manager" {
+					if citem.Conditions[0].Status == "True" {
+						comstatus.Controller = "True"
+					} else {
+						comstatus.Controller = "False"
+					}
+				}
+				if citem.Meta.Name == "scheduler" {
+					if citem.Conditions[0].Status == "True" {
+						comstatus.Scheduler = "True"
+					} else {
+						comstatus.Scheduler = "False"
+					}
+				}
+				if citem.Meta.Name == "etcd-0" {
+					if citem.Conditions[0].Status == "True" {
+						comstatus.Etcd = "True"
+					} else {
+						comstatus.Etcd = "False"
+					}
+				}
+			}
+			comstatus.Node = "True"
+			cs.Componentstatuses = comstatus
+
+			nmdata, errnm := ListNamespace(clustername)
+			if errnm != nil {
+				return nil, errnm
+			}
+			cs.Namespaces = nmdata
+
+			nodes, errn := ListNode(clustername)
+			if errn != nil {
+				return nil, errn
+			}
+			cs.Nodes = len(nodes)
+			var pod1, pod2 int
+			var cpu1, cpu2 int
+			var memory1, memory2 float64
+			for _, nitem := range nodes {
+				p1i, errp1i := strconv.Atoi(nitem.Pods[0])
+				if errp1i != nil {
+					return nil, errp1i
+				}
+				p2i, errp2i := strconv.Atoi(nitem.Pods[1])
+				if errp2i != nil {
+					return nil, errp2i
+				}
+				pod1 += p1i
+				pod2 += p2i
+
+				c1i, errc1i := strconv.Atoi(nitem.Cpu[0])
+				if errc1i != nil {
+					return nil, errc1i
+				}
+				c2i, errc2i := strconv.Atoi(nitem.Cpu[1])
+				if errc2i != nil {
+					return nil, errc2i
+				}
+				cpu1 += c1i
+				cpu2 += c2i
+
+				memory1 += nitem.Memory[0]
+				memory2 += nitem.Memory[1]
+			}
+			pods = append(pods, strconv.Itoa(pod1))
+			pods = append(pods, strconv.Itoa(pod2))
+			cpu = append(cpu, strconv.Itoa(cpu1))
+			cpu = append(cpu, strconv.Itoa(cpu2))
+			memory = append(memory, memory1)
+			memory = append(memory, memory2)
+			cs.Pods = pods
+			cs.Cpu = cpu
+			cs.Memory = memory
+
+			deps, errd := ListDeps(clustername)
 			if errd != nil {
 				return nil, errd
 			}
@@ -1417,6 +1580,19 @@ func DeleteSC(clustername, name string) ([]byte, error) {
 	}
 	return body, nil
 }
+func DeleteChart(chartmastername, name, version string) ([]byte, error) {
+	var newchart = application.Chart{
+		Name:    name,
+		Version: version,
+	}
+	/*data, _ := json.Marshal(dep)
+	fmt.Printf("%s",data)*/
+	body, _, err := cluster.ReadBody(newchart.Delete(chartmastername))
+	if err != nil {
+		return body, err
+	}
+	return body, nil
+}
 func DeleteRelease(swiftclustername, name string) ([]byte, error) {
 
 	var newre = application.Release{
@@ -2009,6 +2185,14 @@ func CreateRelease(re ReleaseMeta) ([]byte, error) {
 	//datas, _ := json.Marshal(newdep)
 	//fmt.Printf("%s", datas)
 	body, _, err := cluster.ReadBody(releaseMeta.Create(re.Cluster + ":31589"))
+	if err != nil {
+		return body, err
+	}
+	return body, nil
+}
+func uploadChart(chartmastername string, file io.Reader) ([]byte, error) {
+
+	body, _, err := cluster.ReadBody(application.UploadCharts(chartmastername, file))
 	if err != nil {
 		return body, err
 	}

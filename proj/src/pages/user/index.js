@@ -463,6 +463,13 @@ import Axios from 'axios';
                 } 
                  })
           }); */
+        
+            console.log('test:')
+            //fetch(`http://192.168.119.129:9090/api/users/`+cookie.load(username)+`/module/application`,{   //Fetch方法
+            //fetch(`http://192.168.119.129:9090/api/users/oijdasd/fed/`,{   //Fetch方法
+         
+        
+
               if(this.state.searchname!==''){
                  //console.log('this.state.searchname:',this.state.searchname)
                  //console.log(this.state.dataSource.map(item=>item.name.indexOf(this.state.searchname)))
