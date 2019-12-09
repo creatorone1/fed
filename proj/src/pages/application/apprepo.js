@@ -7,6 +7,7 @@ import { Z_BLOCK } from 'zlib';
 import { color } from 'echarts/lib/export';
 import CreateApp from './form/create_app'
 import utils from './../../utils/utils'
+const Option=Select.Option;
 export default class AppRepo   extends React.Component {
     state = {
         dataSource:[{
@@ -228,12 +229,66 @@ export default class AppRepo   extends React.Component {
             }
             })
     }
+     // 删除操作
+     handleDelete = (name,versions )=>{
+        console.log("删除！")   
+        var ops=versions.map(item=>
+        <Option value={item.version} key={item.version}>{item.version}</Option>
+        ) 
+        var version=versions[0].version
+        var select=(value)=>{
+            console.log('selected:',value)
+            version=value
+        }
+        //let id = record.id;
+        Modal.confirm({
+            title:'确认删除  '+name,
+            content:<div>
+                    选择版本：
+                    <Select defaultValue={version} style={{width:120}} onSelect={select} >
+                    {ops}
+                    </Select> 
+                    </div>,
+            
+            onOk:()=>{
+
+                var datas={
+                    items:[]
+                }   
+                var ditem={
+                    name:name ,
+                    version:version, 
+                }
+                datas.items=datas.items.concat(ditem) 
+                console.log('json:',JSON.stringify(datas))
+                //下面URL的 集群 名称 以后需要替换掉
+                fetch(utils.urlprefix+'/api/charts?data='+JSON.stringify(datas),{
+                    method:'DELETE',
+                    mode: 'cors', 
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+
+                        message.success('删除成功');
+                        //发送删除请求
+                        this.request(); 
+                        return data;
+                    }).catch( (e)=> {  
+                        message.success('网络错误');
+                        console.log(e);
+                    })
+               
+            }
+        })
+    }
     render(){
         //console.log(this.state.search) 
         const data=this.state.search?this.state.searchdata:this.state.dataSource
         // console.log(data)
         const card= data.map(item=>(
             <div className="card-wrap1" style={{verticalAlign:'top'}} key={item.name }>   
+           <Badge title={"删除"}  style={{backgroundColor: 'white'}} offset={[20,220]}   count={ <Icon type="close" style={{ color: '#fa541c' ,cursor:'pointer',fontSize:15}} onClick={()=>this.handleDelete(item.name,item.versions)}  />}  >
             <Card style={{textAlign:'center',width:'250px' ,height:'320px',    }}  >
                 <img src={item.iconurl} alt=""  style={{height:'80px',width:'80px',display:'block',margin:'auto',marginBottom:'16px'}}/> 
                 <span style={{fontSize:'15px',color:'#00F' }}>{item.name}</span>
@@ -244,6 +299,7 @@ export default class AppRepo   extends React.Component {
                 </div>
                 <Button   type='primary'  style={{marginTop:'20px'}}  onClick={()=>this.handleCreate(true,item)}>创建</Button>  
             </Card>
+            </Badge>
             </div> 
         ))
         var _this =this;
@@ -303,7 +359,7 @@ export default class AppRepo   extends React.Component {
                          <div style={{display:'inline-block'}}> 
                         <Upload  {...props} >
                         <Button>
-                        <Icon type="upload" /> Click to Upload
+                        <Icon type="upload" /> 上传应用包
                         </Button>
                         </Upload>  
                         </div>

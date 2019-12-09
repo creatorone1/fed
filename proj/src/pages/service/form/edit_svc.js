@@ -201,7 +201,19 @@ class CreateSvc extends React.Component {
             console.log('remove data',data)
           }  
         }  
-        
+
+        if(keytype=='annokeys'){
+          //console.log('labelkeys',k)
+          form.setFieldsValue({
+            annokeys: keys.filter(key => key !== k),
+          });
+          if(k.indexOf('default')!==-1){
+            const annoname=form.getFieldValue(`label[${k}]`)
+            var data=this.state.dataSource
+            data.annotations=data.annotations.filter(item=>item.name!==annoname)
+            console.log('remove data',data)
+          }  
+        }
         if(keytype=='exipkeys'){
           //console.log('exipkeys',k)
           form.setFieldsValue({
@@ -236,6 +248,10 @@ class CreateSvc extends React.Component {
         if(keytype=='labelkeys')  
         form.setFieldsValue({
           labelkeys: nextKeys,
+        });
+        if(keytype=='annokeys')  
+        form.setFieldsValue({
+          annokeys: nextKeys,
         });
         if(keytype=='exipkeys')  
         form.setFieldsValue({
@@ -403,7 +419,57 @@ class CreateSvc extends React.Component {
         </Row>
       ));
       return formItems;
-  }
+    }
+
+    //初始化标签label key表单数组
+    initannoKeysItem =(keytype,keys,dataSource,annolength)=>{
+      const { getFieldDecorator } = this.props.form;
+     
+      const formItems = keys.map((k, index) => ( //根据key的数量显示form内容行数
+        <Row key={index} gutter={16}> 
+        <Col span='12'  > 
+        <FormItem 
+          label={index === 0 ? '键' : ''} 
+        >
+          {getFieldDecorator(`label[${k}]`, {
+            initialValue:index<annolength?dataSource.annotations[index].name:'',
+            rules: [{
+              required: true,
+              whitespace: true,
+              message: "不能为空",
+            }],
+          })( 
+            <Input placeholder="" style={{width:'80%',marginRight:'8%' }}  />   
+          )}
+           =
+        </FormItem>
+        </Col>
+         
+        <Col span='12'  > 
+        <FormItem
+          label={index === 0 ? '值' : ''} 
+        >
+          <div> 
+          {getFieldDecorator(`value[${k}]`, {
+            initialValue:index<annolength?dataSource.annotations[index].value:'', 
+          })(   
+            <Input placeholder="" style={{width:'80%',marginRight:'8%'}}  />    
+           )}
+          {keys.length > 0 ? (
+            <Icon
+              className="dynamic-delete-button"
+              type="minus-circle-o"
+              onClick={() => this.remove(keytype,k)}
+            />
+             ) : null}
+            </div> 
+        </FormItem>
+        </Col> 
+        </Row>
+      ));
+      return formItems;
+    }
+
     //初始化端口映射port表单数组
     initPortsItem =(keytype,keys,svctype,dataSource,portlength)=>{
         //console.log('svctype:',svctype)
@@ -476,7 +542,7 @@ class CreateSvc extends React.Component {
             
           </FormItem>
           </Col>
-          <Col span={(svctype =='NodePort'  ) ? '5':'10'}  > 
+          <Col span={(svctype =='NodePort'||svctype =='LoadBalancer'  ) ? '5':'10'}  > 
           <FormItem 
             label={index === 0 ? '容器端口' : ''}  
           >
@@ -488,7 +554,7 @@ class CreateSvc extends React.Component {
                 min={0}
               ></InputNumber> 
             )} 
-            { (svctype =='NodePort'  ) ? '':  
+            { (svctype =='NodePort'||svctype =='LoadBalancer'  ) ? '':  
                 (keys.length > 0 ? (
                   <Icon
                     className="dynamic-delete-button"
@@ -499,7 +565,7 @@ class CreateSvc extends React.Component {
             } 
           </FormItem>
           </Col>
-          {  (svctype =='NodePort'  ) ?  
+          {  (svctype =='NodePort'||svctype =='LoadBalancer'   ) ?  
           <Col span='6'  >
           <FormItem
             label={index === 0 ? '主机端口' : ''} 
@@ -594,6 +660,20 @@ class CreateSvc extends React.Component {
         const labelkeys = getFieldValue('labelkeys'); //获取label的key
         const labelformItems = this.initlabelKeysItem('labelkeys',labelkeys,dataSource,labellength) //根据key数量设定label表单item
         
+        let anno,annolength;
+        if(dataSource){ //读取默认的环境变量env值
+           anno=dataSource.annotations
+        }
+        if(anno){//如果存在env变量则添加默认值
+                this.props.form.getFieldDecorator('annokeys', { initialValue: anno.map((item,index)=>'defaultannokeys'+index) });//定义环境变量的key
+                annolength=anno.length;
+        }else{
+                this.props.form.getFieldDecorator('annokeys', { initialValue: [] });//定义label的key
+                annolength=0
+        }
+        const annokeys = getFieldValue('annokeys'); //获取label的key
+        const annoformItems = this.initannoKeysItem('annokeys',annokeys,dataSource,annolength) //根据key数量设定label表单item
+
         let sel,sellength;
         if(dataSource){ //读取默认的环境变量env值
           sel=dataSource.selectors
@@ -743,6 +823,14 @@ class CreateSvc extends React.Component {
                     </Button>
                     </FormItem>
                 </Panel>
+                <Panel header="注释" key="4" >
+                    {annoformItems}
+                    <FormItem  >
+                    <Button type='primary' onClick={()=>this.add('annokeys')}    >
+                    <Icon type="plus" />添加注释
+                    </Button>
+                    </FormItem>
+                </Panel>
             </Collapse>
             
            </Form>
@@ -776,6 +864,7 @@ function Service(values) {
            
 
           labelkeys,
+          annokeys,
           label,
           value,
 
@@ -802,7 +891,7 @@ function Service(values) {
   
   var ports=[]
   portkeys.map(key=>{
-    if(type=='NodePort'){
+    if(type=='NodePort'||type=='LoadBalancer'){
       var p={
         name:portname[key],
         port:svcport[key],
@@ -830,9 +919,18 @@ function Service(values) {
     }
     labels=labels.concat(l)
   })
-
   svc.label=labels
-    
+
+  var annotations=[]
+  annokeys.map(key=>{
+    var l={
+      name:label[key],
+      value:value[key],
+    }
+    annotations=annotations.concat(l)
+  })  
+  svc.annotations=annotations 
+
   var exips=[] 
   exipkeys.map(key=>{
    // var exip=

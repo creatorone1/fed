@@ -153,6 +153,10 @@ class CreateSvc extends React.Component {
         form.setFieldsValue({
           labelkeys: keys.filter(key => key !== k),
         });
+        if(keytype=='annokeys')  
+        form.setFieldsValue({
+          annokeys: keys.filter(key => key !== k),
+        });
         if(keytype=='exipkeys')  
         form.setFieldsValue({
           exipkeys: keys.filter(key => key !== k),
@@ -175,10 +179,14 @@ class CreateSvc extends React.Component {
         if(keytype=='portkeys')  
         form.setFieldsValue({
           portkeys: nextKeys,
-        });
+        }); 
         if(keytype=='labelkeys')  
         form.setFieldsValue({
           labelkeys: nextKeys,
+        });
+        if(keytype=='annokeys')  
+        form.setFieldsValue({
+          annokeys: nextKeys,
         });
         if(keytype=='exipkeys')  
         form.setFieldsValue({
@@ -504,6 +512,10 @@ class CreateSvc extends React.Component {
         const labelkeys = getFieldValue('labelkeys'); //获取label的key
         const labelformItems = this.initlabelKeysItem('labelkeys',labelkeys) //根据key数量设定label表单item
         
+        getFieldDecorator('annokeys', { initialValue: [] });//定义annokeys 
+        const annokeys = getFieldValue('annokeys'); //获取label的key
+        const annoformItems = this.initlabelKeysItem('annokeys',annokeys) //根据key数量设定label表单item
+        
         getFieldDecorator('selkeys', { initialValue: [] });//定义label的key 
         const selkeys = getFieldValue('selkeys'); //获取label的key
         const selformItems = this.initselKeysItem('selkeys',selkeys) //根据key数量设定label表单item
@@ -649,6 +661,14 @@ class CreateSvc extends React.Component {
                     </Button>
                     </FormItem>
                 </Panel>
+                <Panel header="注释" key="4" >
+                    {annoformItems}
+                    <FormItem  >
+                    <Button type='primary' onClick={()=>this.add('annokeys')}    >
+                    <Icon type="plus" />添加注释
+                    </Button>
+                    </FormItem>
+                </Panel>
             </Collapse>
             
            </Form>
@@ -680,6 +700,7 @@ function Service(values) {
            
 
           labelkeys,
+          annokeys,
           label,
           value,
 
@@ -734,10 +755,19 @@ function Service(values) {
       value:value[key],
     }
     labels=labels.concat(l)
-  })
-
+  }) 
   svc.label=labels
-    
+
+  var annotations=[]
+  annokeys.map(key=>{
+    var l={
+      name:label[key],
+      value:value[key],
+    }
+    annotations=annotations.concat(l)
+  })  
+  svc.annotations=annotations 
+
   var exips=[] 
   exipkeys.map(key=>{
     exips=exips.concat(exip[key])

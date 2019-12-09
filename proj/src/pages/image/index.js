@@ -1,13 +1,16 @@
 import React from 'react';
- import {Modal,message,Badge,InputNumber,Spin,Alert,Tag,Table, Select,Tabs,Divider,Checkbox, Button,Input, Row,Col,Icon,Dropdown,Menu,  
+ import {Modal,message,Badge,InputNumber,Form,Spin,Alert,Upload,Tag,Table, Select,Tabs,Divider,Checkbox, Button,Input, Row,Col,Icon,Dropdown,Menu,  
 } from 'antd'; 
 import { HashRouter, Route, Switch, Redirect,Link,NavLink} from 'react-router-dom'
  
 import utils from '../../utils/utils';
 import Imagetags from './form/imagetags'
+import UpdateRepo from './form/updaterepo'
+
 const Option = Select.Option;
 const TabPane = Tabs.TabPane;
-export default class Images extends React.Component {
+const FormItem = Form.Item;
+ class Images extends React.Component {
       
     state = {
        
@@ -91,7 +94,8 @@ export default class Images extends React.Component {
         ,
         loading:false,
         btnloading:false,
-        currentcluster:'fed'
+        currentcluster:'fed',
+        upload:false
     }
     componentDidMount(){//请求数据
         //按集群读取节点数据
@@ -111,7 +115,8 @@ export default class Images extends React.Component {
                         btnloading:false,
                     })
                 }).catch( (e)=>{
-                    this.setState({ 
+                    this.setState({
+                        dataSource:[] ,
                          loading:false,
                          btnloading:false,
                     })
@@ -351,6 +356,65 @@ export default class Images extends React.Component {
         console.log('refresh!')
         this.request()
     } 
+    handleRepoAdd=(e)=>{
+        let content=e.target.value
+        this.setState({
+            imagerepoadd:content
+        })
+    }
+    handleChangeRepo=()=>{
+        const { getFieldDecorator, getFieldValue } = this.props.form;
+        const formItemLayout = { //设置每个控件的名称和组件的大小
+          labelCol: {
+            xs: { span: 24 },
+            sm: { span: 6 },
+          },
+          wrapperCol: {
+            xs: { span: 24 },
+            sm: { span: 18 },
+          },
+        };   
+         
+        
+        const wwidth='80%' //定义表单中空间宽度
+        Modal.confirm({
+            title:'更新镜像仓库地址',
+            content:(
+                <Row  style={{marginTop:20,height:32}}>
+                <Col span='6' style={{display:'flex',height:'100%',alignItems:'center'  }}> 
+                {'  仓库地址:  ' } 
+                </Col>
+                <Col span='18'> 
+                <Input onChange={this.handleRepoAdd} placeholder='例如：core.harbor.domain' style={{display:'inline-block',width:'90%'}}/>
+                </Col>
+                </Row> ),
+            onOk:()=>{ 
+                var add=this.state.imagerepoadd  
+                
+                fetch(utils.urlprefix+'/api/imagerepo',{
+                    method:'PUT',
+                    mode: 'cors', 
+                    body:add,
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        
+                        message.success('更新成功');
+                        //发送删除请求
+                        this.request(); 
+                        return data;
+                    }).catch( (e)=> {  
+                         
+                        message.success('网络错误');
+                        //发送删除请求
+                        this.request(); 
+                        console.log(e);
+                    })
+               
+            }
+            })
+    }
     render(){ 
         const columns=[
             {
@@ -416,7 +480,63 @@ export default class Images extends React.Component {
                 })
             }
         } 
-        
+        var _this =this;
+        const props = {   
+            onChange(info) {
+           //console.log(info)
+              if (info.file.status !== 'uploading') {
+                console.log(info.file, info.fileList);
+              }
+              if (info.file.status === 'done') {
+                message.success(`${info.file.name} file uploaded successfully`);
+              } else if (info.file.status === 'error') {
+                message.error(`${info.file.name} file upload failed.`);
+              }
+            },
+            showUploadList:false,
+            customRequest({ action,
+                data,
+                file,
+                filename,
+                headers,
+                onError,
+                onProgress,
+                onSuccess,
+                withCredentials,}){
+
+                console.log('post file',file)
+                console.log('filename',file.name)
+                //通过formData来传文件
+                var formData = new FormData();
+                formData.append("file", file);  //后台读取的变量名为 "file"
+                formData.append("filename", file.name);    
+                _this.setState({
+                    upload:true
+                })    
+                fetch(utils.urlprefix+'/api/images',{
+                    method:'POST',
+                    body:formData, 
+                    }).then((response) => {
+                        //console.log('response:',response)
+                        
+                        return response.json();
+                    }).then((data) => {
+                        console.log('data:',data)
+                        onSuccess(data, file); 
+                        _this.setState({
+                            upload:false
+                        })  
+                        _this.request()
+                        return data;
+                    }).catch((e)=>{
+                        message.error(`${file.name} file upload failed.`);
+                        _this.setState({
+                            upload:false
+                        }) 
+                    })
+            }
+          };
+
         return (
             
             <div> 
@@ -440,9 +560,18 @@ export default class Images extends React.Component {
                     <Row className='Button-wrap' style={{ marginTop:-10}}> 
                     <Col span='12'> 
                         <Button onClick={this.handleMutiDelete}>删除<Icon type='delete'></Icon></Button>
-                                                 
+                        <UpdateRepo statechange={this.statechange}/>           
+                       
+                                                
                     </Col>
-                        <Col span='12' className='Button-right'> 
+                    <Col span='12' className='Button-right'> 
+                        <div style={{display:'inline-block'}}> 
+                            <Upload  {...props} >
+                            <Button disabled={this.state.upload?true:false}>
+                            <Icon type={this.state.upload?"loading":"upload"}   /> 上传镜像
+                            </Button>
+                            </Upload>  
+                        </div> 
                         <Button onClick={this.handleRefresh} loading={this.state.btnloading}>刷新 </Button>
                         <Input style={{display:'inline-block',width:150}} onChange={this.searchChange}></Input>
                         <Button onClick={this.handleSearch}>搜索<Icon type="search"  /></Button> 
@@ -477,3 +606,5 @@ export default class Images extends React.Component {
         )
     }
 }
+
+export default Form.create()(Images); 

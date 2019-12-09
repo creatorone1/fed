@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os/exec"
 
 	css "k8sfed/cluster/clusters"
 	"k8sfed/cluster/configmap"
@@ -307,6 +308,7 @@ func ListSvc(clustername string) ([]Service, error) {
 		var svc = Service{}
 		var ports = []SVCPort{}
 		var labels = []Label{}
+		var annos = []Label{}
 		var externalip []string
 		svc.Name = item.Meta.Name
 		svc.Namespace = item.Meta.Namespace
@@ -331,6 +333,14 @@ func ListSvc(clustername string) ([]Service, error) {
 			labels = append(labels, l)
 		}
 		svc.Label = labels
+
+		for k, v := range item.Meta.Annotation {
+			var l Label
+			l.Name = k
+			l.Value = v
+			annos = append(annos, l)
+		}
+		svc.Annotations = annos
 
 		for _, item := range item.Spe.ExternalIPs {
 			externalip = append(externalip, item)
@@ -1850,11 +1860,17 @@ func CreateSvc(svc Service, clustername string) ([]byte, error) {
 	for _, label := range labels {
 		mplabels[label.Name] = label.Value
 	}
+	var annos = svc.Annotations
+	var mpannos map[string]string = make(map[string]string)
+	for _, anno := range annos {
+		mpannos[anno.Name] = anno.Value
+	}
 
 	var svcmeta = &cluster.Metadata{
-		Name:      svc.Name,
-		Namespace: svc.Namespace,
-		Labels:    mplabels,
+		Name:       svc.Name,
+		Namespace:  svc.Namespace,
+		Labels:     mplabels,
+		Annotation: mpannos,
 	}
 	/*svc spe begin*/
 	var svcports []*service.Port
@@ -2197,6 +2213,23 @@ func uploadChart(chartmastername string, file io.Reader) ([]byte, error) {
 		return body, err
 	}
 	return body, nil
+}
+
+func uploadImage(filename, username, password string) ([]byte, error) {
+	fmt.Println("loading image: ", filename)
+
+	command := `./loadimage.sh ` + filename + ` ` + username + ` ` + password + ` .`
+
+	cmd := exec.Command("/bin/bash", "-c", command)
+	output, err := cmd.Output()
+
+	fmt.Println("loading over")
+
+	if err != nil {
+		fmt.Printf("Execute Shell:%s failed with error:%s", command, err.Error())
+		return nil, err
+	}
+	return output, nil
 }
 
 /**update status 对资源状态进行更新*/
@@ -2878,10 +2911,17 @@ func UpdateSvc(svc Service, clustername string) ([]byte, error) {
 	for _, label := range labels {
 		mplabels[label.Name] = label.Value
 	}
+
+	var annos = svc.Annotations
+	var mpannos map[string]string = make(map[string]string)
+	for _, anno := range annos {
+		mpannos[anno.Name] = anno.Value
+	}
 	//从原来基础上更改Meta
 	svcmeta = newsvc.Meta
 	svcmeta.Labels = mplabels
-
+	svcmeta.Annotation = mpannos
+	fmt.Println("Annotation", svcmeta.Annotation)
 	/*svc spe begin*/
 	var svcports []*service.Port
 	for _, item := range svc.Ports {

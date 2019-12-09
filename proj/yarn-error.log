@@ -1,5 +1,5 @@
 Arguments: 
-  C:\Program Files\nodejs\node.exe C:\Program Files (x86)\Yarn\bin\yarn.js add antd
+  C:\Program Files\nodejs\node.exe C:\Program Files (x86)\Yarn\bin\yarn.js add antd:3.5.0
 
 PATH: 
   C:\Program Files (x86)\NetSarang\Xshell 6\;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Windows\System32\WindowsPowerShell\v1.0\;C:\Windows\System32\OpenSSH\;C:\Program Files\nodejs\;C:\Program Files (x86)\Yarn\bin\;C:\Program Files\MiKTeX 2.9\miktex\bin\x64\;C:\Program Files\Git\cmd;C:\Go\bin;C:\Users\bupt\AppData\Local\Microsoft\WindowsApps;D:\IDE\Microsoft VS Code\bin;C:\Users\bupt\AppData\Roaming\npm;C:\Users\bupt\AppData\Local\Yarn\bin;C:\Users\bupt\AppData\Local\Programs\MiKTeX 2.9\miktex\bin\x64\;C:\texlive\2018\bin\win32;C:\Users\bupt\go\bin
@@ -14,10 +14,17 @@ Platform:
   win32 x64
 
 Trace: 
-  Error: connect ETIMEDOUT 104.16.21.35:443
-      at Object._errnoException (util.js:1031:13)
-      at _exceptionWithHostPort (util.js:1052:20)
-      at TCPConnectWrap.afterConnect [as oncomplete] (net.js:1195:14)
+  Error: antd:3.5.0: Invalid protocol: antd:
+      at Request.module.exports.Request.init (C:\Program Files (x86)\Yarn\lib\cli.js:129810:31)
+      at new Request (C:\Program Files (x86)\Yarn\lib\cli.js:129483:8)
+      at request (C:\Program Files (x86)\Yarn\lib\cli.js:126389:10)
+      at RequestManager.execute (C:\Program Files (x86)\Yarn\lib\cli.js:65219:15)
+      at RequestManager.shiftQueue (C:\Program Files (x86)\Yarn\lib\cli.js:65257:10)
+      at C:\Program Files (x86)\Yarn\lib\cli.js:64936:13
+      at new Promise (<anonymous>)
+      at new F (C:\Program Files (x86)\Yarn\lib\cli.js:5228:28)
+      at RequestManager.request (C:\Program Files (x86)\Yarn\lib\cli.js:64934:19)
+      at NpmRegistry.<anonymous> (C:\Program Files (x86)\Yarn\lib\cli.js:31610:42)
 
 npm manifest: 
   {
@@ -26,7 +33,8 @@ npm manifest:
     "private": true,
     "homepage": "./",
     "dependencies": {
-      "@babel/polyfill": "^7.4.4", 
+      "@babel/polyfill": "^7.4.4",
+      "antd": "^3.5.0",
       "autoprefixer": "7.1.6",
       "axios": "^0.18.0",
       "babel-core": "6.26.0",
@@ -67,6 +75,7 @@ npm manifest:
       "postcss-flexbugs-fixes": "3.2.0",
       "postcss-loader": "2.0.8",
       "promise": "8.0.1",
+      "prop-types": "^15.7.2",
       "raf": "3.4.0",
       "react": "^16.3.2",
       "react-clipboard": "^1.3.2",
@@ -6809,7 +6818,7 @@ Lockfile:
       loose-envify "^1.3.1"
       object-assign "^4.1.1"
   
-  prop-types@^15.5.0:
+  prop-types@^15.5.0, prop-types@^15.7.2:
     version "15.7.2"
     resolved "https://registry.yarnpkg.com/prop-types/-/prop-types-15.7.2.tgz#52c41e75b8c87e72b9d9360e0206b99dcbffa6c5"
     integrity sha512-8QQikdH7//R2vurIJSutZ1smHYTcLpRWEOlHnzcWHmBYrOGUysKwSsrC89BCiFj3CbrfJ/nXFdJepOVrY1GCHQ==

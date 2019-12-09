@@ -5,7 +5,7 @@
   "homepage": "./",
   "dependencies": {
     "@babel/polyfill": "^7.4.4",
-    "antd": "^3.4.3",
+    "antd": "3.5.0",
     "autoprefixer": "7.1.6",
     "axios": "^0.18.0",
     "babel-core": "6.26.0",

@@ -54,7 +54,15 @@ export default class Services extends React.Component {
             },{
                 name:'c',
                 value:'d',
-            },],
+            },
+            ],
+            annotations:[{
+                name:'a',
+                value:'b',
+            },{
+                name:'c',
+                value:'d',
+            }],
             externalip:['10.103.240.195','10.103.240.133']
         },
         {
@@ -80,7 +88,14 @@ export default class Services extends React.Component {
                 port:80,
                 protocol:'TCP',
                 targetport:80, 
-            }]
+            }],
+            annotations:[{
+                name:'a',
+                value:'b',
+            },{
+                name:'c',
+                value:'d',
+            }],
         }, 
         ],
         btnloading:false,
@@ -134,8 +149,8 @@ export default class Services extends React.Component {
 
         }) 
         this.request(nextProps.currentcluster,nextProps.currentnamespace)
-        console.log('ingress get props currentcluster:',nextProps.currentcluster)
-        console.log('ingress get props currentnamespaces:',nextProps.currentnamespace)
+        console.log('service get props currentcluster:',nextProps.currentcluster)
+        console.log('service get props currentnamespaces:',nextProps.currentnamespace)
 
     }
     // 删除操作

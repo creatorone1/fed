@@ -97,7 +97,7 @@ class Imagetags extends React.Component {
        
     } 
       
-    //点击暂停
+    //点击删除  
     handleMutiDelete = ()=>{
       console.log("MutiDelete!")
       console.log("selectedRowKeys",this.state.selectedRowKeys)

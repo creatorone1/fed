@@ -193,12 +193,15 @@ export default class Workload extends React.Component {
 
     }
     componentDidMount(){//请求数据
-        this.request('fed','All');//默认是联邦
+
+        this.request(this.props.currentcluster,this.props.currentnamespace);//默认是联邦
        this.setState({
         currentcluster:this.props.currentcluster,
         currentnamespace:this.props.currentnamespace,
-
        })
+       console.log('Workload props currentcluster:',this.props.currentcluster)
+       console.log('Workload props currentnamespaces:',this.props.currentnamespace)
+
     }
     
     componentWillReceiveProps(nextProps){
@@ -207,11 +210,9 @@ export default class Workload extends React.Component {
             currentnamespace:nextProps.currentnamespace, 
         })
         this.request(nextProps.currentcluster,nextProps.currentnamespace);
-        console.log('Workload state currentcluster:',this.state.currentcluster)
-        console.log('Workload state currentnamespaces:',this.state.currentnamespace)
-
-        console.log('Workload get props currentcluster:',nextProps.currentcluster)
-        console.log('Workload get props currentnamespaces:',nextProps.currentnamespace)
+       
+        console.log('Workload get nextprops currentcluster:',nextProps.currentcluster)
+        console.log('Workload get nextprops currentnamespaces:',nextProps.currentnamespace)
 
         //接收参数后更新数据
         

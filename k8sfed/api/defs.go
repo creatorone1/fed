@@ -131,16 +131,17 @@ type Ingress struct {
 }
 
 type Service struct {
-	Name       string            `json:"name,omitempty"`
-	Namespace  string            `json:"namespace,omitempty"`
-	Createtime string            `json:"createtime,omitempty"`
-	Target     map[string]string `json:"target,omitempty"`
-	Selectors  []SvcSelector     `json:"selectors,omitempty"`
-	Type       string            `json:"type,omitempty"`
-	Ports      []SVCPort         `json:"ports,omitempty"`
-	Label      []Label           `json:"label,omitempty"`
-	Externalip []string          `json:"externalip,omitempty"`
-	Workload   []string          `json:"workload,omitempty"`
+	Name        string            `json:"name,omitempty"`
+	Namespace   string            `json:"namespace,omitempty"`
+	Createtime  string            `json:"createtime,omitempty"`
+	Target      map[string]string `json:"target,omitempty"`
+	Selectors   []SvcSelector     `json:"selectors,omitempty"`
+	Type        string            `json:"type,omitempty"`
+	Ports       []SVCPort         `json:"ports,omitempty"`
+	Label       []Label           `json:"label,omitempty"`
+	Annotations []Label           `json:"annotations,omitempty"`
+	Externalip  []string          `json:"externalip,omitempty"`
+	Workload    []string          `json:"workload,omitempty"`
 }
 type SvcSelector struct {
 	Name  string `json:"name,omitempty"`
@@ -334,4 +335,9 @@ type ReleaseMeta struct {
 	Cluster   string `json:"cluster,omitempty"`
 	Charturl  string `json:"charturl,omitempty"`
 	Version   string `json:"version,omitempty"`
+}
+type ImageRepo struct {
+	Address  string `json:"address,omitempty"`
+	Username string `json:"username,omitempty"`
+	Password string `json:"password,omitempty"`
 }

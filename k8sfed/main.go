@@ -25,8 +25,8 @@ func main() {
 		mh := api.NewMiddleWareHandler(r)
 		server := &http.Server{
 			Handler:      mh,
-			ReadTimeout:  20 * time.Second,
-			WriteTimeout: 20 * time.Second,
+			ReadTimeout:  200 * time.Second,
+			WriteTimeout: 200 * time.Second,
 		}
 
 		listen, err := net.Listen("tcp4", ":9090")
@@ -34,7 +34,7 @@ func main() {
 			fmt.Printf("Failed to listen,err:%s", err.Error())
 			panic(err)
 		}
-		server.SetKeepAlivesEnabled(false)
+		//server.SetKeepAlivesEnabled(false)
 		err = server.Serve(listen)
 
 		/*quit := make(chan os.Signal)

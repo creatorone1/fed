@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	css "k8sfed/cluster/clusters"
 	"k8sfed/cluster/deployment"
 	"log"
 	"net/http"
@@ -25,6 +24,7 @@ var tillermastername string
 var harborusername string
 var harborpassword string
 var harbormaster string
+var mode string
 
 /*
 func init() {
@@ -103,6 +103,9 @@ func ConfigLoad() error {
 	if _, ok := contents["harborpassword"]; !ok {
 		return fmt.Errorf("harborpassword cann't null")
 	}
+	if _, ok := contents["mode"]; !ok {
+		return fmt.Errorf("server mode cann't null")
+	}
 
 	fedclustername = contents["fedclustername"]
 	chartrepo = contents["chartrepo"]
@@ -110,6 +113,7 @@ func ConfigLoad() error {
 	harborusername = contents["harborusername"]
 	harborpassword = contents["harborpassword"]
 	harbormaster = contents["harbormaster"]
+	mode = contents["mode"]
 	//fmt.Printf("clusters", clusters)
 	//conf.ProtoAddr = contents["protoAddr"]
 	//conf.Repository = contents["repository"]
@@ -131,6 +135,7 @@ func createRouter(r *httprouter.Router) {
 
 	m := map[string]map[string]HttpHandler{
 		"GET": { //包括暂停 驱逐 恢复 等操作
+			"/api/mode":                         getMode,
 			"/api/deployments":                  getAllDeps, //获取所有集群下面的dep
 			"/api/cluster/:cluster/deployments": getDeps,
 			//"/api/cluster/:cluster/namespace/:namespace/deployment/:deployment": getDep,
@@ -192,6 +197,7 @@ func createRouter(r *httprouter.Router) {
 			"/api/resume/user":                          resumeUser,
 			"/api/resume/users":                         resumeUsers,
 			"/api/charts":                               postChart,
+			"/api/images":                               postImage,
 		},
 		"DELETE": { //删除
 			"/api/cluster/:cluster/app/:app":                                    deleteApp, //不分命名空间
@@ -216,6 +222,7 @@ func createRouter(r *httprouter.Router) {
 		},
 		"PUT": { //更新  包括扩容,      回滚
 			"/api/chartrepo":                          putChartRepo,
+			"/api/imagerepo":                          putImageRepo,
 			"/api/cluster/:cluster/app":               updateApp,
 			"/api/cluster/:cluster/app/:app/rollback": rollbackApp,
 			"/api/cluster/:cluster/namespace/:namespace/deployment/:deployment":          updateDep,
@@ -388,7 +395,15 @@ func getDep(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 	//w.Write(body) 返回json数据byte数据类型
 	return nil
 }
+func getMode(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 
+	fmt.Println(" getMode被访问！")
+	var accessmode = `{"mode":"` + mode + `"}`
+
+	io.WriteString(w, accessmode)
+	//w.WriteString(depsdata) //返回json数据byte数据类型
+	return nil
+}
 func getAllDeps(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 
 	fmt.Println(" getAllDeps被访问！获取所有集群的deps")
@@ -420,10 +435,11 @@ func getClusters(w http.ResponseWriter, r *http.Request, p httprouter.Params) er
 	//var clustername = p.ByName("cluster")
 	//var fedclustername = "k8s-fed" //以后从文件读取联邦集群的名字
 	//dataSource = append(dataSource, deps.Items...)
-	health, errh := css.GetFedHealth(fedclustername + ":31667")
+	//health, errh := css.GetFedHealth(fedclustername + ":31667")
 
-	if errh == nil && health == "ok" { //如果联邦正常工作
-		fmt.Println("fed is active")
+	//if errh == nil && health == "ok" { //如果联邦正常工作
+	if mode == "fed" { //如果是联邦服务器
+		fmt.Println("fed server")
 		dataSource, errc := ListCluster(fedclustername)
 		if errc != nil {
 			// handle error
@@ -437,7 +453,7 @@ func getClusters(w http.ResponseWriter, r *http.Request, p httprouter.Params) er
 		}
 		w.Write(depsdata)
 	} else {
-		fmt.Println("fed is inactive")
+		fmt.Println("cloud server " + clusters[0])
 		//fmt.Printf("clusters", clusters)
 		dataSource, errc := ListCluster2(clusters)
 		if errc != nil {
@@ -1477,6 +1493,58 @@ func postChart(w http.ResponseWriter, r *http.Request, p httprouter.Params) erro
 	return nil
 }
 
+func postImage(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("postImage被访问")
+	//var clustername = p.ByName("cluster")
+	// 根据字段名获取表单文件
+	formFile, _, err := r.FormFile("file")
+	var filename = r.FormValue("filename")
+	//formFiles, _ := json.Marshal(formFile)
+	//fmt.Print("formFile", string(formFiles))
+	//headers, _ := json.Marshal(header)
+	//fmt.Print("\n header", string(headers))
+	//fmt.Print("\n err %s", err)
+
+	fmt.Println("upload ok: ", filename)
+
+	if err != nil {
+		log.Printf("Get form file failed: %s\n", err)
+		return err
+	}
+	defer formFile.Close()
+	// 创建保存文件
+	destFile, err := os.Create("./" + filename)
+	if err != nil {
+		log.Printf("Create failed: %s\n", err)
+		return err
+	}
+	defer destFile.Close()
+
+	// 读取表单文件，写入保存文件
+	_, err = io.Copy(destFile, formFile)
+	if err != nil {
+		log.Printf("Write file failed: %s\n", err)
+		return err
+	}
+
+	body, erru := uploadImage(filename, harborusername, harborpassword)
+
+	if erru != nil {
+		//sendErrorResponse(w, ErrorCreate)
+		return erru
+	}
+	fmt.Print(string(body))
+	if strings.Index(string(body), "done") != -1 {
+		io.WriteString(w, `{
+			"name": "file",
+			"status": "done"
+		}`)
+	}
+	os.Remove("./" + filename)
+	return nil
+}
+
 func deleteApp(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 
 	fmt.Println("deleteApp被访问！")
@@ -1906,7 +1974,7 @@ func deleteImageRepos(w http.ResponseWriter, r *http.Request, p httprouter.Param
 		_, err := DeleteImageRepo(harbormaster, item.Name, harborusername, harborpassword)
 		if err != nil {
 			//io.WriteString(w, "wrong")
-			sendErrorResponse(w, ErrorDelete)
+			//sendErrorResponse(w, ErrorDelete)
 			return err
 		}
 		//w.Write(body)
@@ -1955,11 +2023,41 @@ func putChartRepo(w http.ResponseWriter, r *http.Request, p httprouter.Params) e
 	w.Write(datas)*/
 
 	if err != nil {
-		sendErrorResponse(w, ErrorUpdate)
+		//sendErrorResponse(w, ErrorUpdate)
 		return err
 	}
 	//w.Write(body)
 	fmt.Println("new chartRepoAdd:", chartrepo)
+	sendNormalResponse(w, NormalOp)
+	return nil
+}
+func putImageRepo(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+	fmt.Println("putImageRepo被访问！")
+	data, err := ioutil.ReadAll(r.Body)
+
+	if err != nil {
+		return err
+	}
+	var irepo = &ImageRepo{}
+	if err := json.Unmarshal(data, irepo); err != nil {
+		return err
+	}
+
+	harbormaster = irepo.Address
+	harborusername = irepo.Username
+	harborpassword = irepo.Password
+	/*datas, errj := json.Marshal(dep)
+	if errj != nil {
+		return errj
+	}
+	w.Write(datas)*/
+
+	if err != nil {
+		//sendErrorResponse(w, ErrorUpdate)
+		return err
+	}
+	//w.Write(body)
+	fmt.Println("new ImageRepoAdd:", irepo)
 	sendNormalResponse(w, NormalOp)
 	return nil
 }

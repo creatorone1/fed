@@ -21,8 +21,8 @@ export default class Service extends React.Component {
         fednamespaces:[],
         currentcluster:'All',
         currentnamespace:'All',
-        loading:false,  //设置为true则可以显示加载状态框
-        
+        loading:true,  //设置为true则可以显示加载状态框
+        accessmode:""    
     }
     componentDidMount(){//请求数据
         this.request();
@@ -36,40 +36,87 @@ export default class Service extends React.Component {
     }
     // 动态获取mock数据 
     request = () => {
-        fetch(utils.urlprefix+'/api/clusters',{
+        fetch(utils.urlprefix+'/api/mode',{
             method:'GET'
             }).then((response) => {
                 console.log('response:',response.ok)
                 return response.json();
             }).then((data) => {
-                console.log('data:',data)
+                console.log('accessmode:',data)
+                var accessmode=data.mode
                 this.setState({
-                    cluster:data.filter(item=>item.status!="NotReady")
-                })
-                fetch(utils.urlprefix+'/api/cluster/fed/namespaces',{
+                    accessmode:data.mode
+                }) 
+                
+                fetch(utils.urlprefix+'/api/clusters',{
                     method:'GET'
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();
                     }).then((data) => {
                         console.log('data:',data)
-                        var nms=[]
-                        data.map(nm=>{
-                            nms=nms.concat(nm.name)
-                        })    
                         this.setState({
-                            namespaces:nms,
-                            fednamespaces:nms
+                             cluster:data.filter(item=>item.status!="NotReady"),
+                             
                         })
+                        if(accessmode=="fed"){ //如果是联邦，则请求联邦的命名空间
+                            fetch(utils.urlprefix+'/api/cluster/fed/namespaces',{
+                                method:'GET'
+                                }).then((response) => {
+                                    console.log('response:',response.ok)
+                                    return response.json();
+                                }).then((data) => {
+                                    console.log('data:',data)
+                                    var nms=[]
+                                    data.map(nm=>{
+                                        nms=nms.concat(nm.name)
+                                    })    
+                                    this.setState({
+                                        namespaces:nms,
+                                        fednamespaces:nms,
+                                        loading:false, 
+                                    })
+                                    
+                                    return data;
+                                }).catch((e)=>{
+                                    this.setState({
+                                        loading:false, 
+                                    })
+                                    console.log(e);
+                                }) 
+                        }else{
+                            var cluster = data.filter(item=>item.status!="NotReady")[0]
+                                //console.log(cluster)
+                                if(cluster){
+                                    var nms=[] 
+                                    cluster.namespaces.map(nm=>{
+                                        nms=nms.concat(nm.name)
+                                    })   
+                                }
+                            this.setState({
+                                namespaces:nms,
+                                currentcluster:data.filter(item=>item.status!="NotReady")[0].name,
+                                loading:false, 
+                            })
+                        }
                         
                         return data;
                     }).catch((e)=>{
+                        this.setState({
+                            loading:false, 
+                            
+                        })
                         console.log(e);
-                    }) 
+                    })
                 return data;
             }).catch((e)=>{
+                this.setState({
+                    loading:false, 
+                })
                 console.log(e);
             })
+
+        
     }
 
     handleClustertChange=(value)=> {
@@ -129,14 +176,18 @@ export default class Service extends React.Component {
             <div> 
                <div className="Dropdown-wrap"> 
                     <span style={{marginRight:10,fontSize:15}}>集群：</span>
-                    <Select defaultValue='All' style={{ width: 120 }} onSelect={this.handleClustertChange}  >
-                         <Option value='All'  key='All'>全局</Option>
-                         {clusterdata}
+                    <Select  defaultValue={this.state.cluster.length>0&&this.state.accessmode=="single"?this.state.cluster[0].name:'All'} style={{ width: 120 }} onSelect={this.handleClustertChange}  >
+                    {this.state.cluster.length>0&&this.state.accessmode=="fed"?
+                        <Option value='All'  key='All'>全局</Option>:null
+                    }
+
+                    {clusterdata}
                     </Select>
 
                     <span style={{margin:"0px 10px",fontSize:15}}>命名空间：</span>
                     
                     <Select defaultValue='All'  style={{ width: 120 }} onSelect={this.handleNamespaceChange}  >
+                    
                          <Option value='All'  key='All'>全局</Option>
                          {namespacesdata}
                     </Select>  

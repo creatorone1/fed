@@ -42,7 +42,7 @@ export default class Application extends React.Component {
                     currentcluster:data.filter(item=>item.status!="NotReady")[0].name,
                 })
                 console.log('data[0].name',data.filter(item=>item.status!="NotReady")[0].name)
-                fetch(utils.urlprefix+'/api/cluster/fed/namespaces',{
+                /*fetch(utils.urlprefix+'/api/cluster/fed/namespaces',{
                     method:'GET'
                     }).then((response) => {
                         console.log('response:',response.ok)
@@ -61,7 +61,7 @@ export default class Application extends React.Component {
                         return data;
                     }).catch((e)=>{
                         console.log(e);
-                    }) 
+                    }) */
                 return data;
             }).catch((e)=>{
                 this.setState({

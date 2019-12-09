@@ -42,6 +42,7 @@ class CreateCluster extends React.Component {
               } = values;  
             
             //成功了则关闭弹窗且初始化
+            this.props.statechange()
             const { form } = this.props; 
             form.resetFields();  //重置表单
             this.setState({

@@ -54,7 +54,7 @@ class ClusterList extends React.Component {
             version:'v1.10.0'
         }
         ],
-          
+        accessmode:'',  
         btnloading:false,
        
     }
@@ -64,29 +64,48 @@ class ClusterList extends React.Component {
      }
     // 动态获取mock数据
     request = () => { //初始化数据请求
-        fetch(utils.urlprefix+'/api/clusters',{
-        method:'GET',
-        mode: 'cors', 
-        }).then((response) => {
-            console.log('response:',response.ok)
-            return response.json();
-        }).then((data) => {
-            console.log('data:',data)
+        fetch(utils.urlprefix+'/api/mode',{
+            method:'GET', 
+            }).then((response) => {
+                console.log('response:',response.ok)
+                return response.json();
+            }).then((data) => {
+                console.log('access:',data)
+                this.setState({
+                    accessmode:data.mode
+                })
+                fetch(utils.urlprefix+'/api/clusters',{
+                    method:'GET',
+                    mode: 'cors', 
+                    }).then((response) => {
+                        console.log('response:',response.ok)
+                        return response.json();
+                    }).then((data) => {
+                        console.log('data:',data)
+            
+                        this.setState({ //表格选中状态清空
+                            selectedRowKeys:[],
+                            selectedRows:null,
+                            dataSource:data, 
+                            btnloading:false, 
+                        })
+                         
+                        return data;
+                    }).catch( (e)=> {  
+                        this.setState({   
+                            btnloading:false, 
+                        })
+                        console.log(e);
+                    })
 
-            this.setState({ //表格选中状态清空
-                selectedRowKeys:[],
-                selectedRows:null,
-                dataSource:data, 
-                btnloading:false, 
+                return data;
+            }).catch((e)=>{
+                this.setState({   
+                    btnloading:false, 
+                })
+                console.log(e);
             })
-             
-            return data;
-        }).catch( (e)=> {  
-            this.setState({   
-                btnloading:false, 
-            })
-            console.log(e);
-        })
+        
     } 
 
 
@@ -360,32 +379,39 @@ class ClusterList extends React.Component {
                 key:'createtime',
                 dataIndex:'createtime',  
             },
+            
             {   
                 title:'操作',
                 key:'operation' ,
                 render:(text,record)=>{
                     var opration 
-                    if(record.role=='Controller'){
-                        opration = ( <Dropdown overlay={  
-                            <Menu onClick={({key})=>this.onClick(key,text,record)}> 
-                            <Menu.Item key="1">编辑</Menu.Item>
-                          </Menu> 
-                         } trigger={['click']}>
-                             <img src={require('./../../resource/image/more.png')} alt="more" height='12' style={{cursor:'pointer' }}></img> 
-                        </Dropdown> )
-                    } else{
-                        opration = ( <Dropdown overlay={  
-                            <Menu onClick={({key})=>this.onClick(key,text,record)}> 
-                            <Menu.Item key="1">编辑</Menu.Item>
-                            <Menu.Item key="2">删除</Menu.Item> 
-                          </Menu> 
-                         } trigger={['click']}>
-                             <img src={require('./../../resource/image/more.png')} alt="more" height='12' style={{cursor:'pointer' }}></img> 
-                        </Dropdown> )
+                    if( this.state.accessmode=="fed"){
+                        if(record.role=='Controller'){
+                            opration = ( <Dropdown overlay={  
+                                <Menu onClick={({key})=>this.onClick(key,text,record)}> 
+                                <Menu.Item key="1">编辑</Menu.Item>
+                              </Menu> 
+                             } trigger={['click']}>
+                                 <img src={require('./../../resource/image/more.png')} alt="more" height='12' style={{cursor:'pointer' }}></img> 
+                            </Dropdown> )
+                        } else{
+                            opration = ( <Dropdown overlay={  
+                                <Menu onClick={({key})=>this.onClick(key,text,record)}> 
+                                <Menu.Item key="1">编辑</Menu.Item>
+                                <Menu.Item key="2">删除</Menu.Item> 
+                              </Menu> 
+                             } trigger={['click']}>
+                                 <img src={require('./../../resource/image/more.png')} alt="more" height='12' style={{cursor:'pointer' }}></img> 
+                            </Dropdown> )
+                        }     
+                    }else{
+                        opration='无'
                     }
+                     
                     return opration
                 }
             }
+             
         ]
 
         
@@ -415,6 +441,7 @@ class ClusterList extends React.Component {
             (  
             <div style={{padding:10 ,minHeight:'calc(60vh)' }}> 
                 <div >
+                {this.state.accessmode=="fed"?
                     <Row className='Button-wrap'> 
                     <Col span='16'> 
                         <Button onClick={this.handleMutiDelete}>删除<Icon type='delete'></Icon></Button>
@@ -424,10 +451,11 @@ class ClusterList extends React.Component {
                 
                     </Col>
                         <Col span='8' className='Button-right'>
-                        <FindClusters style={{display:'inline-block'}}/>     
-                        <CreateCluster  style={{display:'inline-block'}} />
+                        <FindClusters statechange={this.statechange}  style={{display:'inline-block'}}/>     
+                        <CreateCluster statechange={this.statechange}  style={{display:'inline-block'}} />
                     </Col>
                     </Row>
+                :null}
                     
                     <Spin tip="Loading..." spinning={this.state.btnloading}>
                     {this.state.btnloading?(      
