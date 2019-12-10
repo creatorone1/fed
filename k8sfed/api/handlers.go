@@ -1528,7 +1528,7 @@ func postImage(w http.ResponseWriter, r *http.Request, p httprouter.Params) erro
 		return err
 	}
 
-	body, erru := uploadImage(filename, harborusername, harborpassword)
+	body, erru := uploadImage(filename, harborusername, harborpassword, harbormaster)
 
 	if erru != nil {
 		//sendErrorResponse(w, ErrorCreate)

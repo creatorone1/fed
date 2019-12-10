@@ -206,20 +206,20 @@ const Panel = Collapse.Panel;
                 </Col>
                 <Col span='6'className='status'>
                     <div className={this.state.dataSource.componentstatuses.controller=="True"?'statussuccess':'statuserror'}>
-                        <div className='icon'><Icon type={this.state.dataSource.componentstatuses.etcd=="True"?"check":'close'}  /> </div>
+                        <div className='icon'><Icon type={this.state.dataSource.componentstatuses.controller=="True"?"check":'close'}  /> </div>
                         <div className='message'>Controller Manager</div>
                     </div> 
                 </Col>
                 <Col span='6' className='status'>
                     <div className={this.state.dataSource.componentstatuses.scheduler=="True"?'statussuccess':'statuserror'}>
-                        <div className='icon'><Icon type={this.state.dataSource.componentstatuses.etcd=="True"?"check":'close'} /> </div>
+                        <div className='icon'><Icon type={this.state.dataSource.componentstatuses.scheduler=="True"?"check":'close'} /> </div>
                         <div className='message'>Scheduler</div>
                     </div>
                     
                 </Col>
                 <Col span='6'className='status'>
                     <div className={this.state.dataSource.componentstatuses.node=="True"?'statussuccess':'statuserror'}>
-                        <div className='icon'><Icon type={this.state.dataSource.componentstatuses.etcd=="True"?"check":'close'}  /> </div>
+                        <div className='icon'><Icon type={this.state.dataSource.componentstatuses.node=="True"?"check":'close'}  /> </div>
                         <div className='message'>Nodes</div>
                     </div> 
                 </Col>

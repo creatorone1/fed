@@ -252,7 +252,9 @@ func ChartCall(method, path, master string, data io.Reader) (io.ReadCloser, int,
 		return nil, -1, err
 	}
 	req.Close = true
+	//添加头
 	req.Header.Add("Content-Type", "binary/octet-stream")
+
 	if data != nil {
 		if method == "PATCH" {
 			req.Header.Add("Content-Type", "application/strategic-merge-patch+json")

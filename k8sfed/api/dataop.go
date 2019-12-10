@@ -727,7 +727,7 @@ func ListCluster(fedclustername string) ([]Cluster, error) {
 			}
 		}
 
-		/**待完善,m
+		/**待完善,ok
 		如果该集群未准备好，不读取其内容
 		*/
 		if cs.Status != "NotReady" {
@@ -772,8 +772,7 @@ func ListCluster(fedclustername string) ([]Cluster, error) {
 					}
 				}
 			}
-			comstatus.Node = "True"
-			cs.Componentstatuses = comstatus
+			//comstatus.Node = "True"
 
 			nmdata, errnm := ListNamespace(item.Meta.Name)
 			if errnm != nil {
@@ -785,6 +784,20 @@ func ListCluster(fedclustername string) ([]Cluster, error) {
 			if errn != nil {
 				return nil, errn
 			}
+			var nodes_status = true
+			for _, item := range nodes {
+				//fmt.Println(item.Status)
+				if item.Status == "NotReady" {
+					//fmt.Println("find NotReady")
+					nodes_status = false
+				}
+			}
+			if nodes_status {
+				comstatus.Node = "True"
+			} else {
+				comstatus.Node = "False"
+			}
+			cs.Componentstatuses = comstatus
 			cs.Nodes = len(nodes)
 			var pod1, pod2 int
 			var cpu1, cpu2 int
@@ -921,8 +934,6 @@ func ListCluster2(clusters []string) ([]Cluster, error) {
 					}
 				}
 			}
-			comstatus.Node = "True"
-			cs.Componentstatuses = comstatus
 
 			nmdata, errnm := ListNamespace(clustername)
 			if errnm != nil {
@@ -934,6 +945,20 @@ func ListCluster2(clusters []string) ([]Cluster, error) {
 			if errn != nil {
 				return nil, errn
 			}
+			var nodes_status = true
+			for _, item := range nodes {
+				//fmt.Println(item.Status)
+				if item.Status == "NotReady" {
+					//fmt.Println("find NotReady")
+					nodes_status = false
+				}
+			}
+			if nodes_status {
+				comstatus.Node = "True"
+			} else {
+				comstatus.Node = "False"
+			}
+			cs.Componentstatuses = comstatus
 			cs.Nodes = len(nodes)
 			var pod1, pod2 int
 			var cpu1, cpu2 int
@@ -2215,15 +2240,15 @@ func uploadChart(chartmastername string, file io.Reader) ([]byte, error) {
 	return body, nil
 }
 
-func uploadImage(filename, username, password string) ([]byte, error) {
-	fmt.Println("loading image: ", filename)
+func uploadImage(filename, username, password, master string) ([]byte, error) {
+	//fmt.Println("loading image: ", filename)
 
-	command := `./loadimage.sh ` + filename + ` ` + username + ` ` + password + ` .`
+	command := `./loadimage.sh ` + filename + ` ` + username + ` ` + password + ` ` + master
 
 	cmd := exec.Command("/bin/bash", "-c", command)
 	output, err := cmd.Output()
 
-	fmt.Println("loading over")
+	//fmt.Println("loading over")
 
 	if err != nil {
 		fmt.Printf("Execute Shell:%s failed with error:%s", command, err.Error())

@@ -76,16 +76,16 @@ class FindClusters extends React.Component {
                //keys表示env名字env_label与值value的key
               //labelkeys表示label名字env_label与值value的key
               //portkeys表示portnum与porttype的key
-              const { data1,
-                    data2,
+              const { username,
+                    password,
                 } = values;  
               var newcluster = {
                 Name:record.Name,
                 IP:record.IP,
                 Port:record.Port,
                 Infed:record.Infed,
-                data1:data1,
-                data2:data2
+                username:username,
+                password:password
               }
               console.log('jsondata',JSON.stringify(newcluster))
                 fetch(utils.urlprefix+'/api/cluster/'+record.Name,{
@@ -169,16 +169,16 @@ class FindClusters extends React.Component {
                                 layout='horizontal'
                             >
                        
-                        <FormItem   label= 'data1'  
+                        <FormItem   label= '用户名'  
                             {...formItemLayout}
                         > 
                             {
-                            getFieldDecorator('data1',{ 
+                            getFieldDecorator('username',{ 
                             initialValue:'',//初始化  
                                 rules:[       //规则数组
                                 {
                                 required:true,
-                                message:'data1不能为空'
+                                message:'username不能为空'
                                 },  
                                 ] 
                             }) (
@@ -186,20 +186,20 @@ class FindClusters extends React.Component {
                                 )
                             } 
                         </FormItem>
-                        <FormItem   label= 'data2'  
+                        <FormItem   label= '密码'  
                             {...formItemLayout}
                         > 
                             {
-                            getFieldDecorator('data2',{ 
+                            getFieldDecorator('password',{ 
                             initialValue:'',//初始化  
                                 rules:[       //规则数组
                                 {
                                 required:true,
-                                message:'data2不能为空'
+                                message:'password不能为空'
                                 },  
                                 ] 
                             }) (
-                                <Input style={{ width: wwidth }}/> 
+                                <Input type={"password"} style={{ width: wwidth }}/> 
                                 )
                             } 
                         </FormItem>

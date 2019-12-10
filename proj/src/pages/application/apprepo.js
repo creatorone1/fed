@@ -72,7 +72,9 @@ export default class AppRepo   extends React.Component {
 
         searchname:'',
         searchdata:[],
-        search:false
+        search:false,
+        
+        upload:false
     }
     componentDidMount(){//请求数据
         this.request(); 
@@ -331,19 +333,29 @@ export default class AppRepo   extends React.Component {
                 console.log('filename',filename)
                 var formData = new FormData();
                 formData.append("file", file);  //后台读取的变量名为 "file"
-
+                _this.setState({
+                    upload:true
+                })    
                 fetch(utils.urlprefix+'/api/charts',{
                     method:'POST',
                     body:formData, 
                     }).then((response) => {
                         //console.log('response:',response)
+                        _this.setState({
+                            upload:false
+                        })  
                         return response.json();
                     }).then((data) => {
                         console.log('data:',data)
                         onSuccess(data, file); 
                         _this.request()
                         return data;
-                    }).catch(onError)
+                    }).catch((e)=>{
+                        message.error(`${file.name} file upload failed.`);
+                        _this.setState({
+                            upload:false
+                        }) 
+                    })
             }
           };
 
@@ -358,8 +370,8 @@ export default class AppRepo   extends React.Component {
 
                          <div style={{display:'inline-block'}}> 
                         <Upload  {...props} >
-                        <Button>
-                        <Icon type="upload" /> 上传应用包
+                        <Button disabled={this.state.upload?true:false}>
+                        <Icon type={this.state.upload?"loading":"upload"} /> 上传应用包
                         </Button>
                         </Upload>  
                         </div>
