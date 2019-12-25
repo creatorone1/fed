@@ -496,7 +496,9 @@ func ListNode(clustername string) ([]Node, error) {
 
 		if item.Spe.Unschedulable {
 			node.Status = "unschedulable"
-		} else if item.Stat.Conditions[4].Status == "True" {
+		} else if len(item.Stat.Conditions) > 4 && item.Stat.Conditions[4].Status == "True" {
+			node.Status = "Ready"
+		} else if item.Stat.Conditions[3].Status == "True" {
 			node.Status = "Ready"
 		} else {
 			node.Status = "NotReady"
@@ -514,22 +516,165 @@ func ListNode(clustername string) ([]Node, error) {
 			return nil, err
 		}
 		var poddata = []*pod.Pod{}
+		var cpul, cpur float64       //单位个
+		var memoryl, memoryr float64 //单位 G
 		for _, poditem := range podsdata.Items {
 			if poditem.Status.Reason != "Evicted" && poditem.Status.Reason != "MatchNodeSelector" {
 				if poditem.Spe.NodeName == item.Meta.Name {
 					poddata = append(poddata, poditem)
+
+					for cindex, _ := range poditem.Spe.Containers {
+						if poditem.Spe.Containers[cindex].Resources != nil {
+
+							//fmt.Print("Resouece")
+							if poditem.Spe.Containers[cindex].Resources.Limits != nil {
+								cl := poditem.Spe.Containers[cindex].Resources.Limits.Cpu
+								if cl != "" {
+									var c1 = cl[0:strings.Index(cl, "m")]
+									c1i, errc1i := strconv.Atoi(c1)
+									if errc1i != nil {
+										// handle error
+										return nil, errc1i
+									}
+									cpul = cpul + float64(c1i)/1000.0
+								}
+
+								ml := poditem.Spe.Containers[cindex].Resources.Limits.Memory
+								if ml != "" {
+									var m1 = ml[0:strings.Index(ml, "M")]
+									m1i, errm1i := strconv.Atoi(m1)
+									if errm1i != nil {
+										// handle error
+										return nil, errm1i
+									}
+									memoryl = memoryl + float64(m1i)/1024.0
+								}
+
+							}
+							if poditem.Spe.Containers[cindex].Resources.Requests != nil {
+								cr := poditem.Spe.Containers[cindex].Resources.Requests.Cpu
+								//fmt.Println("cr: ", poditem.Meta.Name)
+								if cr != "" {
+									//fmt.Println("cr: ", cr)
+									var c2 = cr[0:strings.Index(cr, "m")]
+									c2i, errc2i := strconv.Atoi(c2)
+									if errc2i != nil {
+										// handle error
+										return nil, errc2i
+									}
+									cpur = cpur + float64(c2i)/1000.0
+
+								}
+								mr := poditem.Spe.Containers[cindex].Resources.Requests.Memory
+								if mr != "" {
+									var m2 = mr[0:strings.Index(mr, "M")]
+									m2i, errm2i := strconv.Atoi(m2)
+									if errm2i != nil {
+										// handle error
+										return nil, errm2i
+									}
+									memoryr = memoryr + float64(m2i)/1024.0
+								}
+							}
+						}
+					}
+					/*if len(poditem.Spe.Containers) > 0 {
+						if poditem.Spe.Containers[0].Resources != nil {
+
+							//fmt.Print("Resouece")
+							if poditem.Spe.Containers[0].Resources.Limits != nil {
+								cl := poditem.Spe.Containers[0].Resources.Limits.Cpu
+								if cl != "" {
+									var c1 = cl[0:strings.Index(cl, "m")]
+									c1i, errc1i := strconv.Atoi(c1)
+									if errc1i != nil {
+										// handle error
+										return nil, errc1i
+									}
+									cpul = cpul + float64(c1i)/1000.0
+								}
+
+								ml := poditem.Spe.Containers[0].Resources.Limits.Memory
+								if ml != "" {
+									var m1 = ml[0:strings.Index(ml, "M")]
+									m1i, errm1i := strconv.Atoi(m1)
+									if errm1i != nil {
+										// handle error
+										return nil, errm1i
+									}
+									memoryl = memoryl + float64(m1i)/1024.0
+								}
+
+							}
+							if poditem.Spe.Containers[0].Resources.Requests != nil {
+								cr := poditem.Spe.Containers[0].Resources.Requests.Cpu
+								fmt.Println("cr: ", poditem.Meta.Name)
+								if cr != "" {
+									fmt.Println("cr: ", cr)
+									var c2 = cr[0:strings.Index(cr, "m")]
+									c2i, errc2i := strconv.Atoi(c2)
+									if errc2i != nil {
+										// handle error
+										return nil, errc2i
+									}
+									cpur = cpur + float64(c2i)/1000.0
+
+								}
+								mr := poditem.Spe.Containers[0].Resources.Requests.Memory
+								if mr != "" {
+									var m2 = mr[0:strings.Index(mr, "M")]
+									m2i, errm2i := strconv.Atoi(m2)
+									if errm2i != nil {
+										// handle error
+										return nil, errm2i
+									}
+									memoryr = memoryr + float64(m2i)/1024.0
+								}
+							}
+						}
+					}*/
 				}
+
 			}
 		}
+		//fmt.Println("cpul: ", cpul)
+		//fmt.Println("cpur: ", cpur)
+		//fmt.Println("memoryl: ", memoryl)
+		//fmt.Println("memoryr: ", memoryr)
+
 		pods = append(pods, strconv.Itoa(len(poddata)))
 		pods = append(pods, item.Stat.Capacity.Pods)
 		node.Pods = pods
 
-		cpu = append(cpu, item.Stat.Allocate.Cpu)
-		cpu = append(cpu, item.Stat.Capacity.Cpu)
+		cpuAll, errci := strconv.Atoi(item.Stat.Allocate.Cpu)
+		if errci != nil {
+			// handle error
+			return nil, errci
+		}
+		cpuAllf := float64(cpuAll)
+		cpurf := cpuAllf - cpur
+		cpu = append(cpu, fmt.Sprintf("%.2f", cpurf)) //cpu[0]是剩余量
+		cpu = append(cpu, item.Stat.Allocate.Cpu)     //cpu[1]是总量
+
+		//cpu = append(cpu, item.Stat.Allocate.Cpu)
+		//cpu = append(cpu, item.Stat.Capacity.Cpu)
 		node.Cpu = cpu
 
-		var m1 = item.Stat.Allocate.Memory[0:strings.Index(item.Stat.Allocate.Memory, "K")]
+		var m2 = item.Stat.Allocate.Memory[0:strings.Index(item.Stat.Allocate.Memory, "K")]
+		m2i, err2i := strconv.Atoi(m2)
+		if err2i != nil {
+			// handle error
+			return nil, err2i
+		}
+		m2f := float64(m2i) / 1024.0 / 1024.0
+		m1f := m2f - memoryr
+		//fmt.Printf("%v", m2f)
+		//memory = append(memory, fmt.Sprintf("%.2f", m2f))
+		memory = append(memory, Decimal(m1f))
+		memory = append(memory, Decimal(m2f))
+		node.Memory = memory
+
+		/*var m1 = item.Stat.Allocate.Memory[0:strings.Index(item.Stat.Allocate.Memory, "K")]
 		m1i, err1i := strconv.Atoi(m1)
 		if err1i != nil {
 			// handle error
@@ -550,7 +695,7 @@ func ListNode(clustername string) ([]Node, error) {
 		//fmt.Printf("%v", m2f)
 		//memory = append(memory, fmt.Sprintf("%.2f", m2f))
 		memory = append(memory, Decimal(m2f))
-		node.Memory = memory
+		node.Memory = memory*/
 
 		for k, v := range item.Meta.Annotation {
 			var l Label
@@ -800,9 +945,10 @@ func ListCluster(fedclustername string) ([]Cluster, error) {
 			cs.Componentstatuses = comstatus
 			cs.Nodes = len(nodes)
 			var pod1, pod2 int
-			var cpu1, cpu2 int
+			var cpu1, cpu2 float64
 			var memory1, memory2 float64
 			for _, nitem := range nodes {
+
 				p1i, errp1i := strconv.Atoi(nitem.Pods[0])
 				if errp1i != nil {
 					return nil, errp1i
@@ -813,8 +959,10 @@ func ListCluster(fedclustername string) ([]Cluster, error) {
 				}
 				pod1 += p1i
 				pod2 += p2i
+				/*修改
+				 */
 
-				c1i, errc1i := strconv.Atoi(nitem.Cpu[0])
+				/*c1i, errc1i := strconv.Atoi(nitem.Cpu[0])
 				if errc1i != nil {
 					return nil, errc1i
 				}
@@ -823,15 +971,22 @@ func ListCluster(fedclustername string) ([]Cluster, error) {
 					return nil, errc2i
 				}
 				cpu1 += c1i
-				cpu2 += c2i
+				cpu2 += c2i*/
+
+				c1f, _ := strconv.ParseFloat(nitem.Cpu[0], 64)
+				c2f, _ := strconv.ParseFloat(nitem.Cpu[1], 64)
+
+				cpu1 += c1f
+				cpu2 += c2f
 
 				memory1 += nitem.Memory[0]
 				memory2 += nitem.Memory[1]
+
 			}
 			pods = append(pods, strconv.Itoa(pod1))
 			pods = append(pods, strconv.Itoa(pod2))
-			cpu = append(cpu, strconv.Itoa(cpu1))
-			cpu = append(cpu, strconv.Itoa(cpu2))
+			cpu = append(cpu, fmt.Sprintf("%.2f", cpu1))
+			cpu = append(cpu, fmt.Sprintf("%.2f", cpu2))
 			memory = append(memory, memory1)
 			memory = append(memory, memory2)
 			cs.Pods = pods
@@ -961,7 +1116,7 @@ func ListCluster2(clusters []string) ([]Cluster, error) {
 			cs.Componentstatuses = comstatus
 			cs.Nodes = len(nodes)
 			var pod1, pod2 int
-			var cpu1, cpu2 int
+			var cpu1, cpu2 float64
 			var memory1, memory2 float64
 			for _, nitem := range nodes {
 				p1i, errp1i := strconv.Atoi(nitem.Pods[0])
@@ -974,25 +1129,35 @@ func ListCluster2(clusters []string) ([]Cluster, error) {
 				}
 				pod1 += p1i
 				pod2 += p2i
+				/*
+					c1i, errc1i := strconv.Atoi(nitem.Cpu[0])
+					if errc1i != nil {
+						return nil, errc1i
+					}
+					c2i, errc2i := strconv.Atoi(nitem.Cpu[1])
+					if errc2i != nil {
+						return nil, errc2i
+					}
+					cpu1 += c1i
+					cpu2 += c2i*/
+				//fmt.Println("cpu0: ", nitem.Cpu[0])
+				//fmt.Println("cpu1: ", nitem.Cpu[1])
 
-				c1i, errc1i := strconv.Atoi(nitem.Cpu[0])
-				if errc1i != nil {
-					return nil, errc1i
-				}
-				c2i, errc2i := strconv.Atoi(nitem.Cpu[1])
-				if errc2i != nil {
-					return nil, errc2i
-				}
-				cpu1 += c1i
-				cpu2 += c2i
+				c1f, _ := strconv.ParseFloat(nitem.Cpu[0], 64)
+				c2f, _ := strconv.ParseFloat(nitem.Cpu[1], 64)
+				//fmt.Println("c1f: ", c1f)
+				//fmt.Println("c2f: ", c2f)
+
+				cpu1 += c1f
+				cpu2 += c2f
 
 				memory1 += nitem.Memory[0]
 				memory2 += nitem.Memory[1]
 			}
 			pods = append(pods, strconv.Itoa(pod1))
 			pods = append(pods, strconv.Itoa(pod2))
-			cpu = append(cpu, strconv.Itoa(cpu1))
-			cpu = append(cpu, strconv.Itoa(cpu2))
+			cpu = append(cpu, fmt.Sprintf("%.2f", cpu1))
+			cpu = append(cpu, fmt.Sprintf("%.2f", cpu2))
 			memory = append(memory, memory1)
 			memory = append(memory, memory2)
 			cs.Pods = pods
@@ -3258,6 +3423,10 @@ func UpdateRelease(re ReleaseMeta) ([]byte, error) {
 }
 
 //更新节点标签
+/* 待完善，应该使用replace，
+因为更改label的key之后会新加一个label而不是更改原来的label
+或者先获取原来的label，对比现在的label，对于没有的key给它的value设置为nil
+*/
 func UpdateNode(nd Node, clustername string) ([]byte, error) {
 	var labels = nd.Labels
 	var mplabels map[string]*string = make(map[string]*string)

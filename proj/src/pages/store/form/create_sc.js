@@ -5,6 +5,7 @@ import {
     Modal,Form, Input, Icon, Button,InputNumber ,Collapse , Select ,Radio ,Divider,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
 } from 'antd';
 import utils from './../../../utils/utils'
+import cookie from 'react-cookies'
 const FormItem = Form.Item;
 const Option=Select.Option;
 const Panel = Collapse.Panel;
@@ -121,6 +122,9 @@ class CreateSC extends React.Component {
               fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/sc',{
                method:'POST',
                mode: 'cors', 
+               headers: { 
+                "Authorization":"Basic "+cookie.load("at") 
+                },
                body:JSON.stringify(sc)
              }).then((response) => {
                  console.log('response:',response.ok)
@@ -175,7 +179,10 @@ class CreateSC extends React.Component {
     }
     request = () => {
         fetch('url',{
-        method:'GET'
+        method:'GET',
+        headers: { 
+            "Authorization":"Basic "+cookie.load("at") 
+            },
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();

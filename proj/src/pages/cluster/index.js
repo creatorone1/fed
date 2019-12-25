@@ -5,6 +5,7 @@ import { HashRouter, Route, Switch, Redirect,Link,NavLink} from 'react-router-do
 import ClusterList from './clustelist'
 import FedNamespaceList from'./fednamespace'
 import utils from'./../../utils/utils'
+import cookie from 'react-cookies'
 const Option = Select.Option;
 const TabPane = Tabs.TabPane;
 export default class Cluster extends React.Component {
@@ -41,6 +42,9 @@ export default class Cluster extends React.Component {
     request = () => {
          fetch(utils.urlprefix+'/api/mode',{
         method:'GET', 
+        headers: { 
+            "Authorization":"Basic "+cookie.load("at") 
+            },
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();

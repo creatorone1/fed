@@ -8,6 +8,7 @@
  import RadioGroup from 'antd/lib/radio/group';
  import './user.less'
  import utils from './../../utils/utils'
+ import cookie from'react-cookies'
 import Axios from 'axios';
  export default class User extends React.Component {
      state = {
@@ -69,25 +70,28 @@ import Axios from 'axios';
  
      }
      request = () => {
-         fetch(utils.urlprefix+'/api/users/',{
-         method:'GET',
-         mode: 'cors', 
+
+         fetch(utils.urlprefix+'/api'+'/users',{
+            method:'GET',
+            mode: 'cors', 
+            headers: { 
+                "Authorization":"Basic "+cookie.load("at") 
+                },
          }).then((response) => {
              console.log('response:',response.ok)
              return response.json();
          }).then((data) => {
-             console.log('data:',data)
- 
+             console.log('data:',data) 
              this.setState({ //表格选中状态清空
                  selectedRowKeys:[],
                  selectedRows:null,
                  dataSource:data
-             })
- 
+             }) 
              return data;
          }).catch(function (e) {
              console.log(e);
          })
+         
      }
      //批量删除操作
      handleMutiDelete = ()=>{
@@ -148,6 +152,9 @@ import Axios from 'axios';
                      fetch(utils.urlprefix+'/api/pause/users?data='+JSON.stringify(datas),{
                      method:'POST',
                      mode: 'cors', 
+                     headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                      }).then((response) => {
                          console.log('response:',response.ok)
                          return response.json();
@@ -201,7 +208,10 @@ import Axios from 'axios';
                      console.log(datas)
                      fetch(utils.urlprefix+'/api/resume/users?data='+JSON.stringify(datas),{
                      method:'POST',
-                     mode: 'cors', 
+                     mode: 'cors',
+                     headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        }, 
                      }).then((response) => {
                          console.log('response:',response.ok)
                          return response.json();
@@ -268,6 +278,9 @@ import Axios from 'axios';
                  fetch(utils.urlprefix+'/api/pause/user',{
                      method:'POST',
                      mode: 'cors', 
+                     headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                      body:JSON.stringify(record)
                      }).then((response) => {
                          console.log('response:',response.ok)
@@ -326,6 +339,9 @@ import Axios from 'axios';
                  fetch(utils.urlprefix+'/api/resume/user',{
                      method:'POST',
                      mode: 'cors', 
+                     headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                      body: JSON.stringify(record)
                      }).then((response) => {
                          console.log('response:',response.ok)
@@ -369,7 +385,10 @@ import Axios from 'axios';
                 
                  fetch(utils.urlprefix+'/api/users',{
                      method:'DELETE',
-                     mode: 'cors', 
+                     mode: 'cors',
+                     headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        }, 
                      body:JSON.stringify(record)
                      }).then((response) => {
                          console.log('response:',response.ok)
@@ -507,6 +526,9 @@ import Axios from 'axios';
          fetch( url,{
              method:'PUT',
              mode: 'cors',
+             headers: { 
+                "Authorization":"Basic "+cookie.load("at") 
+                },
              body: JSON.stringify(data),
              }).then((response) => {
                  console.log('response:',response.ok)

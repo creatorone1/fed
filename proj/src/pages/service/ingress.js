@@ -8,6 +8,7 @@ import {Modal,message,Spin,Alert,Badge,InputNumber,Tag,Table, Checkbox, Button,I
 import CreateIng from './form/create_ing'  
 import EditIng from './form/edit_ing' 
 import utils from './../../utils/utils'
+import cookie from 'react-cookies'
 export default class Ingress extends React.Component {
        
     state = {  //初始化state
@@ -117,7 +118,10 @@ export default class Ingress extends React.Component {
     }
     request = (clustername,namespace) => {
         fetch(utils.urlprefix+'/api/cluster/'+clustername+'/ingresses',{
-        method:'GET'
+        method:'GET',
+        headers: { 
+            "Authorization":"Basic "+cookie.load("at") 
+            },
         }).then((response) => {
             console.log('response:',response.ok)
             
@@ -171,6 +175,9 @@ export default class Ingress extends React.Component {
                 fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/ingresses?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();
@@ -255,6 +262,9 @@ export default class Ingress extends React.Component {
                 fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/ingresses?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();

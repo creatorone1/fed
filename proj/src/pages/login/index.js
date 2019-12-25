@@ -71,9 +71,12 @@ class LoginForm extends React.Component {
         //fetch(`http://192.168.119.129:9090/api/users/`+cookie.load(username)+`/module/application`,{   //Fetch方法
         //fetch(`http://192.168.119.129:9090/api/users/oijdasd/module/`+modulename,{   //Fetch方法
         fetch(utils.urlprefix+'/api/users/'+cookie.load("username")+`/module/`+modulename,{   //Fetch方法
-        method: 'GET',
+        method: 'GET', 
         mode:'cors',
-        headers: {'Content-Type': 'application/json; charset=utf-8'},
+        headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            "Authorization":"Basic "+cookie.load("at") 
+            },
     }).then((response) => {
             console.log('response:',response.ok)
             if(response.ok) {
@@ -103,20 +106,23 @@ class LoginForm extends React.Component {
         fetch(utils.urlprefix+'/api/users/'+cookie.load("username")+`/fed`,{   //Fetch方法
         method: 'GET',
         mode:'cors',
-        headers: {'Content-Type': 'application/json; charset=utf-8'},
-    }).then((response) => {
-            console.log('response:',response.ok)           
-            if(response.ok) {
-                cookie.save("clusterauth",true)
-            }
-            return response.ok;
-        }).then((data) => {
-            console.log(data)
-            return data;
-        }).catch( (e)=> {  
+        headers: {
+            'Content-Type': 'application/json; charset=utf-8',
+            "Authorization":"Basic "+cookie.load("at") 
+            },
+        }).then((response) => {
+                console.log('response:',response.ok)           
+                if(response.ok) {
+                    cookie.save("clusterauth",true)
+                }
+                return response.ok;
+            }).then((data) => {
+                console.log(data)
+                return data;
+            }).catch( (e)=> {  
 
-            console.log(e);
-        }) 
+                console.log(e);
+            }) 
     };
 
 
@@ -126,15 +132,21 @@ class LoginForm extends React.Component {
         this.props.form.validateFieldsAndScroll((err, values) => {
             if (!err) {
                 var formValue = _this.props.form.getFieldsValue();
-                var text = {Name:formValue.username,Password:formValue.password} //获取数据
+                var text = {
+                    Name:formValue.username,
+                    Password:formValue.password
+                } //获取数据
                 cookie.remove("username")
                 cookie.remove("clusterauth")
                 cookie.remove("appauth")
                 cookie.remove("serviceauth")
                 cookie.remove("storeauth")
                 cookie.remove("nodeauth")
+                cookie.remove("at")
                 cookie.save("username",formValue.username,{path:"/"})
-                cookie.save("clusterauth",true)
+                cookie.save("at",utils.basicauth(formValue.username+":"+formValue.password))
+                
+                cookie.save("clusterauth",true) 
                 this.fedRequired()
                 this.authRequired("application")
                 this.authRequired("service")
@@ -146,7 +158,11 @@ class LoginForm extends React.Component {
                 var send = JSON.stringify(text);   //重要！将对象转换成json字符串
                 fetch(utils.urlprefix+'/api/login',{   //Fetch方法
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json; charset=utf-8'},
+                    mode:'cors',
+                    headers: {
+                        'Content-Type': 'application/json; charset=utf-8',
+                        "Authorization":"Basic "+utils.basicauth(formValue.username+":"+formValue.password)
+                        },
                     body: send
                 }).then((response) => {
                         console.log('response:',response)

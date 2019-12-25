@@ -8,6 +8,7 @@ import {
 import { height } from 'window-size';
 import './../service.less' 
 import utils from './../../../utils/utils'
+import cookie from 'react-cookies'
 let id = 0;
 const FormItem = Form.Item;
 const Option=Select.Option;
@@ -28,6 +29,9 @@ class CreateIng extends React.Component {
         fetch(utils.urlprefix+'/api/cluster/'+clustername+'/services',{
         method:'GET',
         mode: 'cors', 
+        headers: { 
+            "Authorization":"Basic "+cookie.load("at") 
+            },
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
@@ -121,6 +125,9 @@ class CreateIng extends React.Component {
             fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/ingress',{
             method:'POST',
             mode: 'cors', 
+            headers: { 
+                "Authorization":"Basic "+cookie.load("at") 
+                },
             body:JSON.stringify(ing)
           }).then((response) => {
               console.log('response:',response.ok)

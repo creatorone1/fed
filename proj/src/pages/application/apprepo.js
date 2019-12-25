@@ -6,6 +6,7 @@ import { height } from 'window-size';
 import { Z_BLOCK } from 'zlib';
 import { color } from 'echarts/lib/export';
 import CreateApp from './form/create_app'
+import cookie from 'react-cookies'
 import utils from './../../utils/utils'
 const Option=Select.Option;
 export default class AppRepo   extends React.Component {
@@ -85,7 +86,10 @@ export default class AppRepo   extends React.Component {
     }
     request = () => {
         fetch(utils.urlprefix+'/api/charts',{
-        method:'GET'
+        method:'GET',
+        headers: { 
+            "Authorization":"Basic "+cookie.load("at") 
+            },
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
@@ -209,7 +213,10 @@ export default class AppRepo   extends React.Component {
                 //下面URL的 集群 名称 以后需要替换掉
                 fetch(utils.urlprefix+'/api/chartrepo',{
                     method:'PUT',
-                    mode: 'cors', 
+                    mode: 'cors',
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        }, 
                     body:add,
                     }).then((response) => {
                         console.log('response:',response.ok)
@@ -267,6 +274,9 @@ export default class AppRepo   extends React.Component {
                 fetch(utils.urlprefix+'/api/charts?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();
@@ -338,6 +348,9 @@ export default class AppRepo   extends React.Component {
                 })    
                 fetch(utils.urlprefix+'/api/charts',{
                     method:'POST',
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     body:formData, 
                     }).then((response) => {
                         //console.log('response:',response)

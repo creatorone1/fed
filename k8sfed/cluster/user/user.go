@@ -63,6 +63,7 @@ func Add(usr *User) error {
 	res, err := stmt.Exec(id, usr.Name, usr.Status, usr.Password, usr.Rool, usr.Fedpermission, usr.Clusterpermission, usr.Modulepermission, createtime, permissiontime)
 	fmt.Println(res)
 	checkErr(err)
+	defer db.Close()
 	return err
 }
 
@@ -76,6 +77,7 @@ func QueryUsr() []User {
 		checkErr(err)
 		dataSource = append(dataSource, usr)
 	}
+	defer db.Close()
 	return dataSource
 }
 
@@ -97,6 +99,7 @@ func QueryUsrFedPermission(username string) error {
 		}
 		checkErr(err)
 	}
+	defer db.Close()
 	return nil
 }
 
@@ -119,6 +122,7 @@ func QueryUsrClusterPermission(username string, clustername string) error {
 		}
 		checkErr(err)
 	}
+	defer db.Close()
 	return nil
 }
 
@@ -140,6 +144,7 @@ func QueryUsrModulePermission(username string, modulename string) error {
 		}
 		checkErr(err)
 	}
+	defer db.Close()
 	return nil
 }
 
@@ -154,7 +159,7 @@ func LoginCheck(name string, password string) error {
 		//fmt.Println("name")
 		if usr.Name == name {
 			flag = true
-			fmt.Println(usr.Name + usr.Password)
+			//fmt.Println(usr.Name + usr.Password)
 			if password == usr.Password {
 				return nil
 			} else {
@@ -169,6 +174,7 @@ func LoginCheck(name string, password string) error {
 		var err error = errors.New("login failed")
 		return err
 	}
+	defer db.Close()
 	//checkErr(err)
 	return nil
 }
@@ -180,6 +186,7 @@ func Delete(usr *User) error {
 	res, err := stmt.Exec(usr.Id)
 	fmt.Println(res)
 	checkErr(err)
+	defer db.Close()
 	return err
 }
 
@@ -214,6 +221,7 @@ func UpdateStatus(usr *User) error {
 
 	affect, err := res.RowsAffected()
 	fmt.Println(affect)
+	defer db.Close()
 	checkErr(err)
 	return err
 }
@@ -229,6 +237,7 @@ func UpdateUsersStatus(usr User) error {
 
 	affect, err := res.RowsAffected()
 	fmt.Println(affect)
+	defer db.Close()
 	checkErr(err)
 	return err
 }

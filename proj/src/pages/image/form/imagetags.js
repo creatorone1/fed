@@ -7,8 +7,8 @@ import {
 } from 'antd';
 import {CopyToClipboard} from 'react-copy-to-clipboard'
 import { height } from 'window-size';
- import utils from './../../../utils/utils.js'
-
+import utils from './../../../utils/utils.js'
+import cookie from 'react-cookies'
 let id = 0;
 const FormItem = Form.Item;
 const Option=Select.Option;
@@ -19,6 +19,7 @@ class Imagetags extends React.Component {
         deletelabels:[] ,
         selectedRowKeys:[],
         selectedRows:null, 
+        search:false
     }
     componentDidMount(){//初始化数据，只调用一次
           //...
@@ -44,6 +45,7 @@ class Imagetags extends React.Component {
           deletelabels:[], //初始化,
           selectedRowKeys:[],
           selectedRows:null, 
+          search:false
           }) 
           console.log('dataSource:',  JSON.parse(data)) 
         }
@@ -74,7 +76,10 @@ class Imagetags extends React.Component {
 
     request = () => { //初始化数据请求
       fetch(utils.urlprefix+'/api/images',{
-              method:'GET'
+              method:'GET',
+              headers: { 
+                "Authorization":"Basic "+cookie.load("at") 
+                },
           }).then((response) => {
                   console.log('response:',response.ok)
                   return response.json();
@@ -127,6 +132,9 @@ class Imagetags extends React.Component {
               fetch(utils.urlprefix+'/api/imagetags?reponame='+this.state.dataSource.name+'&data='+JSON.stringify(datas),{
                   method:'DELETE',
                   mode: 'cors', 
+                  headers: { 
+                    "Authorization":"Basic "+cookie.load("at") 
+                    },
                   }).then((response) => {
                       console.log('response:',response.ok)
                       return response.json();

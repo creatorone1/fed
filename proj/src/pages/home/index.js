@@ -8,6 +8,7 @@ import { Line } from 'echarts/lib/util/graphic';
 import  Panel from './../echarts/pie/panel'
 import axios from '../../axios'
 import utils from './../../utils/utils'
+import cookie from 'react-cookies'
 export default class Home extends React.Component{
     state = {
         loading:true,
@@ -47,6 +48,9 @@ export default class Home extends React.Component{
          ,{
              method:'GET',
              mode: 'cors', 
+             headers: { 
+                "Authorization":"Basic "+cookie.load("at") 
+                },
              }).then((response) => {
                  console.log('clusters response:',response.ok)
                  return response.json();
@@ -99,6 +103,9 @@ export default class Home extends React.Component{
                     fetch(utils.urlprefix+'/api/cluster/'+item.name+'/deployments',{
                 method:'GET',
                 mode: 'cors', 
+                headers: { 
+                    "Authorization":"Basic "+cookie.load("at") 
+                    },
                 }).then((response) => {
                     console.log('response:',response.ok)
                     return response.json();
@@ -154,6 +161,9 @@ export default class Home extends React.Component{
                     fetch(utils.urlprefix+'/api/cluster/'+item.name+'/apps',{
                 method:'GET',
                 mode: 'cors', 
+                headers: { 
+                    "Authorization":"Basic "+cookie.load("at") 
+                    },
                 }).then((response) => {
                     console.log('response:',response.ok)
                     return response.json();
@@ -227,6 +237,9 @@ export default class Home extends React.Component{
                     fetch(utils.urlprefix+'/api/cluster/'+item.name+'/nodes',{
                         method:'GET',
                         mode: 'cors',
+                        headers: { 
+                            "Authorization":"Basic "+cookie.load("at") 
+                            },
                     }).then((response) => {
                         console.log(name+'nodesreq:',response.ok)
                         return response.json(); 
@@ -348,13 +361,16 @@ export default class Home extends React.Component{
                         </Card>  
                          </div>
                          <div className="card-wrap1"> 
+                        {/*
                          <Card title={item2.name+' GPU'} >  
                          <Pie domid= {item.name+item2.name+'gpu_info'} pietype='gpu'data1={item2.gpu-item2.gpul}  data2={item2.gpul}/> 
-                         </Card>  
+                         </Card>  */
+                         }
                           </div>
                           <div className="card-wrap1"> 
                           <Card title={item2.name+' Memory'} >  
                           <Liquid_pie domid= {item.name+item2.name+'memory_info' } data1={item2.memoryl}  data2={item2.memoryl/item2.memory}/> 
+                          
                           </Card>  
                            </div>
                         </div>

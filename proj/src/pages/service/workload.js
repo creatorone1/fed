@@ -10,6 +10,7 @@ import { now } from 'moment';
 import Util from './../../utils/utils'
 import EditWL from './form/edit_wl';
 import utils from './../../utils/utils'
+import cookie from 'react-cookies'
 const Option = Select.Option;
 export default class Workload extends React.Component {
       
@@ -222,6 +223,9 @@ export default class Workload extends React.Component {
         fetch(utils.urlprefix+'/api/cluster/'+clustername+'/deployments',{
         method:'GET',
         mode: 'cors', 
+        headers: { 
+            "Authorization":"Basic "+cookie.load("at") 
+            },
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
@@ -274,6 +278,9 @@ export default class Workload extends React.Component {
                 fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/deployments?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();
@@ -323,7 +330,10 @@ export default class Workload extends React.Component {
         let sysTime = Util.formateDate(new Date().getTime()); //获取格式化的时间
     
         fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/namespace/'+record.namespace+'/deployment/'+record.name+'/history',{  //查找该工作负载的副本集,修改 this.state.rollback 数据
-                method:'GET'
+                method:'GET',
+                headers: { 
+                    "Authorization":"Basic "+cookie.load("at") 
+                    },
             }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
@@ -392,6 +402,9 @@ export default class Workload extends React.Component {
                 fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/pause/deployments?data='+JSON.stringify(datas),{
                     method:'GET',
                     mode: 'cors', 
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();
@@ -450,7 +463,10 @@ export default class Workload extends React.Component {
                 
                 fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/resume/deployments?data='+JSON.stringify(datas),{
                     method:'GET',
-                    mode: 'cors', 
+                    mode: 'cors',
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        }, 
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();
@@ -718,7 +734,10 @@ export default class Workload extends React.Component {
                         {  // this.request('url'+this.state.operationdata.name+this.state.revision); //发送回滚请求
                         fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/namespace/'+this.state.operationdata.namespace+'/deployment/'+this.state.operationdata.name+'/rollback?revision='+this.state.revision,{
                             method:'PUT',
-                            mode: 'cors', 
+                            mode: 'cors',
+                            headers: { 
+                                "Authorization":"Basic "+cookie.load("at") 
+                                }, 
                             }).then((response) => {
                                 console.log('response:',response.ok)
                                 return response.json();
@@ -780,7 +799,10 @@ export default class Workload extends React.Component {
                               
                             fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/namespace/'+this.state.operationdata.namespace+'/deployment/'+this.state.operationdata.name+'/scale?replicanum='+this.state.scalenum,{
                                 method:'PUT',
-                                mode: 'cors', 
+                                mode: 'cors',
+                                headers: { 
+                                    "Authorization":"Basic "+cookie.load("at") 
+                                    }, 
                                 }).then((response) => {
                                     console.log('response:',response.ok)
                                     return response.json();

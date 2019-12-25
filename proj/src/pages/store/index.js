@@ -6,6 +6,7 @@ import Pv from './pv'
 import PvC from './pvc'
 import StorageClass from './storageclass'
 import utils from './../../utils/utils'
+import cookie from 'react-cookies'
 import { len } from 'zrender/lib/core/vector';
 const Option = Select.Option;
 const TabPane = Tabs.TabPane;
@@ -30,7 +31,10 @@ export default class Store extends React.Component {
     // 动态获取mock数据
     request = () => {
         fetch(utils.urlprefix+'/api/clusters',{
-            method:'GET'
+            method:'GET',
+            headers: { 
+                "Authorization":"Basic "+cookie.load("at") 
+                },
             }).then((response) => {
                 console.log('response:',response.ok)
                 return response.json();

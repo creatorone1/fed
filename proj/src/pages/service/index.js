@@ -8,6 +8,7 @@ import Services from './services'
 import { height } from 'window-size';
 import CreateWl from  './form/create_wl'
 import utils from './../../utils/utils'
+import cookie from 'react-cookies'
 const Option = Select.Option;
 const TabPane = Tabs.TabPane;
 export default class Service extends React.Component {
@@ -37,7 +38,10 @@ export default class Service extends React.Component {
     // 动态获取mock数据 
     request = () => {
         fetch(utils.urlprefix+'/api/mode',{
-            method:'GET'
+            method:'GET',
+            headers: { 
+                "Authorization":"Basic "+cookie.load("at") 
+                },
             }).then((response) => {
                 console.log('response:',response.ok)
                 return response.json();
@@ -49,7 +53,10 @@ export default class Service extends React.Component {
                 }) 
                 
                 fetch(utils.urlprefix+'/api/clusters',{
-                    method:'GET'
+                    method:'GET',
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();
@@ -61,7 +68,10 @@ export default class Service extends React.Component {
                         })
                         if(accessmode=="fed"){ //如果是联邦，则请求联邦的命名空间
                             fetch(utils.urlprefix+'/api/cluster/fed/namespaces',{
-                                method:'GET'
+                                method:'GET',
+                                headers: { 
+                                    "Authorization":"Basic "+cookie.load("at") 
+                                    },
                                 }).then((response) => {
                                     console.log('response:',response.ok)
                                     return response.json();

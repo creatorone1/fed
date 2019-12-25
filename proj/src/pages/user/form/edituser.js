@@ -6,6 +6,7 @@ import {
     Modal,Form,Tree, Input,Radio,Switch , Icon, Button,InputNumber ,Collapse , Select,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
 } from 'antd';
 import utils from './../../../utils/utils'
+import cookie  from'react-cookies'
 const { TreeNode } = Tree;  
 
  
@@ -149,6 +150,9 @@ class EditUser extends React.Component {
           fetch(utils.urlprefix+'/api/user',{
             method:'PUT',
             mode: 'cors', 
+            headers: { 
+              "Authorization":"Basic "+cookie.load("at") 
+              },
             body:JSON.stringify(usr)
           }).then((response) => {
               console.log('response:',response.ok)

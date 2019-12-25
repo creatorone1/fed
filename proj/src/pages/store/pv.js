@@ -7,6 +7,7 @@ import {Modal,message,Badge,InputNumber,Tag,Table,Spin,Alert,Checkbox, Button,In
 import CreatePV from './form/create_pv'
 import EditPV from './form/edit_pv'
 import utils from './../../utils/utils'
+import cookie from 'react-cookies'
 export default class PV extends React.Component {
     state = {
         selectedRowKeys:[],
@@ -76,6 +77,9 @@ export default class PV extends React.Component {
         fetch(utils.urlprefix+'/api/cluster/'+clustername+'/pvs',{
         method:'GET',
         mode: 'cors', 
+        headers: { 
+            "Authorization":"Basic "+cookie.load("at") 
+            },
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
@@ -122,6 +126,9 @@ export default class PV extends React.Component {
                 fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/pvs?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();
@@ -179,6 +186,9 @@ export default class PV extends React.Component {
                 fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/pvs?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();

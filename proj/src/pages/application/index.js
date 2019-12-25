@@ -5,6 +5,7 @@ import {  Spin, Alert,Card, Tabs,Table, Modal, Button, message, Badge ,Menu,Drop
 import AppRepo from './apprepo'
 import AppRelease from './apprelease'
 import utils from './../../utils/utils'
+import cookie from 'react-cookies'
 import {HashRouter} from 'react-router-dom'
 const Option = Select.Option;
 const TabPane = Tabs.TabPane;
@@ -29,7 +30,10 @@ export default class Application extends React.Component {
     }
     request = () => {
         fetch(utils.urlprefix+'/api/clusters',{
-            method:'GET'
+            method:'GET',
+            headers: { 
+                "Authorization":"Basic "+cookie.load("at") 
+                },
             }).then((response) => {
                 console.log('response:',response.ok)
                 return response.json();

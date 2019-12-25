@@ -59,7 +59,7 @@ func iconHandler(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 	t5.Execute(w, nil)
 }
 
-func viewRouter(router *httprouter.Router) {
+func viewRouter(router *httprouter.Router) { 
 	router.GET("/", homeHandler)
 	router.POST("/", homeHandler)
 	router.GET("/manifest.json", maniHandler)

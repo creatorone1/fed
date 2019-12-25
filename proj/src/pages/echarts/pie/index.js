@@ -21,13 +21,19 @@ import 'echarts/lib/component/markLine'
          // 绘制饼图
          var datatype=(pietype=='应用'||pietype=='服务')?{
             fir:'Running',
-            sec:'Dead'
+            sec:'Waiting'
          }:{
-            fir:'Used',
+            fir:'Used', 
             sec:'Left'
          }
-         var uesd=this.props.data1;
-         var left=this.props.data2;
+         var uesd=this.props.data1 ;   
+         var left =this.props.data2 ; 
+
+         if  (!(pietype=='应用'||pietype=='服务')){ 
+           // console.log('left:',typeof(left))  
+            
+            uesd=uesd.toFixed(2) 
+         }
          //console.log(datatype)
          myChart.setOption({ 
              tooltip: {
@@ -50,25 +56,67 @@ import 'echarts/lib/component/markLine'
                     type:'pie',
                     radius: ['50%', '70%'],
                     center:['40%','50%'],//设置位置
-                    avoidLabelOverlap: false,  
+                    avoidLabelOverlap: true,  
                     label: {
                         normal: {
-                            show: false,
-                            position: 'center'
+                       show:false,     
+                        fontSize:10,
+                         formatter: ' {b|{b}：}{c} ',
+                         backgroundColor: '#eee',
+                         borderColor: '#aaa',
+                         borderWidth: 1,
+                         borderRadius: 4,
+                      
+                         // shadowBlur:3,
+                         // shadowOffsetX: 2,
+                         // shadowOffsetY: 2,
+                         // shadowColor: '#999',
+                         // padding: [0, 7],
+                         rich: {
+                             a: {
+                                 color: '#999',
+                                 lineHeight:20,
+                                 align: 'center',
+                                 
+                             },
+                             // abg: {
+                             //     backgroundColor: '#333',
+                             //     width: '100%',
+                             //     align: 'right',
+                             //     height: 22,
+                             //     borderRadius: [4, 4, 0, 0]
+                             // },
+                             hr: {
+                                 borderColor: '#aaa',
+                                 width: '100%',
+                                 borderWidth: 0.5,
+                                 height: 0
+                             },
+                             b: {
+                                 fontSize: 13,
+                                 lineHeight: 33
+                             },
+                             per: {
+                                 color: '#eee',
+                                 backgroundColor: '#334455',
+                                 padding: [2, 4],
+                                 borderRadius: 2
+                             }
+                         }
                         },
-                        emphasis: {
-                            show: false,
-                            textStyle: {
-                                fontSize: '30',
-                                fontWeight: 'bold'
+                     labelLine:{
+                        show:false,
+                        smooth:true,
+                     },
+                     emphasis: {
+                        show: false,
+                        textStyle: {
+                             fontSize: '30',
+                             fontWeight: 'bold'
                             }
                         }
                     },
-                    labelLine: {
-                        normal: {
-                            show: false
-                        }
-                    },
+                     
                     data:[
                         {value:uesd, name:datatype.fir},
                         {value:left, name:datatype.sec},  

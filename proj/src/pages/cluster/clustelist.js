@@ -11,6 +11,7 @@ import {setClusterDetail} from './../../redux/action/index'
 import {getclusterdetaildata} from './../../redux/reducer/index'
 import { bindActionCreators } from "redux";
 import { connect } from "react-redux";
+import cookie from 'react-cookies'
 
 const Option = Select.Option;
 const TabPane = Tabs.TabPane;
@@ -66,6 +67,9 @@ class ClusterList extends React.Component {
     request = () => { //初始化数据请求
         fetch(utils.urlprefix+'/api/mode',{
             method:'GET', 
+            headers: { 
+                "Authorization":"Basic "+cookie.load("at") 
+                },
             }).then((response) => {
                 console.log('response:',response.ok)
                 return response.json();
@@ -77,6 +81,9 @@ class ClusterList extends React.Component {
                 fetch(utils.urlprefix+'/api/clusters',{
                     method:'GET',
                     mode: 'cors', 
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();
@@ -145,6 +152,9 @@ class ClusterList extends React.Component {
                     fetch(utils.urlprefix+'/api/clusters?data='+JSON.stringify(datas),{
                         method:'DELETE',
                         mode: 'cors', 
+                        headers: { 
+                            "Authorization":"Basic "+cookie.load("at") 
+                            },
                         }).then((response) => {
                             console.log('response:',response.ok)
                             return response.json();
@@ -225,6 +235,9 @@ class ClusterList extends React.Component {
                     fetch(utils.urlprefix+'/api/clusters?data='+JSON.stringify(datas),{
                         method:'DELETE',
                         mode: 'cors', 
+                        headers: { 
+                            "Authorization":"Basic "+cookie.load("at") 
+                            },
                         }).then((response) => {
                             console.log('response:',response.ok)
                             return response.json();

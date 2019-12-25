@@ -5,6 +5,7 @@ import {
     Modal,Form, Input, Icon, Button,InputNumber ,Popover,Tag,Collapse , Select ,Divider,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu, Spin,
 } from 'antd';
 import utils from './../../../utils/utils'
+import cookie from 'react-cookies'
 const FormItem = Form.Item;
 const Option=Select.Option;
 const Panel = Collapse.Panel;
@@ -14,12 +15,12 @@ class FindClusters extends React.Component {
         dataSource:[{
             Name:"controller",
             IP:'192.168.0.1',
-            Port:'12344',
+            Port:'8080',
             Infed:0,
         }, {
             Name:"k8s-fed",
             IP:'192.168.0.2',
-            Port:'4561',
+            Port:'8080',
             Infed:1,
         } ]   ,
         loading:true
@@ -52,7 +53,10 @@ class FindClusters extends React.Component {
             loading: true,  
         }); 
         fetch(utils.urlprefix+'url',{
-        method:'GET'
+        method:'GET',
+        headers: { 
+            "Authorization":"Basic "+cookie.load("at") 
+            },
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
@@ -91,6 +95,9 @@ class FindClusters extends React.Component {
                 fetch(utils.urlprefix+'/api/cluster/'+record.Name,{
                  method:'POST',
                  mode: 'cors', 
+                 headers: { 
+                    "Authorization":"Basic "+cookie.load("at") 
+                    },
                  body:JSON.stringify(newcluster)
                }).then((response) => {
                    console.log('response:',response.ok)

@@ -6,6 +6,7 @@ import {Modal,message,Badge,Spin,InputNumber,Tag,Table, Checkbox, Button,Input, 
 } from 'antd'; 
 import CreatePVC from './form/create_pvc'
 import utils from './../../utils/utils'
+import cookie from 'react-cookies'
 export default class PVC extends React.Component {
     state = {
         selectedRowKeys:[],
@@ -60,6 +61,9 @@ export default class PVC extends React.Component {
         fetch(utils.urlprefix+'/api/cluster/'+clustername+'/pvcs',{
         method:'GET',
         mode: 'cors', 
+        headers: { 
+            "Authorization":"Basic "+cookie.load("at") 
+            },
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
@@ -111,6 +115,9 @@ export default class PVC extends React.Component {
                 fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/pvcs?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();
@@ -169,6 +176,9 @@ export default class PVC extends React.Component {
                 fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/pvcs?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();

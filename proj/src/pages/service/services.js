@@ -6,6 +6,7 @@ import {Modal,message,Spin,Alert,Badge,InputNumber,Tag,Table, Checkbox, Button,I
 import CreateSvc from './form/create_svc'  
 import EditSvc from './form/edit_svc' 
 import utils from './../../utils/utils'
+import cookie from 'react-cookies'
 export default class Services extends React.Component {
       
     state = {
@@ -115,6 +116,9 @@ export default class Services extends React.Component {
         fetch(utils.urlprefix+'/api/cluster/'+clustername+'/services',{
         method:'GET',
         mode: 'cors', 
+        headers: { 
+            "Authorization":"Basic "+cookie.load("at") 
+            },
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
@@ -178,6 +182,9 @@ export default class Services extends React.Component {
                 fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/services?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();
@@ -260,7 +267,10 @@ export default class Services extends React.Component {
                 //下面URL的 集群 名称 以后需要替换掉
                 fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/services?data='+JSON.stringify(datas),{
                     method:'DELETE',
-                    mode: 'cors', 
+                    mode: 'cors',
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();

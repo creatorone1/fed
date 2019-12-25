@@ -28,9 +28,6 @@ func getUsers(w http.ResponseWriter, r *http.Request, p httprouter.Params) error
 	//w.Write(body) 返回json数据byte数据类型
 	return nil
 
-	io.WriteString(w, "getUsers")
-	//w.Write(body) 返回json数据byte数据类型
-	return nil
 }
 
 func getUserModulePermission(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
@@ -47,10 +44,6 @@ func getUserModulePermission(w http.ResponseWriter, r *http.Request, p httproute
 	}
 	//w.Write(body)
 	sendNormalResponse(w, NormalOp)
-	return nil
-
-	io.WriteString(w, "getUserModulePermission")
-	//w.Write(body) 返回json数据byte数据类型
 	return nil
 
 }
@@ -70,10 +63,6 @@ func getUserFedPermission(w http.ResponseWriter, r *http.Request, p httprouter.P
 	sendNormalResponse(w, NormalOp)
 	return nil
 
-	io.WriteString(w, "getUserModulePermission")
-	//w.Write(body) 返回json数据byte数据类型
-	return nil
-
 }
 
 func getUserClusterPermission(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
@@ -89,10 +78,6 @@ func getUserClusterPermission(w http.ResponseWriter, r *http.Request, p httprout
 	}
 	//w.Write(body)
 	sendNormalResponse(w, NormalOp)
-	return nil
-
-	io.WriteString(w, "getUserModulePermission")
-	//w.Write(body) 返回json数据byte数据类型
 	return nil
 
 }
@@ -146,9 +131,6 @@ func pauseUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) erro
 	sendNormalResponse(w, NormalOp)
 	return nil
 
-	io.WriteString(w, "pauseUsers")
-	//w.Write(body) 返回json数据byte数据类型
-	return nil
 }
 
 func resumeUsers(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
@@ -200,13 +182,6 @@ func resumeUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) err
 	sendNormalResponse(w, NormalOp)
 	return nil
 
-	io.WriteString(w, "pauseUsers")
-	//w.Write(body) 返回json数据byte数据类型
-	return nil
-
-	io.WriteString(w, "resumeUsers")
-	//w.Write(body) 返回json数据byte数据类型
-	return nil
 }
 func postUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 
@@ -230,9 +205,6 @@ func postUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) error
 	sendNormalResponse(w, NormalOp)
 	return nil
 
-	io.WriteString(w, "postUser")
-	//w.Write(body) 返回json数据byte数据类型
-	return nil
 }
 
 func userLogin(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
@@ -323,7 +295,4 @@ func updateUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) err
 	sendNormalResponse(w, NormalOp)
 	return nil
 
-	io.WriteString(w, "updateUser")
-	//w.Write(body) 返回json数据byte数据类型
-	return nil
 }

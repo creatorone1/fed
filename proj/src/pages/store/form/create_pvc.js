@@ -5,6 +5,7 @@ import {
     Modal,Form, Input, Icon, Button,InputNumber ,Collapse , Select ,Divider,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
 } from 'antd';
 import utils from './../../../utils/utils'
+import cookie from'react-cookies'
 const FormItem = Form.Item;
 const Option=Select.Option;
 const Panel = Collapse.Panel;
@@ -123,6 +124,9 @@ class CreatePVC extends React.Component {
               fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/pvc',{
                method:'POST',
                mode: 'cors', 
+               headers: { 
+                "Authorization":"Basic "+cookie.load("at") 
+                },
                body:JSON.stringify(pvc)
              }).then((response) => {
                  console.log('response:',response.ok)
@@ -179,6 +183,9 @@ class CreatePVC extends React.Component {
         fetch(utils.urlprefix+'/api/cluster/'+clustername+'/pvs',{
         method:'GET',
         mode: 'cors', 
+        headers: { 
+            "Authorization":"Basic "+cookie.load("at") 
+            },
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
@@ -197,7 +204,10 @@ class CreatePVC extends React.Component {
         })
 
         fetch(utils.urlprefix+'/api/cluster/'+clustername+'/scs',{
-            method:'GET'
+            method:'GET',
+            headers: { 
+                "Authorization":"Basic "+cookie.load("at") 
+                },
             }).then((response) => {
                 console.log('response:',response.ok)
                 return response.json();
@@ -456,6 +466,7 @@ function PVC(values){
     pvc.name=name
     pvc.namespace=namespace
     pvc.size=capacity+'Gi'
+     
     if(storesourcetype=='PV'){
         pvc.volume=storesourcename
     }else{

@@ -5,6 +5,7 @@ import {  Row,Col,Spin, Alert,Card,Tag, Input,Tabs,Table, Modal, Button, message
 import { height } from 'window-size';
 import Util from './../../utils/utils'
 import EditApp from './form/edit_app'
+import cookie from 'react-cookies'
 import utils from './../../utils/utils'
 export default class AppRelease   extends React.Component {
     state = {
@@ -67,7 +68,10 @@ export default class AppRelease   extends React.Component {
     //请求数据
     request = (clustername) => {
         fetch(utils.urlprefix+'/api/cluster/'+clustername+'/apps',{
-        method:'GET'
+        method:'GET',
+        headers: { 
+            "Authorization":"Basic "+cookie.load("at") 
+            },
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
@@ -114,8 +118,11 @@ export default class AppRelease   extends React.Component {
                 datas.items=datas.items.concat(ditem) 
                 //下面URL的 集群 名称 以后需要替换掉
                 fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/releases?data='+JSON.stringify(datas),{
-                    method:'DELETE',
+                    method:'DELETE', 
                     mode: 'cors', 
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();
@@ -173,6 +180,9 @@ export default class AppRelease   extends React.Component {
                 fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/releases?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();
@@ -254,6 +264,9 @@ export default class AppRelease   extends React.Component {
             fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/app/'+record.name.name+'/rollback',{
                 method:'PUT',
                 mode: 'cors', 
+                headers: { 
+                    "Authorization":"Basic "+cookie.load("at") 
+                    },
                 }).then((response) => {
                     console.log('response:',response.ok)
                     return response.json();

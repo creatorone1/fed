@@ -7,7 +7,7 @@ import {
 } from 'antd';
 
 import utils from './../../../utils/utils'
-
+import cookie from 'react-cookies'
 let id = 0;
 const FormItem = Form.Item;
 const Option=Select.Option;
@@ -68,7 +68,10 @@ class EditPV extends React.Component {
     }
     request = (clustername) => { //初始化数据请求
       fetch(utils.urlprefix+'/api/cluster/'+clustername+'/scs',{
-          method:'GET'
+          method:'GET',
+          headers: { 
+            "Authorization":"Basic "+cookie.load("at") 
+            },
           }).then((response) => {
               console.log('response:',response.ok)
               return response.json();
@@ -116,6 +119,9 @@ class EditPV extends React.Component {
               fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/pv/'+name,{
                 method:'PUT',
                 mode: 'cors', 
+                headers: { 
+                    "Authorization":"Basic "+cookie.load("at") 
+                    },
                 body:JSON.stringify(pv)
                 }).then((response) => {
                     console.log('response:',response.ok)

@@ -7,6 +7,7 @@ import {
 } from 'antd';
 import utils from './../../../utils/utils'
 import { height } from 'window-size';
+import cookie from'react-cookies'
 const { TreeNode } = Tree; 
  
  
@@ -75,6 +76,9 @@ class CreateUser extends React.Component {
             fetch(utils.urlprefix+'/api/user',{
               method:'POST',
               mode: 'cors', 
+              headers: { 
+                "Authorization":"Basic "+cookie.load("at") 
+                },
               body:JSON.stringify(usr)
             }).then((response) => {
                 console.log('response:',response.ok)
@@ -137,7 +141,10 @@ class CreateUser extends React.Component {
     }
     request = () => {
         fetch(utils.urlprefix+'/api/user',{
-        method:'post'
+        method:'post',
+        headers: { 
+          "Authorization":"Basic "+cookie.load("at") 
+          },
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();

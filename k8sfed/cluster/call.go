@@ -97,6 +97,9 @@ func createHTTPClient() *http.Client {
 		//Timeout: 20 * time.Second,
 	}
 	//client.Timeout = 10 * time.Second
+
+	//fmt.Print(client.Transport)
+
 	return client
 }
 
@@ -162,6 +165,8 @@ func Call(method, path, master string, data interface{}) (io.ReadCloser, int, er
 
 func Call(method, path, master string, data interface{}) (io.ReadCloser, int, error) {
 	//return nil, 0, fmt.Errorf("new error")
+	//depsdata, _ := json.Marshal(httpc)
+	//fmt.Print(depsdata)
 	params := bytes.NewBuffer(nil)
 
 	if data != nil {

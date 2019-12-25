@@ -7,7 +7,7 @@ import {
 } from 'antd';
 import { height } from 'window-size';
 import utils from '../../../utils/utils';
- 
+import cookie from 'react-cookies' 
 
 let id = 0;
 const FormItem = Form.Item;
@@ -99,6 +99,9 @@ class EditCluster extends React.Component {
           fetch(utils.urlprefix+'/api/cluster/'+name,{
             method:'PUT',
             mode: 'cors', 
+            headers: { 
+              "Authorization":"Basic "+cookie.load("at") 
+              },
             body:JSON.stringify(cluster)
             }).then((response) => {
                 console.log('response:',response.ok)

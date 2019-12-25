@@ -7,6 +7,7 @@ import {Modal,message,Badge,InputNumber,Spin,Alert,Tag,Table, Checkbox, Button,I
 import CreateSc from './form/create_sc'
 import EditSc from './form/edit_sc'
 import utils from './../../utils/utils'
+import cookie from 'react-cookies'
 export default class StorageClass extends React.Component {
     state = {
         selectedRowKeys:[],
@@ -51,7 +52,10 @@ export default class StorageClass extends React.Component {
     }
     request = (clustername) => {
         fetch(utils.urlprefix+'/api/cluster/'+clustername+'/scs',{
-        method:'GET'
+        method:'GET',
+        headers: { 
+            "Authorization":"Basic "+cookie.load("at") 
+            },
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
@@ -97,6 +101,9 @@ export default class StorageClass extends React.Component {
                 fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/scs?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();
@@ -154,6 +161,9 @@ export default class StorageClass extends React.Component {
                 fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/scs?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();

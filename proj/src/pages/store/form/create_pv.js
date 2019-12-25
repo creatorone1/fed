@@ -5,6 +5,7 @@ import {
     Modal,Form, Input, Icon, Button,InputNumber ,Collapse , Select ,Divider,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu,
 } from 'antd';
 import utils from './../../../utils/utils'
+import cookie from'react-cookies'
 const FormItem = Form.Item;
 const Option=Select.Option;
 const Panel = Collapse.Panel;
@@ -120,6 +121,9 @@ class CreatePV extends React.Component {
               fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/pv',{
                method:'POST',
                mode: 'cors', 
+               headers: { 
+                "Authorization":"Basic "+cookie.load("at") 
+                },
                body:JSON.stringify(pv)
              }).then((response) => {
                  console.log('response:',response.ok)
@@ -176,7 +180,10 @@ class CreatePV extends React.Component {
     }
     request = (clustername) => { //初始化数据请求
         fetch(utils.urlprefix+'/api/cluster/'+clustername+'/scs',{
-            method:'GET'
+            method:'GET',
+            headers: { 
+                "Authorization":"Basic "+cookie.load("at") 
+                },
             }).then((response) => {
                 console.log('response:',response.ok)
                 return response.json();

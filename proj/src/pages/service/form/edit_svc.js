@@ -6,6 +6,7 @@ import {
 import { height } from 'window-size';
 import './../service.less' 
 import utils from './../../../utils/utils'
+import cookie from 'react-cookies'
 let id = 0;
 const FormItem = Form.Item;
 const Option=Select.Option;
@@ -96,6 +97,9 @@ class CreateSvc extends React.Component {
             fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/namespace/'+namespace+'/service/'+name,{
               method:'PUT',
               mode: 'cors', 
+              headers: { 
+                "Authorization":"Basic "+cookie.load("at") 
+                },
               body:JSON.stringify(svc)
               }).then((response) => {
                   console.log('response:',response.ok)

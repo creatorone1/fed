@@ -8,6 +8,7 @@ import {
 import { height } from 'window-size';
 import './../service.less' 
 import utils from './../../../utils/utils'
+import cookie from 'react-cookies'
 let id = 0;
 const FormItem = Form.Item;
 const Option=Select.Option;
@@ -217,7 +218,10 @@ class ConfigWL extends React.Component {
     request = (clustername) => { //初始化数据请求
       fetch(utils.urlprefix+'/api/cluster/'+clustername+'/template/deployments',{
       method:'GET',
-      mode: 'cors', 
+      mode: 'cors',
+      headers: { 
+        "Authorization":"Basic "+cookie.load("at") 
+        }, 
       }).then((response) => {
           console.log('response:',response.ok)
           return response.json();
@@ -242,6 +246,9 @@ class ConfigWL extends React.Component {
       fetch(utils.urlprefix+'/api/cluster/'+clustername+'/nodes',{
         method:'GET',
         mode: 'cors', 
+        headers: { 
+          "Authorization":"Basic "+cookie.load("at") 
+          },
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
@@ -264,6 +271,9 @@ class ConfigWL extends React.Component {
         fetch(utils.urlprefix+'/api/images',{
           method:'GET',
           mode: 'cors', 
+          headers: { 
+            "Authorization":"Basic "+cookie.load("at") 
+            },
           }).then((response) => {
               console.log('response:',response.ok)
               return response.json();
@@ -288,6 +298,9 @@ class ConfigWL extends React.Component {
           fetch(utils.urlprefix+'/api/cluster/'+clustername+'/pvcs',{
             method:'GET',
             mode: 'cors', 
+            headers: { 
+              "Authorization":"Basic "+cookie.load("at") 
+              },
             }).then((response) => {
                 console.log('response:',response.ok)
                 return response.json();
@@ -357,6 +370,9 @@ class ConfigWL extends React.Component {
           fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/deployment',{
             method:'POST',
             mode: 'cors', 
+            headers: { 
+              "Authorization":"Basic "+cookie.load("at") 
+              },
             body:JSON.stringify(dep)
           }).then((response) => {
               console.log('response:',response.ok)
@@ -1709,7 +1725,7 @@ class ConfigWL extends React.Component {
 
                         { /***只有在联邦层面才会选择集群匹配 */
                           this.state.schedule==='LABEL'&&currentcluster==='All'? 
-                          <Collapse>
+                           /*<Collapse>
                            <Panel header="集群匹配" key="51" >
                             { //匹配规则数组
                               clustermatchformItems
@@ -1720,7 +1736,8 @@ class ConfigWL extends React.Component {
                             </Button>
                             </FormItem> 
                            </Panel>
-                          </Collapse>  
+                          </Collapse>  */
+                          null 
                            :null
                         }
                         { 

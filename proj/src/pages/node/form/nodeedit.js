@@ -7,7 +7,7 @@ import {
 } from 'antd';
 import { height } from 'window-size';
  import utils from './../../../utils/utils.js'
-
+import cookie from 'react-cookies'
 let id = 0;
 const FormItem = Form.Item;
 const Option=Select.Option;
@@ -84,6 +84,9 @@ class EditNode extends React.Component {
             fetch(utils.urlprefix+'/api/cluster/'+this.state.dataSource.cluster+'/node/'+name,{
               method:'PUT',
               mode: 'cors', 
+              headers: { 
+                "Authorization":"Basic "+cookie.load("at") 
+                },
               body:JSON.stringify(node)
               }).then((response) => {
                   console.log('response:',response.ok)

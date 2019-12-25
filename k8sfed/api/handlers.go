@@ -6,12 +6,14 @@ import (
 	"io"
 	"io/ioutil"
 	"k8sfed/cluster/deployment"
+	"k8sfed/cluster/user"
 	"log"
 	"net/http"
 	"os"
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/julienschmidt/httprouter"
 )
@@ -91,9 +93,9 @@ func ConfigLoad() error {
 	if _, ok := contents["chartrepo"]; !ok {
 		return fmt.Errorf("chartrepo cann't null")
 	}
-	if _, ok := contents["tillermastername"]; !ok {
+	/*if _, ok := contents["tillermastername"]; !ok {
 		return fmt.Errorf("tillermastername cann't null")
-	}
+	}*/
 	if _, ok := contents["harbormaster"]; !ok {
 		return fmt.Errorf("harbormaster cann't null")
 	}
@@ -123,6 +125,60 @@ func ConfigLoad() error {
 
 	return nil
 }
+func WriteConfig() error {
+	var mu sync.Mutex
+	mu.Lock()
+	fmt.Println("write file")
+	fileName := path.Join("./", "k8s.conf")
+	if _, err := os.Stat(fileName); os.IsNotExist(err) {
+		fmt.Errorf("k8s.conf is not exists!")
+		return err
+	}
+	file, erro := os.OpenFile(fileName, os.O_RDWR|os.O_CREATE, 0775)
+	//file, erro := os.Create("./" + "test.txt")
+	if erro != nil {
+		fmt.Errorf("erro!")
+		return erro
+	}
+	file.Seek(0, 0)
+	file.Truncate(0)
+	var fcontent = ""
+	var modef = "#mode fed 表示联邦服务器 single 表示单云服务器\n"
+	if mode == "fed" {
+		modef += "mode = fed \n#mode = single \n"
+	} else {
+		modef += "#mode = fed \nmode = single \n"
+	}
+	var fedclusternamef = "#fedControllerAddr 联邦控制节点ip地址或者域名\n"
+	fedclusternamef += "fedclustername = " + fedclustername + "\n"
+
+	var chartRepoAddrf = "#chartRepoAddr chart仓库地址\n"
+	chartRepoAddrf += "chartrepo = " + chartrepo + "\n"
+
+	var harborAddrf = "#harborAddr 镜像仓库地址\n"
+	harborAddrf += "harbormaster = " + harbormaster + "\n"
+
+	var harborUsernamef = "#harborUsername 镜像仓库账号\n"
+	harborUsernamef += "harborusername = " + harborusername + "\n"
+
+	var harborPasswordf = "#harborPassword 镜像仓库密码\n"
+	harborPasswordf += "harborpassword = " + harborpassword + "\n"
+
+	var clustersf = "#clusters 如果是单云模式，则配置这个子云的ip地址或域名\n"
+	clustersf += "$clusters = " + clusters[0] + "\n"
+
+	fcontent = modef + fedclusternamef + chartRepoAddrf + harborAddrf + harborUsernamef + harborPasswordf + clustersf
+	_, errw := file.WriteString(fcontent)
+	if errw != nil {
+		fmt.Errorf("errw!")
+		return errw
+	}
+
+	defer file.Close()
+	defer mu.Unlock()
+
+	return nil
+}
 
 type middleWareHandler struct {
 	r *httprouter.Router
@@ -145,9 +201,9 @@ func createRouter(r *httprouter.Router) {
 			"/api/cluster/:cluster/nodes":      getNodes,
 			"/api/cluster/:cluster/node/:node": getNode,
 			"/api/charts":                      getCharts, //获取所有集群下面的app
-			"/api/apps":                        getRelease,
-			"/api/cluster/:cluster/apps":       getApps,
-			"/api/cluster/:cluster/releases":   getRelease,
+			//"/api/apps":                        getRelease,
+			"/api/cluster/:cluster/apps":     getApps,
+			"/api/cluster/:cluster/releases": getRelease,
 			//"/api/cluster/:cluster/namespace/:namespace/app/:app": getApp,
 			"/api/cluster/:cluster/namespaces": getNamespaces,
 			//"/api/fed/namespaces":                        getNamespaces,
@@ -279,6 +335,7 @@ func (m middleWareHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 /**注册api*/
 func RegisterHandlers() *httprouter.Router {
 	router := httprouter.New()
+
 	/**view*/
 	viewRouter(router)
 
@@ -287,10 +344,40 @@ func RegisterHandlers() *httprouter.Router {
 	return router
 }
 
-// 添加头
+// 添加头 添加认证
 func makeHttpHandler(localMethod string, localRoute string, handlerFunc HttpHandler) httprouter.Handle {
 	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
 		//writeCorsHeaders(w, r)
+		username, password, _ := r.BasicAuth()
+		//fmt.Println(user, " ", password, " ", hasAuth)
+		user.Connect()
+		errc := user.LoginCheck(username, password)
+
+		if errc == nil {
+			w.Header().Set("Content-Type", "application/json")
+			if err := handlerFunc(w, r, p); err != nil {
+				fmt.Printf("%v\n", err)
+			}
+		} else {
+			//w.Header().Set("WWW-Authenticate", "Basic realm=Restricted")
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		}
+		/*if hasAuth && username == "oijdasd" && password == "111111" { //如果校验通过再执行接下来的操作
+			w.Header().Set("Content-Type", "application/json")
+			if err := handlerFunc(w, r, p); err != nil {
+				fmt.Printf("%v\n", err)
+			}
+		} else {
+			//w.Header().Set("WWW-Authenticate", "Basic realm=Restricted")
+			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
+		}*/
+
+	}
+}
+
+func makeHttpHandler2(localMethod string, localRoute string, handlerFunc HttpHandler) httprouter.Handle {
+	return func(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+
 		w.Header().Set("Content-Type", "application/json")
 		if err := handlerFunc(w, r, p); err != nil {
 			fmt.Printf("%v\n", err)
@@ -301,7 +388,7 @@ func makeHttpHandler(localMethod string, localRoute string, handlerFunc HttpHand
 //解决跨域访问的头
 func writeCorsHeaders(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Access-Control-Allow-Origin", "*")
-	w.Header().Add("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept")
+	w.Header().Add("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization")
 	w.Header().Add("Access-Control-Allow-Methods", "GET, POST, DELETE, PUT, OPTIONS,PATCH")
 }
 
@@ -397,7 +484,7 @@ func getDep(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 }
 func getMode(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
 
-	fmt.Println(" getMode被访问！")
+	fmt.Println("getMode被访问！")
 	var accessmode = `{"mode":"` + mode + `"}`
 
 	io.WriteString(w, accessmode)
@@ -1179,6 +1266,7 @@ func postChartRepo(w http.ResponseWriter, r *http.Request, p httprouter.Params) 
 		return err
 	}
 	//w.Write(body)
+	WriteConfig()
 	sendNormalResponse(w, NormalOp)
 	return nil
 }
@@ -2028,6 +2116,7 @@ func putChartRepo(w http.ResponseWriter, r *http.Request, p httprouter.Params) e
 	}
 	//w.Write(body)
 	fmt.Println("new chartRepoAdd:", chartrepo)
+	WriteConfig()
 	sendNormalResponse(w, NormalOp)
 	return nil
 }
@@ -2058,6 +2147,7 @@ func putImageRepo(w http.ResponseWriter, r *http.Request, p httprouter.Params) e
 	}
 	//w.Write(body)
 	fmt.Println("new ImageRepoAdd:", irepo)
+	WriteConfig()
 	sendNormalResponse(w, NormalOp)
 	return nil
 }

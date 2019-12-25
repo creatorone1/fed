@@ -5,6 +5,7 @@ import {
     Modal,Form, Input, Icon, Button,InputNumber ,Popover,Tag,Collapse , Select ,Divider,message,Badge,Table, Checkbox, Row,Col,Dropdown,Menu, Spin,
 } from 'antd';
 import utils from './../../../utils/utils'
+import cookie from 'react-cookies'
 const FormItem = Form.Item;
 const Option=Select.Option;
 const Panel = Collapse.Panel;
@@ -42,7 +43,10 @@ class UpdateRepo extends React.Component {
             loading: true,  
         }); 
         fetch(utils.urlprefix+'url',{
-        method:'GET'
+        method:'GET',
+        headers: { 
+            "Authorization":"Basic "+cookie.load("at") 
+            },
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
@@ -81,6 +85,9 @@ class UpdateRepo extends React.Component {
               fetch(utils.urlprefix+'/api/imagerepo',{
                   method:'PUT',
                   mode: 'cors', 
+                  headers: { 
+                    "Authorization":"Basic "+cookie.load("at") 
+                    },
                   body:JSON.stringify(imagerepo),
                   }).then((response) => {
                       console.log('response:',response.ok)
@@ -140,7 +147,7 @@ class UpdateRepo extends React.Component {
             <div style={{display:'inline-block'}}>
             <Button type={"primary"} onClick={this.showModal}  >更换仓库地址<Icon type="setting" /></Button>             
             <Modal
-            title="动态发现"
+            title="切换镜像仓库"
             visible={this.state.visible} 
             onCancel={this.hideModal}
             maskClosable={false}

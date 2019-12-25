@@ -6,7 +6,7 @@ import { HashRouter, Route, Switch, Redirect,Link,NavLink} from 'react-router-do
 import utils from '../../utils/utils';
 import Imagetags from './form/imagetags'
 import UpdateRepo from './form/updaterepo'
-
+import cookie from 'react-cookies'
 const Option = Select.Option;
 const TabPane = Tabs.TabPane;
 const FormItem = Form.Item;
@@ -104,7 +104,10 @@ const FormItem = Form.Item;
     // 动态获取mock数据
     request = () => { //初始化数据请求
         fetch(utils.urlprefix+'/api/images',{
-                method:'GET'
+                method:'GET',
+                headers: { 
+                    "Authorization":"Basic "+cookie.load("at") 
+                    },
             }).then((response) => {
                     console.log('response:',response.ok)
                     return response.json();
@@ -173,7 +176,10 @@ const FormItem = Form.Item;
                     
                     fetch(utils.urlprefix+'/api/imagerepos?data='+JSON.stringify(datas),{
                         method:'DELETE',
-                        mode: 'cors', 
+                        mode: 'cors',
+                        headers: { 
+                            "Authorization":"Basic "+cookie.load("at") 
+                            }, 
                         }).then((response) => {
                             console.log('response:',response.ok)
                             return response.json();
@@ -272,6 +278,9 @@ const FormItem = Form.Item;
                 fetch(utils.urlprefix+'/api/imagerepos?data='+JSON.stringify(datas),{
                     method:'DELETE',
                     mode: 'cors', 
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     }).then((response) => {
                         console.log('response:',response.ok)
                         return response.json();
@@ -394,6 +403,9 @@ const FormItem = Form.Item;
                 fetch(utils.urlprefix+'/api/imagerepo',{
                     method:'PUT',
                     mode: 'cors', 
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     body:add,
                     }).then((response) => {
                         console.log('response:',response.ok)
@@ -515,6 +527,9 @@ const FormItem = Form.Item;
                 })    
                 fetch(utils.urlprefix+'/api/images',{
                     method:'POST',
+                    headers: { 
+                        "Authorization":"Basic "+cookie.load("at") 
+                        },
                     body:formData, 
                     }).then((response) => {
                         //console.log('response:',response)
@@ -550,12 +565,12 @@ const FormItem = Form.Item;
                 </Spin>
                 ): 
             (  
-            <div style={{ minHeight:'calc(60vh)'}}>  
+            <div style={{ backgroundColor:'white',minHeight:'calc(60vh)'}}>  
                
                <div className="Dropdown-wrap" style={{marginTop:10}}> 
                     <span style={{marginRight:10,fontSize:15}}>镜像列表 </span>  
                 </div> 
-                <div style={{backgroundColor:'white',marginTop:-10,padding:10 }}>
+                <div style={{marginTop:-10,padding:10 }}>
                     <Divider style={{marginTop:-5}}></Divider>
                     <Row className='Button-wrap' style={{ marginTop:-10}}> 
                     <Col span='12'> 

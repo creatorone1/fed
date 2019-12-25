@@ -9,7 +9,7 @@ import './node.less'
 import EPanel from'./../echarts/panel/panelv2'
 import Bar from'./../echarts/bar/index'
 import utils from '../../utils/utils';
-
+import cookie from 'react-cookies'
 const Panel = Collapse.Panel;
 export default class DetaiNode extends React.Component {
     state = {
@@ -165,7 +165,10 @@ export default class DetaiNode extends React.Component {
         })
 
         fetch(utils.urlprefix+'url',{
-        method:'GET'
+        method:'GET',
+        headers: { 
+            "Authorization":"Basic "+cookie.load("at") 
+            },
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
@@ -307,9 +310,9 @@ export default class DetaiNode extends React.Component {
              
         },
         ]
-        var cpurate =this.state.dataSource.cpu[0]/this.state.dataSource.cpu[1]+''
+        var cpurate =(this.state.dataSource.cpu[1]-this.state.dataSource.cpu[0])/this.state.dataSource.cpu[1]+''
          
-        var memoryrate =this.state.dataSource.memory[0]/this.state.dataSource.memory[1]+''
+        var memoryrate =(this.state.dataSource.memory[1]-this.state.dataSource.memory[0])/this.state.dataSource.memory[1]+''
         var podrate =this.state.dataSource.pods[0]/this.state.dataSource.pods[1]+''
         cpurate=cpurate.substr(0,cpurate.indexOf(".")+3)
         memoryrate=memoryrate.substr(0,memoryrate.indexOf(".")+3)

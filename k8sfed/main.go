@@ -21,6 +21,7 @@ func main() {
 	if err := api.ConfigLoad(); err != nil {
 		fmt.Print(err)
 	} else {
+
 		r := api.RegisterHandlers()
 		mh := api.NewMiddleWareHandler(r)
 		server := &http.Server{

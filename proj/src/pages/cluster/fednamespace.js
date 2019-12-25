@@ -5,6 +5,7 @@ import { HashRouter, Route, Switch, Redirect,Link,NavLink} from 'react-router-do
 import EditCluster from './form/clusteredit'
 import CreateFedNamespace from './form/createfednamespace' 
 import utils from './../../utils/utils'
+import cookie from 'react-cookies'
 const Option = Select.Option;
 const TabPane = Tabs.TabPane;
 export default class FedNamespaceList extends React.Component {
@@ -66,6 +67,9 @@ export default class FedNamespaceList extends React.Component {
         fetch(utils.urlprefix+'/api/cluster/'+clustername+'/namespaces',{
         method:'GET',
         mode: 'cors', 
+        headers: { 
+            "Authorization":"Basic "+cookie.load("at") 
+            },
         }).then((response) => {
             console.log('response:',response.ok)
             return response.json();
@@ -120,6 +124,9 @@ export default class FedNamespaceList extends React.Component {
                     fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/namespaces?data='+JSON.stringify(datas),{
                         method:'DELETE',
                         mode: 'cors', 
+                        headers: { 
+                            "Authorization":"Basic "+cookie.load("at") 
+                            },
                         }).then((response) => {
                             console.log('response:',response.ok)
                             return response.json();
@@ -182,6 +189,9 @@ export default class FedNamespaceList extends React.Component {
                     fetch(utils.urlprefix+'/api/cluster/'+this.props.currentcluster+'/namespaces?data='+JSON.stringify(datas),{
                         method:'DELETE',
                         mode: 'cors', 
+                        headers: { 
+                            "Authorization":"Basic "+cookie.load("at") 
+                            },
                         }).then((response) => {
                             console.log('response:',response.ok)
                             return response.json();
