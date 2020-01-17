@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	cs "k8sfed/cluster/clusters"
 	"k8sfed/cluster/deployment"
 	"k8sfed/cluster/user"
 	"log"
@@ -27,6 +28,7 @@ var harborusername string
 var harborpassword string
 var harbormaster string
 var mode string
+var mysql string
 
 /*
 func init() {
@@ -39,6 +41,7 @@ func init() {
 	harborpassword = "Harbor12345"
 	harbormaster = "core.harbor.domain"
 }*/
+
 func ConfigLoad() error {
 
 	fileName := path.Join("./", "k8s.conf")
@@ -108,7 +111,11 @@ func ConfigLoad() error {
 	if _, ok := contents["mode"]; !ok {
 		return fmt.Errorf("server mode cann't null")
 	}
-
+	if _, ok := contents["mysql"]; !ok {
+		return fmt.Errorf("mysql  cann't null")
+	}
+	mysql = contents["mysql"]
+	//fmt.Print(mysql)
 	fedclustername = contents["fedclustername"]
 	chartrepo = contents["chartrepo"]
 	tillermastername = contents["tillermastername"]
@@ -125,6 +132,7 @@ func ConfigLoad() error {
 
 	return nil
 }
+
 func WriteConfig() error {
 	var mu sync.Mutex
 	mu.Lock()
@@ -164,10 +172,13 @@ func WriteConfig() error {
 	var harborPasswordf = "#harborPassword 镜像仓库密码\n"
 	harborPasswordf += "harborpassword = " + harborpassword + "\n"
 
+	var mysqlf = "#mysql 数据库地址\n"
+	mysqlf += "mysql = " + mysql + "\n"
+
 	var clustersf = "#clusters 如果是单云模式，则配置这个子云的ip地址或域名\n"
 	clustersf += "$clusters = " + clusters[0] + "\n"
 
-	fcontent = modef + fedclusternamef + chartRepoAddrf + harborAddrf + harborUsernamef + harborPasswordf + clustersf
+	fcontent = modef + fedclusternamef + chartRepoAddrf + harborAddrf + harborUsernamef + harborPasswordf + mysqlf + clustersf
 	_, errw := file.WriteString(fcontent)
 	if errw != nil {
 		fmt.Errorf("errw!")
@@ -223,6 +234,7 @@ func createRouter(r *httprouter.Router) {
 			"/api/cluster/:cluster/pause/nodes":         pauseNodes,
 			"/api/cluster/:cluster/resume/nodes":        resumeNodes, //恢复
 			"/api/cluster/:cluster/drain/nodes":         drainNodes,  //驱逐
+			"/api/clusters/discover":                    discoverClusters,
 			"/api/users":                                getUsers,
 			"/api/pause/users":                          pauseUsers,
 			"/api/resume/users":                         resumeUsers,
@@ -245,6 +257,7 @@ func createRouter(r *httprouter.Router) {
 			"/api/cluster/:cluster/sc":                  postSC,
 			"/api/cluster/:cluster":                     postCluster,
 			"/api/cluster/:cluster/namespace":           postNamespace,
+			"/api/clusters/join":                        joinCluster,
 			"/api/user":                                 postUser,
 			"/api/login":                                userLogin,
 			"/api/logout":                               userLogout,
@@ -350,7 +363,7 @@ func makeHttpHandler(localMethod string, localRoute string, handlerFunc HttpHand
 		//writeCorsHeaders(w, r)
 		username, password, _ := r.BasicAuth()
 		//fmt.Println(user, " ", password, " ", hasAuth)
-		user.Connect()
+		user.Connect(mysql)
 		errc := user.LoginCheck(username, password)
 
 		if errc == nil {
@@ -1504,6 +1517,49 @@ func postCluster(w http.ResponseWriter, r *http.Request, p httprouter.Params) er
 	io.WriteString(w, "postCluster")
 	//w.Write(body) 返回json数据byte数据类型
 	return nil
+}
+
+func joinCluster(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+	fmt.Println("joinCluster被访问！")
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err
+	}
+	//fmt.Print(string(data[:]))
+	var joincluster = cs.JoinCluster{}
+	if err := json.Unmarshal(data, &joincluster); err != nil {
+		return err
+	}
+	//fmt.Print(&joincluster)
+	_, _, errp := cs.FcJoinCluster(fedclustername+":31667", joincluster)
+	if errp != nil {
+		sendErrorResponse(w, ErrorCreate)
+		return errp
+	}
+	//w.Write(body)
+	sendNormalResponse(w, NormalOp)
+	return nil
+}
+
+func discoverClusters(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {
+
+	fmt.Println("DiscoverClusters被访问！")
+	var dataSource = []cs.DisCluster{}
+	dataSource = cs.DiscoverCluster()
+
+	clustersdata, err := json.Marshal(dataSource)
+
+	if err != nil {
+		// handle error
+		return err
+	}
+	w.Write(clustersdata)
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+	io.WriteString(w, "DiscoverClusters")
+	//w.Write(body) 返回json数据byte数据类型
+	return nil
+
 }
 
 func postNamespace(w http.ResponseWriter, r *http.Request, p httprouter.Params) error {

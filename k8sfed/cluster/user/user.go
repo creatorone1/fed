@@ -49,8 +49,8 @@ func Newuser(name, password, clusterpermission, modulepermission string, fedperm
 var db *sql.DB
 var err error
 
-func Connect() {
-	db, err = sql.Open("mysql", "root:root@tcp(10.103.240.130:3306)/k8sfeduser?charset=utf8")
+func Connect(mysqlip string) {
+	db, err = sql.Open("mysql", "root:root@tcp("+mysqlip+":3306)/k8sfeduser?charset=utf8")
 	checkErr(err)
 }
 

@@ -13,7 +13,7 @@ const menuList = [
     },
     {
         title:'镜像管理',
-        key:'/image',
+        key:'/imageauth',
           
     },
     {

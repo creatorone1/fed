@@ -2,8 +2,9 @@ import React from 'react';
 import { Select } from 'antd'
 const Option = Select.Option;
 export default {
-    //urlprefix:'http://localhost:9090',
-    urlprefix:'http://10.103.240.130:9090',
+    urlprefix:'http://localhost:9090',
+    //urlprefix:'http://192.168.246.139:9090',
+    //urlprefix:'http://10.103.240.130:9090',
     //urlprefix:'http://10.103.240.195:9090',
     //urlprefix:'http://2w7750p724.wicp.vip:55039',
     //urlprefix:'http://103.46.128.49:55039',

@@ -305,7 +305,14 @@ export default class AppRepo   extends React.Component {
                 <img src={item.iconurl} alt=""  style={{height:'80px',width:'80px',display:'block',margin:'auto',marginBottom:'16px'}}/> 
                 <span style={{fontSize:'15px',color:'#00F' }}>{item.name}</span>
                 <div style={{height:'80px',marginTop:'20px',fontSize:'12px'}}>
-                <p  >
+                <p className="describe" 
+                style={{
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    display:"-webkit-box" ,  
+                    WebkitBoxOrient:"vertical",  
+                    WebkitLineClamp:5,
+                }}>
                     {item.description}
                 </p>
                 </div>

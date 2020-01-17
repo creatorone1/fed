@@ -70,13 +70,7 @@ export default class ERouter extends React.Component{
                                             ) 
                                         
                                          }/>
-                                     <Route exact path="/image" render={() => (
-                                        cookie.load("appauth") ? (
-                                            <Redirect to="/imageauth"/>
-                                            ) : (
-                                            <Redirect to="/auth"/>
-                                            )
-                                        )}/>
+                                      
                                     <Route exact path="/service" render={() => (
                                         cookie.load("serviceauth") ? (
                                             <Redirect to="/serviceauth"/>
@@ -105,7 +99,15 @@ export default class ERouter extends React.Component{
                                             <Redirect to="/auth"/>
                                             )
                                         )}/>
-
+                                    {
+                                       /* <Route exact path="/image" render={() => (
+                                        cookie.load("appauth") ? (
+                                            <Redirect to="/imageauth"/>
+                                            ) : (
+                                            <Redirect to="/auth"/>
+                                            )
+                                        )}/>*/
+                                        }
                                     <Route path="/applicationauth" component={Application} onEnter={this.authRequired} />
                                     <Route path="/imageauth" component={ImagePage} />
                                     <Route path="/serviceauth" component={Service} />

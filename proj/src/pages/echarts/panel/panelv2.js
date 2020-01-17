@@ -10,7 +10,12 @@ export default class EPanel extends React.Component {
         myChart = echarts.init(document.getElementById(this.props.domid) );
         var rate=this.props.rate;
         var perrate=this.props.rate*100+'';
+        var used =this.props.used ;
+        var total =this.props.total
         //console.log('rate:',rate)
+        //console.log('used:',used)
+       // console.log('total:',total)
+        
         perrate=perrate.substr(0,perrate.indexOf(".")+3)
 
 
@@ -32,7 +37,7 @@ export default class EPanel extends React.Component {
                         length:15
                     },
                     detail: {
-                        formatter: '使用率'+ '{value}%',
+                        formatter: '使用率 '+ '{value}%'+'\n \n ( '+used+' / '+total+" )",
                         fontSize: 12,
                     },
                     axisLabel:{
@@ -160,7 +165,7 @@ export default class EPanel extends React.Component {
         };	
 
         
-        //console.log(parseInt(value_))
+        //console.log(rate)
         option.series[0].data[0].value = (rate * 100).toFixed(2) - 0;
          
 

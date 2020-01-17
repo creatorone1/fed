@@ -52,7 +52,7 @@ class FindClusters extends React.Component {
         this.setState({
             loading: true,  
         }); 
-        fetch(utils.urlprefix+'url',{
+        fetch(utils.urlprefix+'/api/clusters/discover',{
         method:'GET',
         headers: { 
             "Authorization":"Basic "+cookie.load("at") 
@@ -81,47 +81,70 @@ class FindClusters extends React.Component {
               //labelkeys表示label名字env_label与值value的key
               //portkeys表示portnum与porttype的key
               const { username,
-                    password,
-                } = values;  
-              var newcluster = {
-                Name:record.Name,
-                IP:record.IP,
-                Port:record.Port,
-                Infed:record.Infed,
-                username:username,
-                password:password
-              }
-              console.log('jsondata',JSON.stringify(newcluster))
-                fetch(utils.urlprefix+'/api/cluster/'+record.Name,{
-                 method:'POST',
-                 mode: 'cors', 
-                 headers: { 
-                    "Authorization":"Basic "+cookie.load("at") 
-                    },
-                 body:JSON.stringify(newcluster)
-               }).then((response) => {
-                   console.log('response:',response.ok)
-                   return response.json();
-               }).then((data) => {
-                   console.log('data:',data) 
-                   //添加成功后重新加载列表数据
-                   this.request()
-                   //成功了则关闭弹窗且初始化
-                   this.props.statechange()
-                   const { form } = this.props; 
-                   form.resetFields();  //重置表单
-                   this.setState({
-                     visible: false, 
-                   });
-                   return data;
-               }).catch( (e)=> {   
-                    const { form } = this.props; 
-                    form.resetFields();  //重置表单
-                    this.setState({
-                    visible: false, 
-                    });
-                    console.log(e);
-                }) 
+                    password, 
+                } = values; 
+                var authorization = {
+                    Name:username,
+                    Password:password
+                }
+
+                fetch(utils.urlprefix+'/api/login',{   //Fetch方法
+                    method: 'POST',
+                    mode:'cors',
+                    headers: {
+                        'Content-Type': 'application/json; charset=utf-8',
+                        "Authorization":"Basic "+utils.basicauth(username+":"+password)
+                        },
+                    body: JSON.stringify(authorization)
+                }).then((response) => {
+                        console.log('response:',response)
+                        if(response.ok) {
+                            var newcluster = {
+                                Name:record.Name,
+                                IP:record.IP,
+                                Port:record.Port,
+                              }
+                              console.log('jsondata',JSON.stringify(newcluster))
+                              fetch(utils.urlprefix+'/api/clusters/join',{
+                               method:'POST',
+                               mode: 'cors', 
+                               headers: { 
+                                  "Authorization":"Basic "+cookie.load("at") 
+                                  },
+                               body:JSON.stringify(newcluster)
+                             }).then((response) => {
+                                 console.log('response:',response.ok)
+                                 return response.json();
+                             }).then((data) => {
+                                 console.log('data:',data) 
+                                 //添加成功后重新加载列表数据
+                                 this.request()
+                                 //成功了则关闭弹窗且初始化
+                                 this.props.statechange()
+                                 const { form } = this.props; 
+                                 form.resetFields();  //重置表单
+                                 this.setState({
+                                   visible: false, 
+                                 });
+                                 return data;
+                             }).catch( (e)=> {   
+                                  const { form } = this.props; 
+                                  form.resetFields();  //重置表单
+                                  this.setState({
+                                  visible: false, 
+                                  });
+                                  console.log(e);
+                              }) 
+
+                        }else window.alert('验证失败')
+                        return response.json();
+                    }).then((data) => {
+                        return data;
+                    }).catch( (e)=> {  
+
+                        console.log(e);
+                    }) 
+
                
             }
             else{ //否则报错 

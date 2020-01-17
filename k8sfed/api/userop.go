@@ -16,7 +16,7 @@ func getUsers(w http.ResponseWriter, r *http.Request, p httprouter.Params) error
 	fmt.Println("getUsers被访问！")
 	var dataSource = []user.User{}
 
-	user.Connect()
+	user.Connect(mysql)
 	dataSource = user.QueryUsr()
 
 	usersdata, err := json.Marshal(dataSource)
@@ -35,7 +35,7 @@ func getUserModulePermission(w http.ResponseWriter, r *http.Request, p httproute
 	var username = p.ByName("username")
 	var modulename = p.ByName("modulename")
 	fmt.Println(username, modulename)
-	user.Connect()
+	user.Connect(mysql)
 	err := user.QueryUsrModulePermission(username, modulename)
 
 	if err != nil {
@@ -52,7 +52,7 @@ func getUserFedPermission(w http.ResponseWriter, r *http.Request, p httprouter.P
 	fmt.Println("getUserFedPermission被访问！")
 	var username = p.ByName("username")
 
-	user.Connect()
+	user.Connect(mysql)
 	err := user.QueryUsrFedPermission(username)
 
 	if err != nil {
@@ -69,7 +69,7 @@ func getUserClusterPermission(w http.ResponseWriter, r *http.Request, p httprout
 	fmt.Println("getUserClusterPermission被访问！")
 	var username = p.ByName("username")
 	var clustername = p.ByName("clustername")
-	user.Connect()
+	user.Connect(mysql)
 	err := user.QueryUsrClusterPermission(username, clustername)
 
 	if err != nil {
@@ -94,7 +94,7 @@ func pauseUsers(w http.ResponseWriter, r *http.Request, p httprouter.Params) err
 	}
 	for _, item := range datas.Items {
 		fmt.Println(item)
-		user.Connect()
+		user.Connect(mysql)
 		item.Status = 0
 		err := user.UpdateUsersStatus(item)
 		if err != nil {
@@ -120,7 +120,7 @@ func pauseUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) erro
 		return err
 	}
 	usr.Status = 0
-	user.Connect()
+	user.Connect(mysql)
 	errc := user.UpdateStatus(usr)
 
 	if errc != nil {
@@ -145,7 +145,7 @@ func resumeUsers(w http.ResponseWriter, r *http.Request, p httprouter.Params) er
 	}
 	for _, item := range datas.Items {
 		fmt.Println(item)
-		user.Connect()
+		user.Connect(mysql)
 		item.Status = 0
 		err := user.UpdateUsersStatus(item)
 		if err != nil {
@@ -171,7 +171,7 @@ func resumeUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) err
 		return err
 	}
 	usr.Status = 1
-	user.Connect()
+	user.Connect(mysql)
 	errc := user.UpdateStatus(usr)
 
 	if errc != nil {
@@ -194,7 +194,7 @@ func postUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) error
 	if err := json.Unmarshal(data, usr); err != nil {
 		return err
 	}
-	user.Connect()
+	user.Connect(mysql)
 	errc := user.Add(usr)
 
 	if errc != nil {
@@ -219,7 +219,7 @@ func userLogin(w http.ResponseWriter, r *http.Request, p httprouter.Params) erro
 	if err := json.Unmarshal(data, usr); err != nil {
 		return err
 	}
-	user.Connect()
+	user.Connect(mysql)
 	errc := user.LoginCheck(usr.Name, usr.Password)
 
 	if errc != nil {
@@ -255,7 +255,7 @@ func deleteUsers(w http.ResponseWriter, r *http.Request, p httprouter.Params) er
 	if err := json.Unmarshal(data, usr); err != nil {
 		return err
 	}
-	user.Connect()
+	user.Connect(mysql)
 	errc := user.Delete(usr)
 
 	if errc != nil {
@@ -284,7 +284,7 @@ func updateUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) err
 	if err := json.Unmarshal(data, usr); err != nil {
 		return err
 	}
-	user.Connect()
+	user.Connect(mysql)
 	errc := user.Update(usr)
 
 	if errc != nil {

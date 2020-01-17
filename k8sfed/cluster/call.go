@@ -33,38 +33,39 @@ func init() {
 func dialTimeout(network, addr string) (net.Conn, error) {
 	return net.DialTimeout(network, addr, time.Second*3)
 }
-func HTTPClient() *http.Client {
-	//fmt.Printf("HTTPClient")
-	/*tr := &http.Transport{
-		Dial: func(network, addr string) (net.Conn, error) {
-			return net.Dial(network, addr)
-		},
-		DisableKeepAlives: true,
-	}
 
-	return &http.Client{
-		Transport: tr,
-	}*/
-	/*tr := &http.Transport{
-		Dial: func(network, addr string) (net.Conn, error) {
-			return net.Dial(network, addr)
-		},
-		Dial:              dialTimeout,
-		DisableKeepAlives: true,
-		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
-		//MaxIdleConnsPerHost: 1,
-	}
-	//fmt.Printf("new http")
-	httpcc := &http.Client{
-		Transport: tr,
-		//Timeout:   time.Duration(1) * time.Second,
-	}*/
-	return httpc
+/*func HTTPClient() *http.Client {*/
+//fmt.Printf("HTTPClient")
+/*tr := &http.Transport{
+	Dial: func(network, addr string) (net.Conn, error) {
+		return net.Dial(network, addr)
+	},
+	DisableKeepAlives: true,
 }
 
+return &http.Client{
+	Transport: tr,
+}*/
+/*tr := &http.Transport{
+	Dial: func(network, addr string) (net.Conn, error) {
+		return net.Dial(network, addr)
+	},
+	Dial:              dialTimeout,
+	DisableKeepAlives: true,
+	TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
+	//MaxIdleConnsPerHost: 1,
+}
+//fmt.Printf("new http")
+httpcc := &http.Client{
+	Transport: tr,
+	//Timeout:   time.Duration(1) * time.Second,
+}*/
+/*return httpc
+}*/
+
 const (
-	MaxIdleConns        int = 1000
-	MaxIdleConnsPerHost int = 1000
+	MaxIdleConns        int = 100
+	MaxIdleConnsPerHost int = 100
 	IdleConnTimeout     int = 30
 )
 
@@ -73,28 +74,25 @@ const (
 func createHTTPClient() *http.Client {
 	fmt.Println("create httpclient!")
 	//client := http.DefaultClient{
+
 	client := &http.Client{
 		Transport: &http.Transport{
-			Proxy: http.ProxyFromEnvironment,
-			/*DialContext: (&net.Dialer{
+			//Proxy: http.ProxyFromEnvironment,
+			//DisableKeepAlives: true,
+			/*Dial: (&net.Dialer{
 				Timeout:   30 * time.Second,
 				KeepAlive: 30 * time.Second,
-			}).DialContext,*/
-			DisableKeepAlives: true,
-			Dial: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: 30 * time.Second,
-			}).Dial,
+			}).Dial,*/
 			TLSHandshakeTimeout:   10 * time.Second,
 			ResponseHeaderTimeout: 10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
+			ExpectContinueTimeout: 10 * time.Second,
 
 			TLSClientConfig:     &tls.Config{InsecureSkipVerify: true},
 			MaxIdleConns:        MaxIdleConns,
 			MaxIdleConnsPerHost: MaxIdleConnsPerHost,
 			IdleConnTimeout:     time.Duration(IdleConnTimeout) * time.Second,
 		},
-		//Timeout: 20 * time.Second,
+		Timeout: time.Duration(30) * time.Second,
 	}
 	//client.Timeout = 10 * time.Second
 
@@ -165,8 +163,10 @@ func Call(method, path, master string, data interface{}) (io.ReadCloser, int, er
 
 func Call(method, path, master string, data interface{}) (io.ReadCloser, int, error) {
 	//return nil, 0, fmt.Errorf("new error")
-	//depsdata, _ := json.Marshal(httpc)
+
+	//depsdata, _ := json.Marshal(HTTPClient().Transport)
 	//fmt.Print(depsdata)
+
 	params := bytes.NewBuffer(nil)
 
 	if data != nil {
@@ -196,11 +196,11 @@ func Call(method, path, master string, data interface{}) (io.ReadCloser, int, er
 	if err != nil {
 		return nil, -1, err
 	}
-	req.Close = true
+	//req.Close = true
 	//req.URL.Host = master
 	//req.URL.Scheme = "http"
 
-	req.Header.Add("Connection", "close")
+	//req.Header.Add("Connection", "close")
 
 	//fmt.Print(req)
 	if data != nil {
@@ -213,16 +213,15 @@ func Call(method, path, master string, data interface{}) (io.ReadCloser, int, er
 	} else if method == "POST" {
 		req.Header.Add("Content-Type", "application/text")
 	}
-	HTTPClient().Timeout = 10 * time.Second
+	httpc.Timeout = 30 * time.Second
 
-	resp, err := HTTPClient().Do(req)
-
+	resp, err := httpc.Do(req)
 	//fmt.Print(resp)
 	if err != nil {
 		return nil, -1, err
 	}
 
-	resp.Header.Add("Connection", "close")
+	//resp.Header.Add("Connection", "close")
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		body, err := ioutil.ReadAll(resp.Body)
@@ -256,7 +255,7 @@ func ChartCall(method, path, master string, data io.Reader) (io.ReadCloser, int,
 	if err != nil {
 		return nil, -1, err
 	}
-	req.Close = true
+	//req.Close = true
 	//添加头
 	req.Header.Add("Content-Type", "binary/octet-stream")
 
@@ -270,16 +269,16 @@ func ChartCall(method, path, master string, data io.Reader) (io.ReadCloser, int,
 	} else if method == "POST" {
 		//req.Header.Add("Content-Type", "application/text")
 	}
-	HTTPClient().Timeout = 10 * time.Second
+	httpc.Timeout = 30 * time.Second
 
-	resp, err := HTTPClient().Do(req)
+	resp, err := httpc.Do(req)
 
 	//fmt.Print(resp)
 	if err != nil {
 		return nil, -1, err
 	}
 
-	resp.Header.Add("Connection", "close")
+	//resp.Header.Add("Connection", "close")
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		body, err := ioutil.ReadAll(resp.Body)
@@ -329,7 +328,7 @@ func AuthCall(method, path, master string, data interface{}, username, password 
 
 	req.URL.Host = master
 	req.URL.Scheme = "https" //必须使用https
-	req.Header.Set("Connection", "close")
+	//req.Header.Set("Connection", "close")
 	if method == "DELETE" {
 		req.Header.Set("Accept", "application/json")
 		req.Header.Set("X-Xsrftoken", "FrZ8jj0hgTOF5E127tGRXjZy0h1JmjRF")
@@ -347,13 +346,13 @@ func AuthCall(method, path, master string, data interface{}, username, password 
 	} else if method == "POST" {
 		req.Header.Set("Content-Type", "application/text")
 	}
-	resp, err := HTTPClient().Do(req)
+	resp, err := httpc.Do(req)
 	//fmt.Print(resp)
 	if err != nil {
 		return nil, -1, err
 	}
 
-	resp.Header.Set("Connection", "close")
+	//resp.Header.Set("Connection", "close")
 	if resp.StatusCode < 200 || resp.StatusCode >= 400 {
 		body, err := ioutil.ReadAll(resp.Body)
 
@@ -400,7 +399,7 @@ func PatchCall(method, path, master string, data []byte) (io.ReadCloser, int, er
 	} else if method == "POST" {
 		req.Header.Set("Content-Type", "application/text")
 	}
-	resp, err := HTTPClient().Do(req)
+	resp, err := httpc.Do(req)
 
 	if err != nil {
 		return nil, -1, err
@@ -450,7 +449,7 @@ func Stream(method, path, master string) (io.ReadCloser, int, error) {
 	req.URL.Host = master
 	req.URL.Scheme = "http"
 
-	resp, err := HTTPClient().Do(req)
+	resp, err := httpc.Do(req)
 
 	if err != nil {
 		return nil, -1, err

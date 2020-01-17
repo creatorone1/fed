@@ -155,8 +155,8 @@ export default class DetaiNode extends React.Component {
         this.request();
     }
     componentWillReceiveProps(nextProps){
-        //接收参数后更新数据
-
+         //接收参数后更新数据
+         
     }
     request = () => {
         // 这先直接写获取数据成功，有了后台删掉这
@@ -164,7 +164,7 @@ export default class DetaiNode extends React.Component {
             getdata:true
         })
 
-        fetch(utils.urlprefix+'url',{
+        /*fetch(utils.urlprefix+'url',{
         method:'GET',
         headers: { 
             "Authorization":"Basic "+cookie.load("at") 
@@ -179,9 +179,9 @@ export default class DetaiNode extends React.Component {
                 getdata:true
             })
             return data;
-        }).catch(function (e) {
+        }).catch( (e)=>{
             console.log(e);
-        })
+        })*/
     }
     render(){
         console.log('nodename:',  this.state.nodename)
@@ -311,11 +311,13 @@ export default class DetaiNode extends React.Component {
         },
         ]
         var cpurate =(this.state.dataSource.cpu[1]-this.state.dataSource.cpu[0])/this.state.dataSource.cpu[1]+''
-         
+        var cpuused=(this.state.dataSource.cpu[1]-this.state.dataSource.cpu[0]+'').substr(0,(this.state.dataSource.cpu[1]-this.state.dataSource.cpu[0]+'').indexOf(".")+3)       
+        var memoryused=(this.state.dataSource.memory[1]-this.state.dataSource.memory[0]+'').substr(0,(this.state.dataSource.memory[1]-this.state.dataSource.memory[0]+'').indexOf(".")+3)
+       
         var memoryrate =(this.state.dataSource.memory[1]-this.state.dataSource.memory[0])/this.state.dataSource.memory[1]+''
         var podrate =this.state.dataSource.pods[0]/this.state.dataSource.pods[1]+''
         cpurate=cpurate.substr(0,cpurate.indexOf(".")+3)
-        memoryrate=memoryrate.substr(0,memoryrate.indexOf(".")+3)
+        memoryrate=memoryrate.substr(0,memoryrate.indexOf(".")+5)
         podrate=podrate.substr(0,podrate.indexOf(".")+3)
          return(
         <div style={{  minHeight:'calc(60vh)'}}> 
@@ -358,13 +360,13 @@ export default class DetaiNode extends React.Component {
                 {/*** 仪表盘信息*/}
                 <Row gutter={16}  >
                 <Col span='8' >
-                   <EPanel domid='cpu' rate={cpurate}  ></EPanel>
+                   <EPanel domid='cpu' rate={cpurate} used={cpuused} total={this.state.dataSource.cpu[1] }></EPanel>
                 </Col>
                 <Col span='8'>
-                <EPanel domid='内存'  rate={memoryrate} ></EPanel>
+                <EPanel domid='内存'  rate={memoryrate} used={memoryused} total={this.state.dataSource.memory[1]+'GB'}></EPanel>
                 </Col>
                 <Col span='8' >
-                <EPanel domid='pod' rate={podrate} ></EPanel> 
+                <EPanel domid='pod' rate={podrate}  used={this.state.dataSource.pods[0]} total={this.state.dataSource.pods[1]}></EPanel> 
                 </Col> 
                  </Row>
 

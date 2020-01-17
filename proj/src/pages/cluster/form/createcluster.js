@@ -38,17 +38,48 @@ class CreateCluster extends React.Component {
              //keys表示env名字env_label与值value的key
             //labelkeys表示label名字env_label与值value的key
             //portkeys表示portnum与porttype的key
-            const { name,
-                address,port, 
+            const { Name,
+                IP,Port, 
               } = values;  
-            
-            //成功了则关闭弹窗且初始化
-            this.props.statechange()
-            const { form } = this.props; 
-            form.resetFields();  //重置表单
-            this.setState({
-              visible: false, 
-            });
+              var newcluster = {
+                Name:Name,
+                IP:IP,
+                Port:Port+''
+              }
+              //console.log('newcluster:',newcluster)
+              //console.log('newcluster:',JSON.stringify(newcluster))
+              fetch(utils.urlprefix+'/api/clusters/join',{
+                method:'POST',
+                mode: 'cors', 
+                headers: { 
+                   "Authorization":"Basic "+cookie.load("at") 
+                   },
+                body:JSON.stringify(newcluster)
+              }).then((response) => {
+                  console.log('response:',response.ok)
+                  return response.json();
+              }).then((data) => {
+                  console.log('data:',data) 
+                  //添加成功后重新加载列表数据
+                  //this.request()
+                  //成功了则关闭弹窗且初始化
+                    this.props.statechange()
+                    const { form } = this.props; 
+                    form.resetFields();  //重置表单
+                    this.setState({
+                    visible: false, 
+                    });
+                  return data;
+              }).catch( (e)=> {   
+                   const { form } = this.props; 
+                   form.resetFields();  //重置表单
+                   this.setState({
+                   visible: false, 
+                   });
+                   console.log(e);
+               }) 
+
+             
           }
           else{ //否则报错 
             const { name,podsnum,image,namepace,
@@ -71,7 +102,7 @@ class CreateCluster extends React.Component {
 
     }
     request = () => {
-        fetch(utils.urlprefix+'url',{
+        fetch(utils.urlprefix+'/',{
         method:'GET',
         headers: { 
             "Authorization":"Basic "+cookie.load("at") 
@@ -129,7 +160,7 @@ class CreateCluster extends React.Component {
                             {...formItemLayout}
                         > 
                             {
-                            getFieldDecorator('name',{ 
+                            getFieldDecorator('Name',{ 
                             initialValue:'',//初始化  
                                 rules:[       //规则数组
                                 {
@@ -150,7 +181,7 @@ class CreateCluster extends React.Component {
                             {...formItemLayout}
                         > 
                             {
-                            getFieldDecorator('address',{ 
+                            getFieldDecorator('IP',{ 
                                 rules:[       //规则数组
                                     {
                                     required:true,
@@ -166,7 +197,7 @@ class CreateCluster extends React.Component {
                             {...formItemLayout}
                         > 
                             {
-                            getFieldDecorator('path',{  
+                            getFieldDecorator('Port',{  
                                 rules:[       //规则数组
                                 {
                                 required:true,

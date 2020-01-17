@@ -114,6 +114,9 @@ const Panel = Collapse.Panel;
             'NotReady': <Tag  color="#ff7875" style={{cursor:'auto' }} >NotReady</Tag> ,  
  
         }
+        console.log('this.state.dataSource:',this.state.dataSource)
+       
+        console.log('this.state.dataSource.status:',this.state.dataSource.status)
         var status=config[this.state.dataSource.status] 
         if(this.state.dataSource.status=="Ready"){
              //标签labels
@@ -135,10 +138,14 @@ const Panel = Collapse.Panel;
         ]
         
         var cpurate =(this.state.dataSource.cpu[1]-this.state.dataSource.cpu[0])/this.state.dataSource.cpu[1]+''
+        var cpuused=(this.state.dataSource.cpu[1]-this.state.dataSource.cpu[0]+'').substr(0,(this.state.dataSource.cpu[1]-this.state.dataSource.cpu[0]+'').indexOf(".")+3)       
         var memoryrate =(this.state.dataSource.memory[1]-this.state.dataSource.memory[0])/this.state.dataSource.memory[1]+''
+        var memoryused=(this.state.dataSource.memory[1]-this.state.dataSource.memory[0]+'').substr(0,(this.state.dataSource.memory[1]-this.state.dataSource.memory[0]+'').indexOf(".")+3)
+        
         var podrate =this.state.dataSource.pods[0]/this.state.dataSource.pods[1]+''
-        cpurate=cpurate.substr(0,cpurate.indexOf(".")+3) //保留三位小数
-        memoryrate=memoryrate.substr(0,memoryrate.indexOf(".")+3)
+        cpurate=cpurate.substr(0,cpurate.indexOf(".")+5) //保留三位小数
+        memoryrate=memoryrate.substr(0,memoryrate.indexOf(".")+5)
+        //console.log('memoryrate',memoryrate)
         podrate=podrate.substr(0,podrate.indexOf(".")+3)
         }
         
@@ -164,7 +171,7 @@ const Panel = Collapse.Panel;
                 this.state.dataSource.status=="Ready"? 
                 
                 <div style={{backgroundColor:'white',marginTop:-10,padding:10 }}>
-                {//节点详细信息
+                {//集群详细信息
                 }
                 <Divider style={{marginTop:-5}}></Divider>
                 <div  className='banner' style={{ marginTop:-10}}> 
@@ -184,13 +191,13 @@ const Panel = Collapse.Panel;
                 {/*** 仪表盘信息*/}
                 <Row gutter={16}>
                 <Col span='8' >
-                   <EPanel domid='cpu' rate={cpurate}  ></EPanel>
+                   <EPanel domid='cpu' rate={cpurate} used={cpuused} total={this.state.dataSource.cpu[1]} ></EPanel>
                 </Col>
                 <Col span='8'>
-                <EPanel domid='内存'  rate={memoryrate} ></EPanel>
+                <EPanel domid='内存'  rate={memoryrate} used={memoryused} total={this.state.dataSource.memory[1]+'GB'}></EPanel>
                 </Col>
                 <Col span='8' >
-                <EPanel domid='pod' rate={podrate} ></EPanel> 
+                <EPanel domid='pod' rate={podrate} used={this.state.dataSource.pods[0]} total={this.state.dataSource.pods[1]}></EPanel> 
                 </Col> 
                  </Row>
 

@@ -3,7 +3,7 @@ package endpoint
 import (
 	"encoding/json"
 	"fmt"
-	"k8s/cluster"
+	"k8sfed/cluster"
 	"testing"
 )
 

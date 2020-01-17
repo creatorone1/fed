@@ -3,7 +3,7 @@ package heapster
 import (
 	"encoding/json"
 	"fmt"
-	"k8s_v2/cluster"
+	"k8sfed/cluster"
 )
 
 type NodeMonitor struct {
